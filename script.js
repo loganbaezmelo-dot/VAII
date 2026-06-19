@@ -1,11 +1,12 @@
 const cityInput = document.getElementById('city-input');
 const datalist = document.getElementById('city-suggestions');
 const weatherBtn = document.getElementById('weather-btn');
+const newsBtn = document.getElementById('news-btn');
 const output = document.getElementById('weather-output');
 
 let debounceTimer;
 
-// Handle live suggestions while typing
+// Handle live autocomplete suggestions while typing
 cityInput.addEventListener('input', function() {
     const query = cityInput.value.trim();
     
@@ -29,22 +30,12 @@ cityInput.addEventListener('input', function() {
                     const state = location.admin1;
                     const country = location.country;
 
-                    // Build array and ignore any duplicate data entries
                     let parts = [];
-                    
                     if (city) parts.push(city);
-                    
-                    if (state && !parts.includes(state)) {
-                        parts.push(state);
-                    }
-                    
-                    if (country && !parts.includes(country)) {
-                        parts.push(country);
-                    }
+                    if (state && !parts.includes(state)) parts.push(state);
+                    if (country && !parts.includes(country)) parts.push(country);
 
-                    // Joins beautifully without repeating text
                     option.value = parts.join(', ');
-                    
                     option.setAttribute('data-lat', location.latitude);
                     option.setAttribute('data-lon', location.longitude);
                     
@@ -55,12 +46,11 @@ cityInput.addEventListener('input', function() {
     }, 300);
 });
 
-// Handle Weather Lookup when clicking Check
+// WEATHER BUTTON ACTION
 weatherBtn.addEventListener('click', function() {
     const fullInput = cityInput.value.trim();
-    
     if (!fullInput) {
-        output.innerText = "Please type a city first.";
+        output.innerText = "Please type a location first.";
         return;
     }
     
@@ -112,3 +102,44 @@ function getWeatherData(lat, lon, displayName) {
             console.error(err);
         });
 }
+
+// NEWS BUTTON ACTION
+newsBtn.addEventListener('click', function() {
+    const query = cityInput.value.trim();
+    if (!query) {
+        output.innerText = "Please type a topic or location for news.";
+        return;
+    }
+
+    output.innerText = `Searching news for "${query}"...`;
+
+    // Uses a completely free, CORS-safe Google News RSS converter to fetch global articles
+    const feedUrl = `https://news.google.com/rss/search?q=${encodeURIComponent(query)}&hl=en-US&gl=US&ceid=US:en`;
+    const apiUrl = `https://api.rss2json.com/v1/api.json?rss_url=${encodeURIComponent(feedUrl)}`;
+
+    fetch(apiUrl)
+        .then(res => res.json())
+        .then(data => {
+            if (!data.items || data.items.length === 0) {
+                output.innerText = `No recent news articles found for "${query}".`;
+                return;
+            }
+
+            let newsHTML = `<h3>📰 Latest News: ${query}</h3>`;
+            // Grab the top 4 articles to keep it clean on mobile
+            data.items.slice(0, 4).forEach(item => {
+                newsHTML += `
+                    <div class="news-item">
+                        <a class="news-title" href="${item.link}" target="_blank">${item.title}</a>
+                        <div class="news-desc">📅 ${item.pubDate.split(' ')[0]}</div>
+                    </div>
+                `;
+            });
+
+            output.innerHTML = newsHTML;
+        })
+        .catch(err => {
+            output.innerText = "Error loading news feed.";
+            console.error(err);
+        });
+});
