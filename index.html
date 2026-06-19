@@ -41,13 +41,11 @@
             margin-top: 0;
             margin-bottom: 15px;
         }
-        /* Stack layout: Column wrapper */
         .search-container {
             display: flex;
             flex-direction: column;
             gap: 12px;
         }
-        /* Text input gets 100% full width */
         input {
             width: 100%;
             padding: 12px;
@@ -58,13 +56,12 @@
             font-size: 1rem;
             box-sizing: border-box;
         }
-        /* Button row sits underneath */
         .button-group {
             display: flex;
             gap: 10px;
         }
         button {
-            flex: 1; /* Makes both buttons take equal half-width */
+            flex: 1;
             padding: 12px;
             border-radius: 8px;
             border: none;
@@ -86,11 +83,18 @@
             border-radius: 8px;
             font-size: 0.95rem;
             color: #eee;
-            max-height: 300px;
+            max-height: 350px;
             overflow-y: auto;
         }
+        .news-header-msg {
+            color: #888;
+            font-style: italic;
+            margin-bottom: 15px;
+            font-size: 0.9rem;
+            line-height: 1.4;
+        }
         .news-item {
-            margin-bottom: 12px;
+            margin-bottom: 16px;
             padding-bottom: 12px;
             border-bottom: 1px solid #333;
         }
@@ -100,15 +104,28 @@
             padding-bottom: 0;
         }
         .news-title {
-            color: #4da3ff;
-            text-decoration: none;
+            color: #ffffff;
             font-weight: bold;
             display: block;
-            margin-bottom: 4px;
+            margin-bottom: 6px;
+            font-size: 1rem;
+            line-height: 1.3;
         }
         .news-desc {
+            font-size: 0.88rem;
+            color: #b3b3b3;
+            margin-bottom: 8px;
+            line-height: 1.4;
+        }
+        .news-link {
+            color: #4da3ff;
+            text-decoration: none;
             font-size: 0.85rem;
-            color: #bbb;
+            font-weight: bold;
+            display: inline-block;
+        }
+        .news-link:hover {
+            text-decoration: underline;
         }
     </style>
 </head>
@@ -123,10 +140,7 @@
             <section class="widget" id="search-widget">
                 <h3>🔍 Smart Assistant Hub</h3>
                 <div class="search-container">
-                    <!-- Top full-width bar -->
                     <input type="text" id="city-input" placeholder="Search city, topic, or country..." list="city-suggestions" autocomplete="off">
-                    
-                    <!-- Bottom action row -->
                     <div class="button-group">
                         <button id="weather-btn">Weather</button>
                         <button id="news-btn">News</button>
