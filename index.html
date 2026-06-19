@@ -82,13 +82,11 @@
             <section class="widget" id="weather-section">
                 <h3>🌤️ Live Weather</h3>
                 <div class="input-group">
-                    <!-- Added list link for autocomplete -->
-                    <input type="text" id="city-input" value="Loughman, Florida" placeholder="Type a city..." list="city-suggestions" autocomplete="off">
+                    <input type="text" id="city-input" placeholder="Search city & state..." list="city-suggestions" autocomplete="off">
                     <button id="weather-btn">Check</button>
                 </div>
-                <!-- Container for dropdown suggestions -->
                 <datalist id="city-suggestions"></datalist>
-                <div id="weather-output" class="output-box">Click check to fetch data...</div>
+                <div id="weather-output" class="output-box">Type a city above to fetch live data...</div>
             </section>
         </main>
     </div>
