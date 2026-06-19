@@ -58,9 +58,8 @@
             color: #ffffff;
             margin: 0;
         }
-        /* Fixed Circular Help Button Style */
         .help-btn {
-            all: unset; /* Completely overrides generic app container button flex stretching */
+            all: unset;
             box-sizing: border-box;
             background: #2a2a2a;
             color: #aaa;
@@ -68,9 +67,6 @@
             width: 24px;
             height: 24px;
             min-width: 24px;
-            min-height: 24px;
-            max-width: 24px;
-            max-height: 24px;
             border-radius: 50%;
             font-weight: bold;
             font-size: 0.8rem;
@@ -133,12 +129,9 @@
             font-size: 1rem;
             cursor: pointer;
         }
-        #weather-btn {
-            background: #007bff;
-        }
-        #news-btn {
-            background: #28a745;
-        }
+        #weather-btn { background: #007bff; }
+        #news-btn { background: #28a745; }
+        
         .output-box {
             margin-top: 15px;
             padding: 12px;
@@ -148,6 +141,44 @@
             color: #eee;
             max-height: 350px;
             overflow-y: auto;
+        }
+
+        /* Authentication Layout Screens */
+        #auth-container {
+            display: block;
+        }
+        #main-app {
+            display: none;
+        }
+        .auth-toggle-text {
+            color: #4da3ff;
+            cursor: pointer;
+            font-size: 0.85rem;
+            margin-top: 15px;
+            display: inline-block;
+            text-decoration: underline;
+        }
+        .google-btn {
+            background: #ffffff !important;
+            color: #000000 !important;
+            margin-top: 10px;
+            width: 100%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+        }
+        .logout-btn {
+            background: #dc3545;
+            padding: 6px 12px;
+            font-size: 0.8rem;
+            border-radius: 6px;
+            margin-top: 10px;
+            width: auto;
+            cursor: pointer;
+            font-weight: bold;
+            border: none;
+            color: white;
         }
     </style>
 </head>
@@ -159,40 +190,73 @@
         </header>
 
         <main>
-            <div id="routing-warning" class="global-warning-msg">
-                ⚠️ Website routing is not 100% accurate because the AI cannot scrape live websites.
-            </div>
-
-            <section class="widget" id="search-widget">
-                <div class="widget-header">
-                    <h3>🔍 Smart Assistant Hub</h3>
-                    <button id="help-toggle" class="help-btn" title="View features layout guide">?</button>
-                </div>
-
-                <div id="help-guide" class="help-drawer">
-                    <strong>💡 VAII Feature Cheat-Sheet:</strong>
-                    <ul>
-                        <li><strong>☀️ Weather:</strong> Type any global location name to grab live temperatures & wind coordinates immediately.</li>
-                        <li><strong>📖 Word Definition:</strong> Type a single word into <strong>Info</strong> to look up explicit definitions from Wiktionary.</li>
-                        <li><strong>🧠 Topic Explainer:</strong> Type a phrase or sentence into <strong>Info</strong> to fetch non-truncated summary articles from Wikipedia.</li>
-                        <li><strong>🌐 Direct Link Go:</strong> Paste a real URL (e.g., <code>google.com</code>) to jump to that site instantly.</li>
-                        <li><strong>🚀 App Launch Command:</strong> Type <code>open [app]</code> (e.g., <code>open gemini</code> or <code>open deepmind</code>). It handles custom extensions and rolls a dice randomly for split subdomain variations!</li>
-                    </ul>
-                </div>
-
-                <div class="search-container">
-                    <input type="text" id="city-input" placeholder="Search city, topic, or country..." list="city-suggestions" autocomplete="off">
+            <!-- LOGIN / SIGNUP VIEW CONTAINER -->
+            <section id="auth-container" class="widget">
+                <h3 id="auth-title">🔒 Account Sign In</h3>
+                <div class="search-container" style="margin-top: 15px;">
+                    <div id="auth-error" style="color: #ff4d4d; font-size: 0.85rem; display: none; margin-bottom: 5px;"></div>
+                    <input type="email" id="auth-email" placeholder="Email Address">
+                    <input type="password" id="auth-password" placeholder="Password">
+                    
                     <div class="button-group">
-                        <button id="weather-btn">Weather</button>
-                        <button id="news-btn">Info</button>
+                        <button id="auth-submit-btn" style="background: #007bff;">Log In</button>
+                    </div>
+
+                    <div style="text-align: center; color: #666; font-size: 0.85rem; margin: 5px 0;">— OR —</div>
+                    
+                    <button id="google-signin-btn" class="google-btn">
+                        <img src="https://fonts.gstatic.com/s/i/productlogos/googleg/v6/web-24dp/logo_googleg_color_24dp.png" width="16" alt="Google Logo"> 
+                        Sign in with Google
+                    </button>
+
+                    <div style="text-align: center;">
+                        <span id="auth-toggle" class="auth-toggle-text">Need an account? Register instead</span>
                     </div>
                 </div>
-                <datalist id="city-suggestions"></datalist>
-                <div id="weather-output" class="output-box">Type above to fetch weather or latest info...</div>
             </section>
+
+            <!-- MAIN ASSISTANT DASHBOARD VIEW PANEL -->
+            <div id="main-app">
+                <div id="routing-warning" class="global-warning-msg">
+                    ⚠️ Website routing is not 100% accurate because the AI cannot scrape live websites.
+                </div>
+
+                <section class="widget" id="search-widget">
+                    <div class="widget-header">
+                        <h3>🔍 Smart Assistant Hub</h3>
+                        <button id="help-toggle" class="help-btn">?</button>
+                    </div>
+
+                    <div id="help-guide" class="help-drawer">
+                        <strong>💡 VAII Feature Cheat-Sheet:</strong>
+                        <ul>
+                            <li><strong>☀️ Weather:</strong> Type any global location name to grab live temperatures & wind coordinates immediately.</li>
+                            <li><strong>📖 Word Definition:</strong> Type a single word into <strong>Info</strong> to look up explicit definitions from Wiktionary.</li>
+                            <li><strong>🧠 Topic Explainer:</strong> Type a phrase or sentence into <strong>Info</strong> to fetch non-truncated summary articles from Wikipedia.</li>
+                            <li><strong>🌐 Direct Link Go:</strong> Paste a real URL (e.g., <code>google.com</code>) to jump to that site instantly.</li>
+                            <li><strong>🚀 App Launch Command:</strong> Type <code>open [app]</code> (e.g., <code>open gemini</code> or <code>open deepmind</code>). It handles custom extensions and rolls a dice randomly for split subdomain variations!</li>
+                        </ul>
+                    </div>
+
+                    <div class="search-container">
+                        <input type="text" id="city-input" placeholder="Search city, topic, or country..." list="city-suggestions" autocomplete="off">
+                        <div class="button-group">
+                            <button id="weather-btn">Weather</button>
+                            <button id="news-btn">Info</button>
+                        </div>
+                    </div>
+                    <datalist id="city-suggestions"></datalist>
+                    <div id="weather-output" class="output-box">Type above to fetch weather or latest info...</div>
+                    
+                    <div style="text-align: right;">
+                        <button id="logout-action-btn" class="logout-btn">Log Out</button>
+                    </div>
+                </section>
+            </div>
         </main>
     </div>
 
-    <script src="script.js"></script>
+    <!-- Ensure script is defined as module type to handle split file context exports properly -->
+    <script type="module" src="script.js"></script>
 </body>
 </html>
