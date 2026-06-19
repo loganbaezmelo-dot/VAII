@@ -3,28 +3,23 @@ const datalist = document.getElementById('city-suggestions');
 const weatherBtn = document.getElementById('weather-btn');
 const newsBtn = document.getElementById('news-btn');
 const output = document.getElementById('weather-output');
+const routingWarning = document.getElementById('routing-warning');
 
 let debounceTimer;
 
-// Handle live autocomplete suggestions and instant warnings while typing
+// Handle live autocomplete suggestions and display warning on top of the box
 cityInput.addEventListener('input', function() {
-    const query = cityInput.value; // Keep original casing and spaces for checking
+    const query = cityInput.value; 
     const trimmedQuery = query.trim();
     
-    // INSTANT WARNING LOOKUP: Triggers the moment "Open " is typed
+    // Check if user is trying to execute a link command
     if (query.toLowerCase().startsWith('open ')) {
-        datalist.innerHTML = ""; // Kill suggestions
-        
-        // Only show the warning if the output box isn't already showing a launch link
-        if (!output.innerHTML.includes('Resolved Address:')) {
-            output.innerHTML = `
-                <div style="color: #ffa500; font-size: 0.78rem; font-style: italic; margin-bottom: 12px; line-height: 1.3; text-align: left;">⚠️ Website routing is not 100% accurate because the AI cannot scrape live websites.</div>
-                <div style="color: #888; font-size: 0.85rem; font-style: italic; line-height: 1.4; text-align: left;">
-                    Keep typing the app name...
-                </div>
-            `;
-        }
+        datalist.innerHTML = ""; // Kill search suggestions
+        routingWarning.style.display = "block"; // Make warning appear ON TOP of the widget box
         return;
+    } else {
+        // Hide the top warning if they backspace or clear out the command
+        routingWarning.style.display = "none";
     }
 
     if (trimmedQuery.length < 3) {
@@ -32,7 +27,6 @@ cityInput.addEventListener('input', function() {
         return;
     }
 
-    // Skip geocoding lookups completely if the user is typing an internet link
     if (trimmedQuery.startsWith('http://') || trimmedQuery.startsWith('https://') || /\.[a-z]{2,6}/i.test(trimmedQuery)) {
         datalist.innerHTML = "";
         return;
@@ -71,6 +65,7 @@ cityInput.addEventListener('input', function() {
 
 // WEATHER BUTTON ACTION
 weatherBtn.addEventListener('click', function() {
+    routingWarning.style.display = "none"; // Hide command warning
     const fullInput = cityInput.value.trim();
     if (!fullInput) {
         output.innerText = "Please type a location first.";
@@ -136,6 +131,7 @@ newsBtn.addEventListener('click', function() {
 
     // 1. SMART COMMAND DETECTOR WITH RANDOM SUBDOMAIN ROUTING ("Open ...")
     if (query.toLowerCase().startsWith("open ")) {
+        routingWarning.style.display = "block"; // Keep top header alert locked visible
         let appName = query.substring(5).trim().toLowerCase().replace(/['"]+/g, '');
         
         if (!appName) {
@@ -195,6 +191,7 @@ newsBtn.addEventListener('click', function() {
     const hasProtocol = query.startsWith('http://') || query.startsWith('https://');
 
     if (hasProtocol || isUrlPattern) {
+        routingWarning.style.display = "block"; // Show top layout alert for manual link passthroughs too
         let targetUrl = query;
         if (!hasProtocol) {
             targetUrl = 'https://' + query;
@@ -202,6 +199,9 @@ newsBtn.addEventListener('click', function() {
         launchTargetUrl(targetUrl);
         return;
     }
+
+    // If it's a normal lookup, make sure to hide the top alert message box
+    routingWarning.style.display = "none";
 
     // 3. DICTIONARY CHECKER FOR SINGLE WORDS
     const isSingleWord = !query.includes(" ");
@@ -257,8 +257,8 @@ newsBtn.addEventListener('click', function() {
 function launchTargetUrl(url) {
     const isDiceRoll = output.innerHTML.includes("🎲");
     
+    // Warning text is completely gone from this layout because it is locked on top of the container box
     let contentHTML = `
-        <div style="color: #ffa500; font-size: 0.78rem; font-style: italic; margin-bottom: 12px; line-height: 1.3; text-align: left;">⚠️ Website routing is not 100% accurate because the AI cannot scrape live websites.</div>
         <div class="news-header-msg" style="color: #888; font-style: italic; margin-bottom: 4px; font-size: 0.9rem; line-height: 1.4;">Navigating to external web link...</div>
         <div style="background: #1a1a1a; padding: 14px; border-radius: 8px; border-left: 3px solid #007bff; text-align: left; margin-bottom: 15px;">
             🔗 <strong>Resolved Address:</strong> <span style="color: #4da3ff; word-break: break-all;">${url}</span>
