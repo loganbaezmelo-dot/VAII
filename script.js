@@ -15,8 +15,8 @@ cityInput.addEventListener('input', function() {
         return;
     }
 
-    // Skip geocoding lookups completely if the user is typing an internet link
-    if (query.startsWith('http://') || query.startsWith('https://') || /\.[a-z]{2,6}/i.test(query)) {
+    // Skip geocoding lookups completely if the user is typing an internet link or an open command
+    if (query.startsWith('http://') || query.startsWith('https://') || query.toLowerCase().startsWith('open ') || /\.[a-z]{2,6}/i.test(query)) {
         datalist.innerHTML = "";
         return;
     }
@@ -109,7 +109,7 @@ function getWeatherData(lat, lon, displayName) {
         });
 }
 
-// INFO BUTTON ACTION: HYBRID DICTIONARY, ENCYCLOPEDIA & LINK PASSTHROUGH ROUTER
+// INFO BUTTON ACTION: HYBRID DICTIONARY, ENCYCLOPEDIA, LINK & COMMAND ROUTER
 newsBtn.addEventListener('click', function() {
     let query = cityInput.value.trim();
     if (!query) {
@@ -117,35 +117,73 @@ newsBtn.addEventListener('click', function() {
         return;
     }
 
-    // 1. SMART LINK CHECKER
-    // Regular expression looks for standard domain endings like .com, .net, .org, .app etc.
+    // 1. SMART COMMAND DETECTOR ("Open ...")
+    if (query.toLowerCase().startsWith("open ")) {
+        // Strip out the "open " keyword to isolate the app name (e.g., "youtube")
+        let appName = query.substring(5).trim().toLowerCase().replace(/['"]+/g, '');
+        
+        if (!appName) {
+            output.innerText = "Please specify what you want to open.";
+            return;
+        }
+
+        output.innerText = `Resolving domain variants for "${appName}"...`;
+
+        // Hardcoded primary overrides for unique domains (like minecraft using .net)
+        const domainOverrides = {
+            "minecraft": "https://minecraft.net",
+            "wikipedia": "https://wikipedia.org"
+        };
+
+        if (domainOverrides[appName]) {
+            launchTargetUrl(domainOverrides[appName]);
+            return;
+        }
+
+        // Mutation chain testing for standard web platforms (.com, .org, .net, .co)
+        const domainExtensions = ["com", "org", "net", "co"];
+        let testUrls = domainExtensions.map(ext => `https://${appName}.${ext}`);
+
+        // Cycle through variants to find which endpoint responds cleanly
+        // Using a sequential head test fallback sequence
+        let tryFetchVariant = (index) => {
+            if (index >= testUrls.length) {
+                // If all domain testing chains fail, fall back to standard .com format guess
+                launchTargetUrl(`https://${appName}.com`);
+                return;
+            }
+
+            let targetTest = testUrls[index];
+            
+            // Using no-cors mode to bypass web safety rules during domain mapping tests
+            fetch(targetTest, { mode: 'no-cors' })
+                .then(() => {
+                    launchTargetUrl(targetTest);
+                })
+                .catch(() => {
+                    // Fail loop triggers next web extension test check
+                    tryFetchVariant(index + 1);
+                });
+        };
+
+        tryFetchVariant(0);
+        return;
+    }
+
+    // 2. LINK PASSTHROUGH ROUTER
     const isUrlPattern = /\.[a-z]{2,6}/i.test(query);
     const hasProtocol = query.startsWith('http://') || query.startsWith('https://');
 
     if (hasProtocol || isUrlPattern) {
-        // Automatically inject secure https protocol if missing so the browser doesn't break
         let targetUrl = query;
         if (!hasProtocol) {
             targetUrl = 'https://' + query;
         }
-
-        output.innerHTML = `
-            <div class="news-header-msg" style="color: #888; font-style: italic; margin-bottom: 12px; font-size: 0.9rem; line-height: 1.4;">Navigating to external web link...</div>
-            <div style="background: #1a1a1a; padding: 14px; border-radius: 8px; border-left: 3px solid #007bff; text-align: left; margin-bottom: 15px;">
-                🔗 <strong>Link Detected:</strong> <span style="color: #4da3ff; word-break: break-all;">${targetUrl}</span>
-            </div>
-            <a href="${targetUrl}" target="_blank" style="display: flex; align-items: center; justify-content: space-between; background: #007bff; border-radius: 6px; padding: 10px 14px; color: white; text-decoration: none; font-weight: bold; font-size: 0.95rem;">
-                <span>Launch Link</span>
-                <span>Open Site ↗</span>
-            </a>
-        `;
-        
-        // Instant automated pop-out launch action
-        window.open(targetUrl, '_blank');
+        launchTargetUrl(targetUrl);
         return;
     }
 
-    // 2. DICTIONARY CHECKER FOR SINGLE WORDS
+    // 3. DICTIONARY CHECKER FOR SINGLE WORDS
     const isSingleWord = !query.includes(" ");
 
     if (isSingleWord) {
@@ -194,6 +232,21 @@ newsBtn.addEventListener('click', function() {
         runWikipediaEngine(query);
     }
 });
+
+// SHARED UTILITY TO RENDER LAUNCH INTERFACE AND OPEN LINK
+function launchTargetUrl(url) {
+    output.innerHTML = `
+        <div class="news-header-msg" style="color: #888; font-style: italic; margin-bottom: 12px; font-size: 0.9rem; line-height: 1.4;">Navigating to external web link...</div>
+        <div style="background: #1a1a1a; padding: 14px; border-radius: 8px; border-left: 3px solid #007bff; text-align: left; margin-bottom: 15px;">
+            🔗 <strong>Resolved Address:</strong> <span style="color: #4da3ff; word-break: break-all;">${url}</span>
+        </div>
+        <a href="${url}" target="_blank" style="display: flex; align-items: center; justify-content: space-between; background: #007bff; border-radius: 6px; padding: 10px 14px; color: white; text-decoration: none; font-weight: bold; font-size: 0.95rem;">
+            <span>Launch Link</span>
+            <span>Open Site ↗</span>
+        </a>
+    `;
+    window.open(url, '_blank');
+}
 
 // CORE WIKIPEDIA SNIPPET & SUMMARY LOGIC CONTAINER
 function runWikipediaEngine(query) {
