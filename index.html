@@ -105,22 +105,48 @@
             flex-direction: column;
             gap: 12px;
         }
-        input {
+        .input-row {
+            display: flex;
+            gap: 8px;
             width: 100%;
+        }
+        input {
+            flex: 1;
             padding: 12px;
             border-radius: 8px;
-            border: 1px solid #333;
+            border: 2px solid #333;
             background: #2a2a2a;
             color: white;
             font-size: 1rem;
             box-sizing: border-box;
             transition: border-color 0.2s ease;
         }
+        .enter-btn {
+            background: #ffffff;
+            color: #121212;
+            width: 46px;
+            height: 46px;
+            border-radius: 8px;
+            border: none;
+            font-size: 1.2rem;
+            font-weight: bold;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: background 0.2s ease, transform 0.1s ease;
+        }
+        .enter-btn:hover {
+            background: #e0e0e0;
+        }
+        .enter-btn:active {
+            transform: scale(0.95);
+        }
         .button-group {
             display: flex;
             gap: 10px;
         }
-        button {
+        button.mode-select {
             flex: 1;
             padding: 12px;
             border-radius: 8px;
@@ -131,15 +157,17 @@
             cursor: pointer;
             text-align: center;
             transition: transform 0.1s ease, opacity 0.2s ease;
+            opacity: 0.4; /* Dimmed by default to make selection clear */
         }
-        button:active {
-            transform: scale(0.97);
+        button.mode-select.active {
+            opacity: 1 !important;
+            transform: scale(1.02);
         }
         #weather-btn { background: #007bff; }
         #news-btn { background: #28a745; }
         #draw-btn { background: #e0a800; color: #121212; }
         
-        /* Highlight borders to subtly indicate which mode is armed */
+        /* Interactive dynamic border accent structures */
         input.mode-weather { border-color: #007bff !important; }
         input.mode-info { border-color: #28a745 !important; }
         input.mode-draw { border-color: #e0a800 !important; }
@@ -270,25 +298,28 @@
                     <div id="help-guide" class="help-drawer">
                         <strong>💡 VAII Feature Cheat-Sheet:</strong>
                         <ul>
-                            <li><strong>☀️ Weather:</strong> Type any global location name to grab live temperatures & wind coordinates immediately.</li>
-                            <li><strong>📖 Word Definition:</strong> Type a single word into <strong>Info</strong> to look up explicit definitions from Wiktionary.</li>
-                            <li><strong>🧠 Topic Explainer:</strong> Type a phrase or sentence into <strong>Info</strong> to fetch non-truncated summary articles from Wikipedia.</li>
-                            <li><strong>🎨 AI Art Generator:</strong> Type a description and tap <strong>Draw</strong> (or preface inputs with <code>draw </code> inside Info) to render imagery.</li>
-                            <li><strong>🌐 Direct Link Go:</strong> Paste a real URL (e.g., <code>google.com</code>) to jump to that site instantly.</li>
-                            <li><strong>🚀 App Launch Command:</strong> Type <code>open [app]</code> (e.g., <code>open gemini</code> or <code>open deepmind</code>). It handles custom extensions and rolls a dice randomly for split subdomain variations!</li>
+                            <li><strong>☀️ Weather:</strong> Arm Weather, type any location name, and hit Enter for live climate summaries.</li>
+                            <li><strong>📖 Word Definition:</strong> Arm Info and type a single word to lookup explicit definitions from Wiktionary.</li>
+                            <li><strong>🧠 Topic Explainer:</strong> Arm Info and type a full phrase to fetch summary articles from Wikipedia.</li>
+                            <li><strong>🎨 AI Art Generator:</strong> Arm Draw and describe an image concept to spin up automated creations instantly.</li>
+                            <li><strong>🌐 Direct Link Go:</strong> Paste a real URL (e.g., <code>google.com</code>) under Info to jump to that site instantly.</li>
+                            <li><strong>🚀 App Launch Command:</strong> Type <code>open [app]</code> under Info. It handles routing and subdomain randomizers!</li>
                         </ul>
                     </div>
 
                     <div class="search-container">
-                        <input type="text" id="city-input" placeholder="Select a service below to begin typing..." list="city-suggestions" autocomplete="off">
                         <div class="button-group">
-                            <button id="weather-btn">Weather</button>
-                            <button id="news-btn">Info</button>
-                            <button id="draw-btn">Draw</button>
+                            <button id="weather-btn" class="mode-select">Weather</button>
+                            <button id="news-btn" class="mode-select active">Info</button>
+                            <button id="draw-btn" class="mode-select">Draw</button>
+                        </div>
+                        <div class="input-row">
+                            <input type="text" id="city-input" placeholder="Search topic, open apps, or enter URL..." list="city-suggestions" autocomplete="off">
+                            <button id="execute-action-btn" class="enter-btn">➔</button>
                         </div>
                     </div>
                     <datalist id="city-suggestions"></datalist>
-                    <div id="weather-output" class="output-box">Type above to fetch weather or latest info...</div>
+                    <div id="weather-output" class="output-box">Select an interface view above...</div>
                     
                     <div style="text-align: right;">
                         <button id="logout-action-btn" class="logout-btn">Log Out</button>
