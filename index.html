@@ -39,28 +39,39 @@
         .widget h3 {
             color: #ffffff;
             margin-top: 0;
+            margin-bottom: 15px;
         }
-        .input-group {
+        /* Stack layout: Column wrapper */
+        .search-container {
             display: flex;
-            gap: 8px;
+            flex-direction: column;
+            gap: 12px;
         }
+        /* Text input gets 100% full width */
         input {
-            flex: 1;
-            padding: 10px;
+            width: 100%;
+            padding: 12px;
             border-radius: 8px;
             border: 1px solid #333;
             background: #2a2a2a;
             color: white;
-            min-width: 0; /* Prevents input from busting the flex layout */
+            font-size: 1rem;
+            box-sizing: border-box;
+        }
+        /* Button row sits underneath */
+        .button-group {
+            display: flex;
+            gap: 10px;
         }
         button {
-            padding: 10px 12px;
+            flex: 1; /* Makes both buttons take equal half-width */
+            padding: 12px;
             border-radius: 8px;
             border: none;
             color: white;
             font-weight: bold;
+            font-size: 1rem;
             cursor: pointer;
-            white-space: nowrap;
         }
         #weather-btn {
             background: #007bff;
@@ -109,13 +120,17 @@
         </header>
 
         <main>
-            <!-- Merged Widget Box -->
             <section class="widget" id="search-widget">
                 <h3>🔍 Smart Assistant Hub</h3>
-                <div class="input-group">
+                <div class="search-container">
+                    <!-- Top full-width bar -->
                     <input type="text" id="city-input" placeholder="Search city, topic, or country..." list="city-suggestions" autocomplete="off">
-                    <button id="weather-btn">Weather</button>
-                    <button id="news-btn">News</button>
+                    
+                    <!-- Bottom action row -->
+                    <div class="button-group">
+                        <button id="weather-btn">Weather</button>
+                        <button id="news-btn">News</button>
+                    </div>
                 </div>
                 <datalist id="city-suggestions"></datalist>
                 <div id="weather-output" class="output-box">Type above to fetch weather or latest news...</div>
