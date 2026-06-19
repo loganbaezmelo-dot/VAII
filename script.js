@@ -103,7 +103,7 @@ function getWeatherData(lat, lon, displayName) {
         });
 }
 
-// INFO BUTTON ACTION
+// INFO BUTTON ACTION: HYBRID DICTIONARY & ENCYCLOPEDIA ROUTER
 newsBtn.addEventListener('click', function() {
     const query = cityInput.value.trim();
     if (!query) {
@@ -111,6 +111,63 @@ newsBtn.addEventListener('click', function() {
         return;
     }
 
+    // Check if the query is a single word (no spaces inside)
+    const isSingleWord = !query.includes(" ");
+
+    if (isSingleWord) {
+        output.innerText = `Looking up definition for "${query}"...`;
+        
+        // Fetch pristine dictionary data from open Wiktionary engine
+        fetch(`https://en.wiktionary.org/api/rest_v1/page/definition/${encodeURIComponent(query.toLowerCase())}`)
+            .then(res => {
+                if (!res.ok) throw new Error("Word not found");
+                return res.json();
+            })
+            .then(dictData => {
+                // Find first valid part of speech text
+                const key = Object.keys(dictData)[0];
+                if (!dictData[key] || dictData[key].length === 0) {
+                    throw new Error("No definition layout");
+                }
+                
+                const definitionObj = dictData[key][0];
+                const partOfSpeech = definitionObj.partOfSpeech;
+                // Strip raw tags out of dictionary snippet lines
+                let rawDefinition = definitionObj.definitions[0].definition.replace(/<[^>]*>/g, '').trim();
+                
+                let infoHTML = `<div class="news-header-msg" style="color: #888; font-style: italic; margin-bottom: 12px; font-size: 0.9rem; line-height: 1.4;">I have provided the most relevant text of each information source related to "${query}".</div>`;
+                
+                infoHTML += `
+                    <div class="aggregated-text" style="font-size: 0.95rem; color: #e0e0e0; line-height: 1.6; margin-bottom: 20px; background: #1a1a1a; padding: 14px; border-radius: 8px; border-left: 3px solid #28a745; text-align: left;">
+                        <strong>${query.charAt(0).toUpperCase() + query.slice(1)}</strong> (${partOfSpeech.toLowerCase()}): ${rawDefinition}
+                    </div>
+                `;
+
+                infoHTML += `
+                    <div class="source-box" style="border-top: 1px solid #333; padding-top: 12px;">
+                        <span style="display: block; font-size: 0.75rem; color: #777; font-weight: bold; text-transform: uppercase; margin-bottom: 8px; letter-spacing: 0.5px;">Sources Index</span>
+                        <div class="source-list" style="display: flex; flex-direction: column;">
+                            <a href="https://en.wiktionary.org/wiki/${encodeURIComponent(query)}" target="_blank" style="display: flex; align-items: center; justify-content: space-between; background: #2a2a2a; border: 1px solid #3d3d3d; border-radius: 6px; padding: 6px 10px; color: #4da3ff; text-decoration: none; font-size: 0.82rem; font-weight: bold;">
+                                <span style="color: #aaa; font-weight: normal;">📖 Wiktionary</span>
+                                <span>Open Source →</span>
+                            </a>
+                        </div>
+                    </div>
+                `;
+                output.innerHTML = infoHTML;
+            })
+            .catch(() => {
+                // If Wiktionary lookup falls through, route into Wikipedia search index as safety net
+                runWikipediaEngine(query);
+            });
+    } else {
+        // Multi-word phrase or complete sentence goes straight to Wikipedia
+        runWikipediaEngine(query);
+    }
+});
+
+// CORE WIKIPEDIA SNIPPET & SUMMARY LOGIC CONTAINER
+function runWikipediaEngine(query) {
     output.innerText = `Searching information for "${query}"...`;
 
     fetch(`https://en.wikipedia.org/w/api.php?action=query&list=search&srsearch=${encodeURIComponent(query)}&utf8=&format=json&origin=*`)
@@ -132,28 +189,22 @@ newsBtn.addEventListener('click', function() {
                     let finalTitle = topPageTitle;
                     let articleUrl = summaryData.content_urls?.desktop?.page || `https://en.wikipedia.org/wiki/${encodeURIComponent(topPageTitle)}`;
 
-                    // Fallback to snippets if it hits a broad disambiguation directory page
                     if (summaryData.type === "disambiguation" || infoText.toLowerCase().includes("may refer to")) {
                         let snippets = [];
-                        showTitlePrefix = false; // Completely hides the redundant title text inside the box
+                        showTitlePrefix = false;
                         
                         results.forEach((item) => {
                             let cleanSnippet = item.snippet.replace(/<[^>]*>/g, '').trim();
-                            
-                            // FILTER EXTRACTION: Purge Wiktionary advertisement phrases or generic structural directory code
                             if (
                                 cleanSnippet.toLowerCase().includes("wiktionary") || 
                                 cleanSnippet.toLowerCase().includes("refer to:") ||
                                 cleanSnippet === ""
                             ) {
-                                return; // Skip item completely
+                                return;
                             }
-
                             if (cleanSnippet && !cleanSnippet.endsWith('.')) {
                                 cleanSnippet += "...";
                             }
-                            
-                            // Keep max 3 high quality snippet strings
                             if (snippets.length < 3) {
                                 snippets.push(cleanSnippet);
                             }
@@ -169,8 +220,6 @@ newsBtn.addEventListener('click', function() {
                     }
 
                     let newsHTML = `<div class="news-header-msg" style="color: #888; font-style: italic; margin-bottom: 12px; font-size: 0.9rem; line-height: 1.4;">I have provided the most relevant text of each information source related to "${query}".</div>`;
-                    
-                    // Conditionally appends title header string ONLY if it's a direct definition page
                     let inlineContent = showTitlePrefix ? `<strong>${finalTitle}:</strong> ${infoText}` : infoText;
 
                     newsHTML += `
@@ -198,4 +247,4 @@ newsBtn.addEventListener('click', function() {
             output.innerText = "Error pulling content summary.";
             console.error(err);
         });
-});
+}
