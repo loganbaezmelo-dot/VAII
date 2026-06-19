@@ -103,7 +103,7 @@ function getWeatherData(lat, lon, displayName) {
         });
 }
 
-// NEWS BUTTON ACTION: TEXT-FIRST READOUT & SOURCE MATRIX
+// NEWS BUTTON ACTION: RICH SNIPPET PARAGRAPH READOUT
 newsBtn.addEventListener('click', function() {
     const query = cityInput.value.trim();
     if (!query) {
@@ -111,75 +111,72 @@ newsBtn.addEventListener('click', function() {
         return;
     }
 
-    output.innerText = `Searching news for "${query}"...`;
+    output.innerText = `Searching information for "${query}"...`;
 
-    const feedUrl = `https://news.google.com/rss/search?q=${encodeURIComponent(query)}&hl=en-US&gl=US&ceid=US:en`;
-    const apiUrl = `https://api.rss2json.com/v1/api.json?rss_url=${encodeURIComponent(feedUrl)}`;
+    const apiUrl = `https://api.duckduckgo.com/?q=${encodeURIComponent(query)}&format=json&no_html=1&skip_disambig=1`;
 
     fetch(apiUrl)
         .then(res => res.json())
         .then(data => {
-            if (!data.items || data.items.length === 0) {
-                output.innerText = `No recent news articles found for "${query}".`;
+            let infoText = "";
+            let sources = [];
+
+            if (data.AbstractText) {
+                infoText = data.AbstractText;
+                if (data.AbstractSource) {
+                    sources.push({ name: data.AbstractSource, link: data.AbstractURL });
+                }
+            } 
+            
+            if (!infoText && data.RelatedTopics && data.RelatedTopics.length > 0) {
+                let snippets = [];
+                data.RelatedTopics.slice(0, 3).forEach((topic, index) => {
+                    if (topic.Text && !topic.Name) {
+                        snippets.push(`${topic.Text.trim()} [${index + 1}]`);
+                        sources.push({ name: `Source [${index + 1}]`, link: topic.FirstURL });
+                    }
+                });
+                infoText = snippets.join(" ");
+            }
+
+            if (!infoText) {
+                output.innerText = `Could not extract deep summary text for "${query}". Try searching a city or a broader topic!`;
                 return;
             }
 
-            // 1. Initial Prompt Header
             let newsHTML = `<div class="news-header-msg" style="color: #888; font-style: italic; margin-bottom: 12px; font-size: 0.9rem; line-height: 1.4;">I have provided the most relevant text of each news article related to "${query}".</div>`;
             
-            newsHTML += `<div class="aggregated-text" style="font-size: 0.95rem; color: #e0e0e0; line-height: 1.5; margin-bottom: 20px; background: #1a1a1a; padding: 12px; border-radius: 8px; border-left: 3px solid #28a745;">`;
-            
-            let sourceBadgesHTML = "";
-
-            data.items.slice(0, 4).forEach((item, index) => {
-                let plainDescription = item.description.replace(/<[^>]*>/g, '').trim();
-                let cleanTitle = item.title;
-                let sourceName = "Source";
-
-                if (cleanTitle.includes(' - ')) {
-                    const segments = cleanTitle.split(' - ');
-                    sourceName = segments.pop().trim();
-                    cleanTitle = segments.join(' - ').trim();
-                }
-
-                if (plainDescription.endsWith(sourceName)) {
-                    plainDescription = plainDescription.substring(0, plainDescription.lastIndexOf(sourceName)).trim();
-                }
-
-                // If description is missing or just duplicates the title, fall back to title text
-                let contentText = plainDescription || cleanTitle;
-                if (contentText.length > 150) {
-                    contentText = contentText.substring(0, 150) + "...";
-                }
-
-                // Append the raw text content sequentially into a single readable flow
-                newsHTML += `<p style="margin: 0 0 10px 0;">• ${contentText} <strong>[${index + 1}]</strong></p>`;
-
-                // Build a tidy mini source list button array for the bottom container
-                sourceBadgesHTML += `
-                    <a href="${item.link}" target="_blank" style="display: flex; align-items: center; justify-content: space-between; background: #2a2a2a; border: 1px solid #3d3d3d; border-radius: 6px; padding: 6px 10px; color: #4da3ff; text-decoration: none; font-size: 0.82rem; font-weight: bold; margin-bottom: 6px;">
-                        <span style="color: #aaa; font-weight: normal;">[${index + 1}] ${sourceName}</span>
-                        <span>Open →</span>
-                    </a>
-                `;
-            });
-
-            newsHTML += `</div>`; // Close text block
-
-            // 2. Small "Search Engine Box / Sources Index" container at the bottom
             newsHTML += `
-                <div class="source-box" style="border-top: 1px solid #333; padding-top: 12px;">
-                    <span style="display: block; font-size: 0.75rem; color: #777; font-weight: bold; text-transform: uppercase; margin-bottom: 8px; letter-spacing: 0.5px;">Sources Index</span>
-                    <div class="source-list" style="display: flex; flex-direction: column;">
-                        ${sourceBadgesHTML}
-                    </div>
+                <div class="aggregated-text" style="font-size: 0.95rem; color: #e0e0e0; line-height: 1.6; margin-bottom: 20px; background: #1a1a1a; padding: 14px; border-radius: 8px; border-left: 3px solid #28a745; text-align: left;">
+                    ${infoText}
                 </div>
             `;
+
+            if (sources.length > 0) {
+                let sourceBadgesHTML = "";
+                sources.forEach(src => {
+                    sourceBadgesHTML += `
+                        <a href="${src.link}" target="_blank" style="display: flex; align-items: center; justify-content: space-between; background: #2a2a2a; border: 1px solid #3d3d3d; border-radius: 6px; padding: 6px 10px; color: #4da3ff; text-decoration: none; font-size: 0.82rem; font-weight: bold; margin-bottom: 6px;">
+                            <span style="color: #aaa; font-weight: normal;">📰 ${src.name}</span>
+                            <span>Open Source →</span>
+                        </a>
+                    `;
+                });
+
+                newsHTML += `
+                    <div class="source-box" style="border-top: 1px solid #333; padding-top: 12px;">
+                        <span style="display: block; font-size: 0.75rem; color: #777; font-weight: bold; text-transform: uppercase; margin-bottom: 8px; letter-spacing: 0.5px;">Sources Index</span>
+                        <div class="source-list" style="display: flex; flex-direction: column;">
+                            ${sourceBadgesHTML}
+                        </div>
+                    </div>
+                `;
+            }
 
             output.innerHTML = newsHTML;
         })
         .catch(err => {
-            output.innerText = "Error loading news feed.";
+            output.innerText = "Error pulling content summary.";
             console.error(err);
         });
 });
