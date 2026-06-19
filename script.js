@@ -103,7 +103,7 @@ function getWeatherData(lat, lon, displayName) {
         });
 }
 
-// NEWS BUTTON ACTION
+// NEWS BUTTON ACTION WITH CLEAN TEXT SUMMARY EXTRACTION
 newsBtn.addEventListener('click', function() {
     const query = cityInput.value.trim();
     if (!query) {
@@ -113,7 +113,6 @@ newsBtn.addEventListener('click', function() {
 
     output.innerText = `Searching news for "${query}"...`;
 
-    // Uses a completely free, CORS-safe Google News RSS converter to fetch global articles
     const feedUrl = `https://news.google.com/rss/search?q=${encodeURIComponent(query)}&hl=en-US&gl=US&ceid=US:en`;
     const apiUrl = `https://api.rss2json.com/v1/api.json?rss_url=${encodeURIComponent(feedUrl)}`;
 
@@ -125,13 +124,23 @@ newsBtn.addEventListener('click', function() {
                 return;
             }
 
-            let newsHTML = `<h3>📰 Latest News: ${query}</h3>`;
-            // Grab the top 4 articles to keep it clean on mobile
+            // Injects the exact text statement you requested right at the header profile
+            let newsHTML = `<div class="news-header-msg">I have provided the most relevant text of each news article related to "${query}".</div>`;
+
             data.items.slice(0, 4).forEach(item => {
+                // Stripping out raw HTML formatting inside the RSS descriptive string safely
+                let plainDescription = item.description.replace(/<[^>]*>/g, '').trim();
+                
+                // Truncate fallback if the summary includes long repetitive feed headers
+                if (plainDescription.length > 180) {
+                    plainDescription = plainDescription.substring(0, 180) + "...";
+                }
+
                 newsHTML += `
                     <div class="news-item">
-                        <a class="news-title" href="${item.link}" target="_blank">${item.title}</a>
-                        <div class="news-desc">📅 ${item.pubDate.split(' ')[0]}</div>
+                        <span class="news-title">${item.title}</span>
+                        <div class="news-desc">${plainDescription || 'No preview summary text available for this publication.'}</div>
+                        <a class="news-link" href="${item.link}" target="_blank">Read Full Article →</a>
                     </div>
                 `;
             });
