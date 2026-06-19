@@ -132,7 +132,7 @@
         }
         #weather-btn { background: #007bff; }
         #news-btn { background: #28a745; }
-        #draw-btn { background: #e0a800; color: #121212; } /* Vibrant amber/gold to stand out cleanly */
+        #draw-btn { background: #e0a800; color: #121212; }
         
         .output-box {
             margin-top: 15px;
@@ -180,6 +180,32 @@
             font-weight: bold;
             border: none;
             color: white;
+        }
+
+        /* Loading Spinner Infrastructure */
+        .loader-spinner {
+            display: inline-block;
+            width: 18px;
+            height: 18px;
+            border: 3px solid rgba(255, 255, 255, 0.15);
+            border-radius: 50%;
+            border-top-color: #e0a800;
+            animation: spin 0.8s linear infinite;
+            margin-right: 12px;
+            vertical-align: middle;
+        }
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+        .generation-status {
+            display: flex;
+            align-items: center;
+            background: #1a1a1a;
+            padding: 12px;
+            border-radius: 6px;
+            border-left: 3px solid #e0a800;
+            margin-top: 10px;
+            text-align: left;
         }
     </style>
 </head>
@@ -237,7 +263,7 @@
                             <li><strong>☀️ Weather:</strong> Type any global location name to grab live temperatures & wind coordinates immediately.</li>
                             <li><strong>📖 Word Definition:</strong> Type a single word into <strong>Info</strong> to look up explicit definitions from Wiktionary.</li>
                             <li><strong>🧠 Topic Explainer:</strong> Type a phrase or sentence into <strong>Info</strong> to fetch non-truncated summary articles from Wikipedia.</li>
-                            <li><strong>🎨 AI Art Generator:</strong> Type a description and hit <strong>Draw</strong> (or start text with <code>draw </code> inside Info) to render custom art.</li>
+                            <li><strong>🎨 AI Art Generator:</strong> Type a description and tap <strong>Draw</strong> (or preface inputs with <code>draw </code> inside Info) to render imagery.</li>
                             <li><strong>🌐 Direct Link Go:</strong> Paste a real URL (e.g., <code>google.com</code>) to jump to that site instantly.</li>
                             <li><strong>🚀 App Launch Command:</strong> Type <code>open [app]</code> (e.g., <code>open gemini</code> or <code>open deepmind</code>). It handles custom extensions and rolls a dice randomly for split subdomain variations!</li>
                         </ul>
