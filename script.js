@@ -103,7 +103,7 @@ function getWeatherData(lat, lon, displayName) {
         });
 }
 
-// INFO BUTTON ACTION
+// INFO BUTTON ACTION (WIKIPEDIA CLEAN OVERVIEW SUMMARY)
 newsBtn.addEventListener('click', function() {
     const query = cityInput.value.trim();
     if (!query) {
@@ -113,108 +113,47 @@ newsBtn.addEventListener('click', function() {
 
     output.innerText = `Searching information for "${query}"...`;
 
-    const apiUrl = `https://api.duckduckgo.com/?q=${encodeURIComponent(query)}&format=json&no_html=1&skip_disambig=1`;
-
-    fetch(apiUrl)
+    // Step 1: Search Wikipedia for the exact matching article page title
+    fetch(`https://en.wikipedia.org/w/api.php?action=query&list=search&srsearch=${encodeURIComponent(query)}&utf8=&format=json&origin=*`)
         .then(res => res.json())
-        .then(data => {
-            let infoText = "";
-            let sources = [];
-
-            if (data.AbstractText) {
-                infoText = data.AbstractText;
-                if (data.AbstractSource) {
-                    sources.push({ name: data.AbstractSource, link: data.AbstractURL });
-                }
-            } 
-            
-            if (!infoText && data.RelatedTopics && data.RelatedTopics.length > 0) {
-                let snippets = [];
-                data.RelatedTopics.forEach((topic) => {
-                    if (topic.Text && !topic.Name && snippets.length < 3) {
-                        let textBlock = topic.Text.trim();
-                        
-                        // Strip raw metadata bracket numbers
-                        textBlock = textBlock.replace(/\[\d+\]/g, '').trim();
-
-                        // GRAMMAR REPAIR: Injects a proper colon if the API mashed the title and text together
-                        const words = textBlock.split(' ');
-                        if (words.length > 1) {
-                            const firstWord = words[0];
-                            const secondWord = words[1];
-                            if (secondWord && secondWord[0] === secondWord[0].toUpperCase()) {
-                                textBlock = firstWord + ": " + words.slice(1).join(' ');
-                            }
-                        }
-
-                        // Cleanly parse out real, explicitly named publishers
-                        let namedSource = "Web Resource";
-                        if (topic.FirstURL) {
-                            try {
-                                const urlObj = new URL(topic.FirstURL);
-                                let domain = urlObj.hostname.replace('www.', '');
-                                if (domain.includes('wikipedia')) namedSource = "Wikipedia";
-                                else if (domain.includes('britannica')) namedSource = "Britannica";
-                                else namedSource = domain.split('.')[0].charAt(0).toUpperCase() + domain.split('.')[0].slice(1);
-                            } catch (e) {
-                                namedSource = "Source Reference";
-                            }
-                        }
-
-                        snippets.push(textBlock);
-                        sources.push({ name: namedSource, link: topic.FirstURL });
-                    }
-                });
-                
-                // Seamlessly blend the source string segments with an explicit line divider
-                infoText = snippets.join(' <span style="color: #555; font-weight: bold; margin: 0 6px;">|</span> ');
-            }
-
-            if (!infoText) {
-                output.innerText = `Could not extract summary text for "${query}". Try searching a city or a broader topic!`;
+        .then(searchData => {
+            if (!searchData.query.search || searchData.query.search.length === 0) {
+                output.innerText = `Could not extract summary text for "${query}". Try a broader topic!`;
                 return;
             }
 
-            let newsHTML = `<div class="news-header-msg" style="color: #888; font-style: italic; margin-bottom: 12px; font-size: 0.9rem; line-height: 1.4;">I have provided the most relevant text of each information source related to "${query}".</div>`;
-            
-            newsHTML += `
-                <div class="aggregated-text" style="font-size: 0.95rem; color: #e0e0e0; line-height: 1.6; margin-bottom: 20px; background: #1a1a1a; padding: 14px; border-radius: 8px; border-left: 3px solid #28a745; text-align: left;">
-                    ${infoText}
-                </div>
-            `;
+            // Target the best result match
+            const pageTitle = searchData.query.search[0].title;
 
-            if (sources.length > 0) {
-                let sourceBadgesHTML = "";
-                const uniqueSources = [];
-                const seenLinks = new Set();
-                
-                sources.forEach(src => {
-                    if (!seenLinks.has(src.link)) {
-                        seenLinks.add(src.link);
-                        uniqueSources.push(src);
-                    }
-                });
+            // Step 2: Grab the pristine text overview using Wikipedia's REST API
+            return fetch(`https://en.wikipedia.org/api/rest_v1/page/summary/${encodeURIComponent(pageTitle.replace(/ /g, '_'))}`)
+                .then(res => res.json())
+                .then(summaryData => {
+                    let infoText = summaryData.extract || "No clear text overview found.";
+                    let articleUrl = summaryData.content_urls?.desktop?.page || `https://en.wikipedia.org/wiki/${encodeURIComponent(pageTitle)}`;
 
-                uniqueSources.forEach(src => {
-                    sourceBadgesHTML += `
-                        <a href="${src.link}" target="_blank" style="display: flex; align-items: center; justify-content: space-between; background: #2a2a2a; border: 1px solid #3d3d3d; border-radius: 6px; padding: 6px 10px; color: #4da3ff; text-decoration: none; font-size: 0.82rem; font-weight: bold; margin-bottom: 6px;">
-                            <span style="color: #aaa; font-weight: normal;">📰 ${src.name}</span>
-                            <span>Open Source →</span>
-                        </a>
-                    `;
-                });
-
-                newsHTML += `
-                    <div class="source-box" style="border-top: 1px solid #333; padding-top: 12px;">
-                        <span style="display: block; font-size: 0.75rem; color: #777; font-weight: bold; text-transform: uppercase; margin-bottom: 8px; letter-spacing: 0.5px;">Sources Index</span>
-                        <div class="source-list" style="display: flex; flex-direction: column;">
-                            ${sourceBadgesHTML}
+                    let newsHTML = `<div class="news-header-msg" style="color: #888; font-style: italic; margin-bottom: 12px; font-size: 0.9rem; line-height: 1.4;">I have provided the most relevant text of each information source related to "${query}".</div>`;
+                    
+                    newsHTML += `
+                        <div class="aggregated-text" style="font-size: 0.95rem; color: #e0e0e0; line-height: 1.6; margin-bottom: 20px; background: #1a1a1a; padding: 14px; border-radius: 8px; border-left: 3px solid #28a745; text-align: left;">
+                            <strong>${pageTitle}:</strong> ${infoText}
                         </div>
-                    </div>
-                `;
-            }
+                    `;
 
-            output.innerHTML = newsHTML;
+                    newsHTML += `
+                        <div class="source-box" style="border-top: 1px solid #333; padding-top: 12px;">
+                            <span style="display: block; font-size: 0.75rem; color: #777; font-weight: bold; text-transform: uppercase; margin-bottom: 8px; letter-spacing: 0.5px;">Sources Index</span>
+                            <div class="source-list" style="display: flex; flex-direction: column;">
+                                <a href="${articleUrl}" target="_blank" style="display: flex; align-items: center; justify-content: space-between; background: #2a2a2a; border: 1px solid #3d3d3d; border-radius: 6px; padding: 6px 10px; color: #4da3ff; text-decoration: none; font-size: 0.82rem; font-weight: bold;">
+                                    <span style="color: #aaa; font-weight: normal;">📰 Wikipedia</span>
+                                    <span>Open Source →</span>
+                                </a>
+                            </div>
+                        </div>
+                    `;
+
+                    output.innerHTML = newsHTML;
+                });
         })
         .catch(err => {
             output.innerText = "Error pulling content summary.";
