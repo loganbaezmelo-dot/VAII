@@ -1,3 +1,26 @@
+import { 
+    auth, 
+    googleProvider, 
+    signInWithPopup, 
+    signInWithEmailAndPassword, 
+    createUserWithEmailAndPassword, 
+    onAuthStateChanged, 
+    signOut 
+} from "./firebase-config.js";
+
+// AUTH CONTROL NODES
+const authContainer = document.getElementById('auth-container');
+const mainApp = document.getElementById('main-app');
+const authTitle = document.getElementById('auth-title');
+const authEmail = document.getElementById('auth-email');
+const authPassword = document.getElementById('auth-password');
+const authSubmitBtn = document.getElementById('auth-submit-btn');
+const googleSigninBtn = document.getElementById('google-signin-btn');
+const authToggle = document.getElementById('auth-toggle');
+const authError = document.getElementById('auth-error');
+const logoutActionBtn = document.getElementById('logout-action-btn');
+
+// SYSTEM APP WORKSPACE NODES
 const cityInput = document.getElementById('city-input');
 const datalist = document.getElementById('city-suggestions');
 const weatherBtn = document.getElementById('weather-btn');
@@ -7,9 +30,86 @@ const routingWarning = document.getElementById('routing-warning');
 const helpToggle = document.getElementById('help-toggle');
 const helpGuide = document.getElementById('help-guide');
 
+let isLoginMode = true;
 let debounceTimer;
 
-// Dynamic toggle handler for Help system walkthrough
+// ==========================================
+// 1. FIREBASE AUTHENTICATION FLOW MANAGEMENT
+// ==========================================
+
+// Monitor Authentication State changes dynamically
+onAuthStateChanged(auth, (user) => {
+    if (user) {
+        authContainer.style.display = "none";
+        mainApp.style.display = "block";
+        output.innerText = `Welcome back! Type above to fetch weather or latest info...`;
+        authEmail.value = "";
+        authPassword.value = "";
+        authError.style.display = "none";
+    } else {
+        authContainer.style.display = "block";
+        mainApp.style.display = "none";
+    }
+});
+
+// Toggle between sign in and dynamic user sign up mode UI view
+authToggle.addEventListener('click', () => {
+    isLoginMode = !isLoginMode;
+    authError.style.display = "none";
+    if (isLoginMode) {
+        authTitle.innerText = "🔒 Account Sign In";
+        authSubmitBtn.innerText = "Log In";
+        authSubmitBtn.style.background = "#007bff";
+        authToggle.innerText = "Need an account? Register instead";
+    } else {
+        authTitle.innerText = "✨ Create Account";
+        authSubmitBtn.innerText = "Register App User";
+        authSubmitBtn.style.background = "#28a745";
+        authToggle.innerText = "Already have an account? Sign In";
+    }
+});
+
+// Trigger email & password submission actions
+authSubmitBtn.addEventListener('click', () => {
+    const email = authEmail.value.trim();
+    const password = authPassword.value;
+    authError.style.display = "none";
+
+    if (!email || !password) {
+        showAuthError("Please fill out all credential inputs.");
+        return;
+    }
+
+    if (isLoginMode) {
+        signInWithEmailAndPassword(auth, email, password)
+            .catch(err => showAuthError(err.message));
+    } else {
+        createUserWithEmailAndPassword(auth, email, password)
+            .catch(err => showAuthError(err.message));
+    }
+});
+
+// Trigger pop-up integration window login with Google Provider
+googleSigninBtn.addEventListener('click', () => {
+    authError.style.display = "none";
+    signInWithPopup(auth, googleProvider)
+        .catch(err => showAuthError(err.message));
+});
+
+// Handle Sign Out action
+logoutActionBtn.addEventListener('click', () => {
+    signOut(auth).catch(err => console.error("Sign out fail:", err));
+});
+
+function showAuthError(message) {
+    authError.innerText = message.replace("Firebase: ", "");
+    authError.style.display = "block";
+}
+
+// ==========================================
+// 2. CORE SYSTEM ASSISTANT LOGIC PIPELINES
+// ==========================================
+
 helpToggle.addEventListener('click', function() {
     if (helpGuide.style.display === "block") {
         helpGuide.style.display = "none";
@@ -20,12 +120,10 @@ helpToggle.addEventListener('click', function() {
     }
 });
 
-// Handle live autocomplete suggestions and display warning on top of the box
 cityInput.addEventListener('input', function() {
     const query = cityInput.value; 
     const trimmedQuery = query.trim();
     
-    // Check if user is trying to execute a link command
     if (query.toLowerCase().startsWith('open ')) {
         datalist.innerHTML = ""; 
         routingWarning.style.display = "block"; 
@@ -54,7 +152,6 @@ cityInput.addEventListener('input', function() {
 
                 geoData.results.forEach(location => {
                     const option = document.createElement('option');
-                    
                     const city = location.name;
                     const state = location.admin1;
                     const country = location.country;
@@ -67,7 +164,6 @@ cityInput.addEventListener('input', function() {
                     option.value = parts.join(', ');
                     option.setAttribute('data-lat', location.latitude);
                     option.setAttribute('data-lon', location.longitude);
-                    
                     datalist.appendChild(option);
                 });
             })
@@ -75,7 +171,6 @@ cityInput.addEventListener('input', function() {
     }, 300);
 });
 
-// WEATHER BUTTON ACTION
 weatherBtn.addEventListener('click', function() {
     routingWarning.style.display = "none"; 
     const fullInput = cityInput.value.trim();
@@ -133,7 +228,6 @@ function getWeatherData(lat, lon, displayName) {
         });
 }
 
-// INFO BUTTON ACTION
 newsBtn.addEventListener('click', function() {
     let query = cityInput.value.trim();
     if (!query) {
@@ -141,7 +235,6 @@ newsBtn.addEventListener('click', function() {
         return;
     }
 
-    // 1. SMART COMMAND DETECTOR WITH RANDOM SUBDOMAIN ROUTING ("Open ...")
     if (query.toLowerCase().startsWith("open ")) {
         routingWarning.style.display = "block"; 
         let appName = query.substring(5).trim().toLowerCase().replace(/['"]+/g, '');
@@ -166,14 +259,12 @@ newsBtn.addEventListener('click', function() {
         if (randomizedRoutes[appName]) {
             const routesList = randomizedRoutes[appName];
             const randomChoice = routesList[Math.floor(Math.random() * routesList.length)];
-            
             output.innerHTML = `<div style="font-size:0.8rem; color:#888; margin-bottom:5px;">🎲 Random selection active (${routesList.length} choices found)</div>`;
             launchTargetUrl(randomChoice);
             return;
         }
 
         let safeDomainName = appName.replace(/\s+/g, '');
-
         const domainExtensions = ["com", "org", "net", "co"];
         let testUrls = domainExtensions.map(ext => `https://${safeDomainName}.${ext}`);
 
@@ -197,7 +288,6 @@ newsBtn.addEventListener('click', function() {
         return;
     }
 
-    // 2. LINK PASSTHROUGH ROUTER
     const isUrlPattern = /\.[a-z]{2,6}/i.test(query);
     const hasProtocol = query.startsWith('http://') || query.startsWith('https://');
 
@@ -212,8 +302,6 @@ newsBtn.addEventListener('click', function() {
     }
 
     routingWarning.style.display = "none";
-
-    // 3. DICTIONARY CHECKER FOR SINGLE WORDS
     const isSingleWord = !query.includes(" ");
 
     if (isSingleWord) {
@@ -235,7 +323,6 @@ newsBtn.addEventListener('click', function() {
                 let rawDefinition = definitionObj.definitions[0].definition.replace(/<[^>]*>/g, '').trim();
                 
                 let infoHTML = `<div class="news-header-msg" style="color: #888; font-style: italic; margin-bottom: 12px; font-size: 0.9rem; line-height: 1.4;">I have provided the most relevant text of each information source related to "${query}".</div>`;
-                
                 infoHTML += `
                     <div class="aggregated-text" style="font-size: 0.95rem; color: #e0e0e0; line-height: 1.6; margin-bottom: 20px; background: #1a1a1a; padding: 14px; border-radius: 8px; border-left: 3px solid #28a745; text-align: left;">
                         <strong>${query.charAt(0).toUpperCase() + query.slice(1)}</strong> (${partOfSpeech.toLowerCase()}): ${rawDefinition}
@@ -263,10 +350,8 @@ newsBtn.addEventListener('click', function() {
     }
 });
 
-// SHARED UTILITY TO RENDER LAUNCH INTERFACE AND OPEN LINK
 function launchTargetUrl(url) {
     const isDiceRoll = output.innerHTML.includes("🎲");
-    
     let contentHTML = `
         <div class="news-header-msg" style="color: #888; font-style: italic; margin-bottom: 4px; font-size: 0.9rem; line-height: 1.4;">Navigating to external web link...</div>
         <div style="background: #1a1a1a; padding: 14px; border-radius: 8px; border-left: 3px solid #007bff; text-align: left; margin-bottom: 15px;">
@@ -283,11 +368,9 @@ function launchTargetUrl(url) {
     } else {
         output.innerHTML = contentHTML;
     }
-    
     window.open(url, '_blank');
 }
 
-// CORE WIKIPEDIA SNIPPET & SUMMARY LOGIC CONTAINER
 function runWikipediaEngine(query) {
     output.innerText = `Searching information for "${query}"...`;
 
@@ -313,14 +396,9 @@ function runWikipediaEngine(query) {
                     if (summaryData.type === "disambiguation" || infoText.toLowerCase().includes("may refer to")) {
                         let snippets = [];
                         showTitlePrefix = false;
-                        
                         results.forEach((item) => {
                             let cleanSnippet = item.snippet.replace(/<[^>]*>/g, '').trim();
-                            if (
-                                cleanSnippet.toLowerCase().includes("wiktionary") || 
-                                cleanSnippet.toLowerCase().includes("refer to:") ||
-                                cleanSnippet === ""
-                            ) {
+                            if (cleanSnippet.toLowerCase().includes("wiktionary") || cleanSnippet.toLowerCase().includes("refer to:") || cleanSnippet === "") {
                                 return;
                             }
                             if (cleanSnippet && !cleanSnippet.endsWith('.')) {
@@ -330,7 +408,6 @@ function runWikipediaEngine(query) {
                                 snippets.push(cleanSnippet);
                             }
                         });
-                        
                         infoText = snippets.join(" <span style='color: #444;'>|</span> ");
                         articleUrl = `https://en.wikipedia.org/wiki/Special:Search?search=${encodeURIComponent(query)}`;
                     }
@@ -360,7 +437,6 @@ function runWikipediaEngine(query) {
                             </div>
                         </div>
                     `;
-
                     output.innerHTML = newsHTML;
                 });
         })
