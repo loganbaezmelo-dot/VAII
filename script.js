@@ -103,7 +103,7 @@ function getWeatherData(lat, lon, displayName) {
         });
 }
 
-// NEWS BUTTON ACTION WITH CLEAN TEXT SUMMARY EXTRACTION
+// NEWS BUTTON ACTION WITH DEDICATED SOURCE BOX SEPARATION
 newsBtn.addEventListener('click', function() {
     const query = cityInput.value.trim();
     if (!query) {
@@ -124,23 +124,38 @@ newsBtn.addEventListener('click', function() {
                 return;
             }
 
-            // Injects the exact text statement you requested right at the header profile
-            let newsHTML = `<div class="news-header-msg">I have provided the most relevant text of each news article related to "${query}".</div>`;
+            let newsHTML = `<div class="news-header-msg" style="color: #888; font-style: italic; margin-bottom: 15px; font-size: 0.9rem; line-height: 1.4;">I have provided the most relevant text of each news article related to "${query}".</div>`;
 
             data.items.slice(0, 4).forEach(item => {
-                // Stripping out raw HTML formatting inside the RSS descriptive string safely
+                // Extract clean description text
                 let plainDescription = item.description.replace(/<[^>]*>/g, '').trim();
                 
-                // Truncate fallback if the summary includes long repetitive feed headers
-                if (plainDescription.length > 180) {
-                    plainDescription = plainDescription.substring(0, 180) + "...";
+                // Smart parse: Cleanly strip the publication source name out of the raw text block if it duplicates the headline
+                let cleanTitle = item.title;
+                let sourceName = "News Source";
+
+                // Google News format usually puts the source at the end of the title after a hyphen
+                if (cleanTitle.includes(' - ')) {
+                    const segments = cleanTitle.split(' - ');
+                    sourceName = segments.pop().trim();
+                    cleanTitle = segments.join(' - ').trim();
+                }
+
+                // If description contains the source text at the end, clean it up
+                if (plainDescription.endsWith(sourceName)) {
+                    plainDescription = plainDescription.substring(0, plainDescription.lastIndexOf(sourceName)).trim();
                 }
 
                 newsHTML += `
-                    <div class="news-item">
-                        <span class="news-title">${item.title}</span>
-                        <div class="news-desc">${plainDescription || 'No preview summary text available for this publication.'}</div>
-                        <a class="news-link" href="${item.link}" target="_blank">Read Full Article →</a>
+                    <div class="news-item" style="margin-bottom: 16px; padding-bottom: 12px; border-bottom: 1px solid #333;">
+                        <span class="news-title" style="color: #ffffff; font-weight: bold; display: block; margin-bottom: 6px; font-size: 1rem; line-height: 1.3;">${cleanTitle}</span>
+                        <div class="news-desc" style="font-size: 0.88rem; color: #b3b3b3; margin-bottom: 8px; line-height: 1.4;">${plainDescription || 'No preview text summary found.'}</div>
+                        
+                        <!-- Tiny, separate box showing the actual article source link -->
+                        <div class="source-container" style="display: flex; gap: 8px; align-items: center; margin-top: 6px;">
+                            <span class="source-tag" style="background: #333; color: #aaa; font-size: 0.75rem; padding: 2px 6px; border-radius: 4px; font-weight: 500;">📰 ${sourceName}</span>
+                            <a class="news-link" href="${item.link}" target="_blank" style="color: #4da3ff; text-decoration: none; font-size: 0.85rem; font-weight: bold;">Read Full Article →</a>
+                        </div>
                     </div>
                 `;
             });
