@@ -103,7 +103,7 @@ function getWeatherData(lat, lon, displayName) {
         });
 }
 
-// INFO BUTTON ACTION: CLEAN CONTINUOUS TRANSITIONS & EXPLICIT SOURCE NAMES
+// INFO BUTTON ACTION
 newsBtn.addEventListener('click', function() {
     const query = cityInput.value.trim();
     if (!query) {
@@ -134,15 +134,24 @@ newsBtn.addEventListener('click', function() {
                     if (topic.Text && !topic.Name && snippets.length < 3) {
                         let textBlock = topic.Text.trim();
                         
-                        // Smart RegEx to remove trailing brackets like "[1]" or "..." if present
+                        // Strip raw metadata bracket numbers
                         textBlock = textBlock.replace(/\[\d+\]/g, '').trim();
 
-                        // Cleanly extract a real name from the source URL structure
+                        // GRAMMAR REPAIR: Injects a proper colon if the API mashed the title and text together
+                        const words = textBlock.split(' ');
+                        if (words.length > 1) {
+                            const firstWord = words[0];
+                            const secondWord = words[1];
+                            if (secondWord && secondWord[0] === secondWord[0].toUpperCase()) {
+                                textBlock = firstWord + ": " + words.slice(1).join(' ');
+                            }
+                        }
+
+                        // Cleanly parse out real, explicitly named publishers
                         let namedSource = "Web Resource";
                         if (topic.FirstURL) {
                             try {
                                 const urlObj = new URL(topic.FirstURL);
-                                // Turns "en.wikipedia.org" into "Wikipedia"
                                 let domain = urlObj.hostname.replace('www.', '');
                                 if (domain.includes('wikipedia')) namedSource = "Wikipedia";
                                 else if (domain.includes('britannica')) namedSource = "Britannica";
@@ -157,7 +166,7 @@ newsBtn.addEventListener('click', function() {
                     }
                 });
                 
-                // Seamlessly join the strings with a clean styled spacer instead of raw numbers
+                // Seamlessly blend the source string segments with an explicit line divider
                 infoText = snippets.join(' <span style="color: #555; font-weight: bold; margin: 0 6px;">|</span> ');
             }
 
@@ -176,7 +185,17 @@ newsBtn.addEventListener('click', function() {
 
             if (sources.length > 0) {
                 let sourceBadgesHTML = "";
+                const uniqueSources = [];
+                const seenLinks = new Set();
+                
                 sources.forEach(src => {
+                    if (!seenLinks.has(src.link)) {
+                        seenLinks.add(src.link);
+                        uniqueSources.push(src);
+                    }
+                });
+
+                uniqueSources.forEach(src => {
                     sourceBadgesHTML += `
                         <a href="${src.link}" target="_blank" style="display: flex; align-items: center; justify-content: space-between; background: #2a2a2a; border: 1px solid #3d3d3d; border-radius: 6px; padding: 6px 10px; color: #4da3ff; text-decoration: none; font-size: 0.82rem; font-weight: bold; margin-bottom: 6px;">
                             <span style="color: #aaa; font-weight: normal;">📰 ${src.name}</span>
