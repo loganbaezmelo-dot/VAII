@@ -111,7 +111,6 @@
             width: 100%;
         }
         
-        /* Scoped globally for text field baselines */
         input {
             width: 100%;
             padding: 12px;
@@ -148,7 +147,10 @@
         .button-group {
             display: flex;
             gap: 10px;
+            width: 100%;
         }
+        
+        /* Structured buttons for the Mode Selection row */
         button.mode-select {
             flex: 1;
             padding: 12px;
@@ -169,6 +171,23 @@
         #weather-btn { background: #007bff; }
         #news-btn { background: #28a745; }
         #draw-btn { background: #e0a800; color: #121212; }
+        
+        /* Dedicated full-width class for login/auth engine operations */
+        .auth-btn {
+            width: 100%;
+            padding: 12px;
+            border-radius: 8px;
+            border: none;
+            color: white;
+            font-weight: bold;
+            font-size: 1rem;
+            cursor: pointer;
+            text-align: center;
+            transition: transform 0.1s ease;
+        }
+        .auth-btn:active {
+            transform: scale(0.98);
+        }
         
         /* Interactive dynamic border accent structures */
         input.mode-weather { border-color: #007bff !important; }
@@ -209,6 +228,12 @@
             align-items: center;
             justify-content: center;
             gap: 10px;
+            padding: 12px;
+            border-radius: 8px;
+            border: none;
+            font-weight: bold;
+            font-size: 1rem;
+            cursor: pointer;
         }
         .logout-btn {
             background: #dc3545;
@@ -265,9 +290,7 @@
                     <input type="email" id="auth-email" placeholder="Email Address">
                     <input type="password" id="auth-password" placeholder="Password">
                     
-                    <div class="button-group">
-                        <button id="auth-submit-btn" style="background: #007bff;">Log In</button>
-                    </div>
+                    <button id="auth-submit-btn" class="auth-btn" style="background: #007bff;">Log In</button>
 
                     <div style="text-align: center; color: #666; font-size: 0.85rem; margin: 5px 0;">— OR —</div>
                     
