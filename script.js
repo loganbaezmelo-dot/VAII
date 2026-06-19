@@ -6,24 +6,40 @@ const output = document.getElementById('weather-output');
 
 let debounceTimer;
 
-// Handle live autocomplete suggestions while typing
+// Handle live autocomplete suggestions and instant warnings while typing
 cityInput.addEventListener('input', function() {
-    const query = cityInput.value.trim();
+    const query = cityInput.value; // Keep original casing and spaces for checking
+    const trimmedQuery = query.trim();
     
-    if (query.length < 3) {
+    // INSTANT WARNING LOOKUP: Triggers the moment "Open " is typed
+    if (query.toLowerCase().startsWith('open ')) {
+        datalist.innerHTML = ""; // Kill suggestions
+        
+        // Only show the warning if the output box isn't already showing a launch link
+        if (!output.innerHTML.includes('Resolved Address:')) {
+            output.innerHTML = `
+                <div style="color: #ffa500; font-size: 0.85rem; font-style: italic; line-height: 1.4; text-align: left; padding: 4px;">
+                    ⚠️ Website routing is not 100% accurate because the AI cannot scrape live websites. Keep typing the app name...
+                </div>
+            `;
+        }
+        return;
+    }
+
+    if (trimmedQuery.length < 3) {
         datalist.innerHTML = "";
         return;
     }
 
-    // Skip geocoding lookups completely if the user is typing an internet link or an open command
-    if (query.startsWith('http://') || query.startsWith('https://') || query.toLowerCase().startsWith('open ') || /\.[a-z]{2,6}/i.test(query)) {
+    // Skip geocoding lookups completely if the user is typing an internet link
+    if (trimmedQuery.startsWith('http://') || trimmedQuery.startsWith('https://') || /\.[a-z]{2,6}/i.test(trimmedQuery)) {
         datalist.innerHTML = "";
         return;
     }
 
     clearTimeout(debounceTimer);
     debounceTimer = setTimeout(() => {
-        fetch(`https://geocoding-api.open-meteo.com/v1/search?name=${encodeURIComponent(query)}&count=5&language=en&format=json`)
+        fetch(`https://geocoding-api.open-meteo.com/v1/search?name=${encodeURIComponent(trimmedQuery)}&count=5&language=en&format=json`)
             .then(res => res.json())
             .then(geoData => {
                 datalist.innerHTML = ""; 
@@ -128,10 +144,12 @@ newsBtn.addEventListener('click', function() {
 
         output.innerText = `Resolving routing for "${appName}"...`;
 
-        // RANDOM SHUFFLE OVERRIDES
+        // RANDOM SHUFFLE & EXPLICIT OVERRIDES
         const randomizedRoutes = {
             "gemini": ["https://gemini.google.com", "https://gemini.com"],
-            "google gemini": ["https://gemini.google.com", "https://gemini.com"], // Added to catch multi-word typing
+            "google gemini": ["https://gemini.google.com", "https://gemini.com"],
+            "google deepmind": ["https://deepmind.google/"],
+            "deepmind": ["https://deepmind.google/"],
             "youtube music": ["https://music.youtube.com", "https://youtube.com/music"],
             "minecraft": ["https://minecraft.net"],
             "wikipedia": ["https://wikipedia.org"]
@@ -146,7 +164,6 @@ newsBtn.addEventListener('click', function() {
             return;
         }
 
-        // SPACE ELIMINATION FILTER: Strips spaces out entirely for the domain testing string array
         let safeDomainName = appName.replace(/\s+/g, '');
 
         const domainExtensions = ["com", "org", "net", "co"];
@@ -219,7 +236,7 @@ newsBtn.addEventListener('click', function() {
                         <span style="display: block; font-size: 0.75rem; color: #777; font-weight: bold; text-transform: uppercase; margin-bottom: 8px; letter-spacing: 0.5px;">Sources Index</span>
                         <div class="source-list" style="display: flex; flex-direction: column;">
                             <a href="https://en.wiktionary.org/wiki/${encodeURIComponent(query)}" target="_blank" style="display: flex; align-items: center; justify-content: space-between; background: #2a2a2a; border: 1px solid #3d3d3d; border-radius: 6px; padding: 6px 10px; color: #4da3ff; text-decoration: none; font-size: 0.82rem; font-weight: bold;">
-                                <span style="color: #aaa; font-weight: normal;">📖 Wiktionary</span>
+                                <span style="color: #aaa; font-weight: normal;">📰 Wiktionary</span>
                                 <span>Open Source →</span>
                             </a>
                         </div>
@@ -239,7 +256,8 @@ newsBtn.addEventListener('click', function() {
 function launchTargetUrl(url) {
     const appendBox = document.createElement('div');
     appendBox.innerHTML = `
-        <div class="news-header-msg" style="color: #888; font-style: italic; margin-bottom: 12px; font-size: 0.9rem; line-height: 1.4;">Navigating to external web link...</div>
+        <div class="news-header-msg" style="color: #888; font-style: italic; margin-bottom: 4px; font-size: 0.9rem; line-height: 1.4;">Navigating to external web link...</div>
+        <div style="color: #ffa500; font-size: 0.78rem; font-style: italic; margin-bottom: 12px; line-height: 1.3;">⚠️ Website routing is not 100% accurate because the AI cannot scrape live websites.</div>
         <div style="background: #1a1a1a; padding: 14px; border-radius: 8px; border-left: 3px solid #007bff; text-align: left; margin-bottom: 15px;">
             🔗 <strong>Resolved Address:</strong> <span style="color: #4da3ff; word-break: break-all;">${url}</span>
         </div>
