@@ -44,6 +44,7 @@ const datalist = document.getElementById('city-suggestions');
 const weatherBtn = document.getElementById('weather-btn');
 const newsBtn = document.getElementById('news-btn');
 const drawBtn = document.getElementById('draw-btn');
+const executeActionBtn = document.getElementById('execute-action-btn');
 const output = document.getElementById('weather-output');
 const routingWarning = document.getElementById('routing-warning');
 const helpToggle = document.getElementById('help-toggle');
@@ -67,16 +68,19 @@ const defaultDrawSuggestions = [
 ];
 
 // Helper to smoothly recalibrate styling and placeholders on context shift
-function setAppInputMode(newMode, placeholderText) {
+function setAppInputMode(newMode, placeholderText, activeBtn) {
     currentMode = newMode;
     cityInput.placeholder = placeholderText;
-    datalist.innerHTML = ""; // Clear active nodes instantly
+    datalist.innerHTML = ""; 
     
-    // Manage accent borders dynamically
+    // Manage input border accent style frames dynamically
     cityInput.className = ""; 
     cityInput.classList.add(`mode-${newMode}`);
+
+    // Manage button tab highlights cleanly
+    document.querySelectorAll('.mode-select').forEach(btn => btn.classList.remove('active'));
+    if (activeBtn) activeBtn.classList.add('active');
     
-    // Inject local context array instantly to save typing effort
     populateStaticSuggestions();
 }
 
@@ -105,11 +109,11 @@ onAuthStateChanged(auth, (user) => {
     if (user) {
         authContainer.style.display = "none";
         mainApp.style.display = "block";
-        output.innerText = `Welcome back! Type above to fetch weather or latest info...`;
+        output.innerText = `Welcome back! Arm an interface tool above and hit the arrow button...`;
         authEmail.value = "";
         authPassword.value = "";
         authError.style.display = "none";
-        setAppInputMode('info', "Search topic, open apps, or enter URL...");
+        setAppInputMode('info', "Search topic, open apps, or enter URL...", newsBtn);
     } else {
         authContainer.style.display = "block";
         mainApp.style.display = "none";
@@ -180,11 +184,23 @@ helpToggle.addEventListener('click', function() {
     }
 });
 
+// View Setup Controls: Clicking a button ONLY arms that mode context 
+weatherBtn.addEventListener('click', function() {
+    setAppInputMode('weather', "Type global location name for meteorology...", weatherBtn);
+});
+
+newsBtn.addEventListener('click', function() {
+    setAppInputMode('info', "Search topic, open apps, or enter URL...", newsBtn);
+});
+
+drawBtn.addEventListener('click', function() {
+    setAppInputMode('draw', "Describe what you want the AI to render...", drawBtn);
+});
+
 cityInput.addEventListener('input', function() {
     const query = cityInput.value; 
     const trimmedQuery = query.trim();
     
-    // Prevent global warnings or API leaks if writing operational flags
     if (query.toLowerCase().startsWith('open ')) {
         datalist.innerHTML = ""; 
         routingWarning.style.display = "block"; 
@@ -193,7 +209,7 @@ cityInput.addEventListener('input', function() {
         routingWarning.style.display = "none";
     }
 
-    // CRITICAL: Stop meteorological fetch completely if user isn't matching coordinates
+    // Halt weather engine lookup loops completely if user is in an alternate text window
     if (currentMode !== 'weather') {
         if (trimmedQuery.length === 0) {
             populateStaticSuggestions();
@@ -240,20 +256,42 @@ cityInput.addEventListener('input', function() {
     }, 300);
 });
 
-weatherBtn.addEventListener('click', function() {
-    // Arm the location interface if clicked directly with empty states
-    if (currentMode !== 'weather' && !cityInput.value.trim()) {
-        setAppInputMode('weather', "Type global location name for meteorology...");
-        return;
+// Master Execution Dispatcher: Fired solely by clicking the custom Enter arrow button
+if (executeActionBtn) {
+    executeActionBtn.addEventListener('click', function() {
+        const query = cityInput.value.trim();
+        if (!query) {
+            output.innerText = "Please input a term or prompt value first.";
+            return;
+        }
+
+        // Route internally depending on which mode is armed
+        if (currentMode === 'weather') {
+            runWeatherExecution(query);
+        } else if (currentMode === 'draw') {
+            let imagePrompt = query;
+            if (imagePrompt.toLowerCase().startsWith("draw ")) {
+                imagePrompt = imagePrompt.substring(5).trim();
+            }
+            executeImageGeneration(imagePrompt);
+        } else {
+            runInfoExecution(query);
+        }
+    });
+}
+
+// Keyboard Passthrough: Allow physical computer keyboards to hit Enter as well
+cityInput.addEventListener('keypress', function(e) {
+    if (e.key === 'Enter' && executeActionBtn) {
+        executeActionBtn.click();
     }
-    
+});
+
+// ----------------------------------------------------
+// ROUTED TARGET SYSTEMS
+// ----------------------------------------------------
+function runWeatherExecution(fullInput) {
     routingWarning.style.display = "none"; 
-    const fullInput = cityInput.value.trim();
-    if (!fullInput) {
-        output.innerText = "Please type a location first.";
-        return;
-    }
-    
     output.innerText = "Searching coordinates...";
 
     const options = Array.from(datalist.options);
@@ -280,7 +318,7 @@ weatherBtn.addEventListener('click', function() {
                 console.error(err);
             });
     }
-});
+}
 
 function getWeatherData(lat, lon, displayName) {
     output.innerText = `Fetching forecast for ${displayName}...`;
@@ -296,8 +334,7 @@ function getWeatherData(lat, lon, displayName) {
                 🌡️ Temperature: ${tempFahrenheit}°F (${tempCelsius}°C)<br>
                 💨 Wind Speed: ${weatherData.current_weather.windspeed} km/h
             `;
-            // Revert context frame cleanly to baseline
-            setAppInputMode('info', "Search topic, open apps, or enter URL...");
+            setAppInputMode('info', "Search topic, open apps, or enter URL...", newsBtn);
         })
         .catch(err => {
             output.innerText = "Error fetching live weather data.";
@@ -305,9 +342,6 @@ function getWeatherData(lat, lon, displayName) {
         });
 }
 
-// ----------------------------------------------------
-// CORE REUSABLE WORKSPACE AI IMAGE ENGINE
-// ----------------------------------------------------
 function executeImageGeneration(imagePrompt) {
     routingWarning.style.display = "none"; 
 
@@ -336,46 +370,13 @@ function executeImageGeneration(imagePrompt) {
         const loader = document.getElementById("image-loader");
         if (loader) loader.remove();
         img.style.display = "block";
-        // Reset mode tracker smoothly
-        setAppInputMode('info', "Search topic, open apps, or enter URL...");
+        setAppInputMode('info', "Search topic, open apps, or enter URL...", newsBtn);
     };
 
     output.appendChild(img);
 }
 
-// Dedicated Draw Button Event Handler
-if (drawBtn) {
-    drawBtn.addEventListener('click', function() {
-        if (currentMode !== 'draw' && !cityInput.value.trim()) {
-            setAppInputMode('draw', "Describe what you want the AI to render...");
-            return;
-        }
-
-        let query = cityInput.value.trim();
-        if (query.toLowerCase().startsWith("draw ")) {
-            query = query.substring(5).trim();
-        }
-
-        if (!query) {
-            output.innerText = "Please specify what you want to draw.";
-            return;
-        }
-        executeImageGeneration(query);
-    });
-}
-
-newsBtn.addEventListener('click', function() {
-    if (currentMode !== 'info' && !cityInput.value.trim()) {
-        setAppInputMode('info', "Search topic, open apps, or enter URL...");
-        return;
-    }
-
-    let query = cityInput.value.trim();
-    if (!query) {
-        output.innerText = "Please type a topic, location, or website URL.";
-        return;
-    }
-
+function runInfoExecution(query) {
     if (query.toLowerCase().startsWith("draw ")) {
         let imagePrompt = query.substring(5).trim();
         if (!imagePrompt) {
@@ -386,9 +387,6 @@ newsBtn.addEventListener('click', function() {
         return;
     }
 
-    // ----------------------------------------------------
-    // EXISTING: OPEN COMMAND ROUTER
-    // ----------------------------------------------------
     if (query.toLowerCase().startsWith("open ")) {
         routingWarning.style.display = "block"; 
         let appName = query.substring(5).trim().toLowerCase().replace(/['"]+/g, '');
@@ -502,7 +500,7 @@ newsBtn.addEventListener('click', function() {
     } else {
         runWikipediaEngine(query);
     }
-});
+}
 
 function launchTargetUrl(url) {
     const isDiceRoll = output.innerHTML.includes("🎲");
