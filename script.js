@@ -254,10 +254,12 @@ newsBtn.addEventListener('click', function() {
 
 // SHARED UTILITY TO RENDER LAUNCH INTERFACE AND OPEN LINK
 function launchTargetUrl(url) {
-    const appendBox = document.createElement('div');
-    appendBox.innerHTML = `
+    const isDiceRoll = output.innerHTML.includes("🎲");
+    
+    // Warning header text setup positioned completely up top
+    let contentHTML = `
+        <div style="color: #ffa500; font-size: 0.78rem; font-style: italic; margin-bottom: 12px; line-height: 1.3; text-align: left;">⚠️ Website routing is not 100% accurate because the AI cannot scrape live websites.</div>
         <div class="news-header-msg" style="color: #888; font-style: italic; margin-bottom: 4px; font-size: 0.9rem; line-height: 1.4;">Navigating to external web link...</div>
-        <div style="color: #ffa500; font-size: 0.78rem; font-style: italic; margin-bottom: 12px; line-height: 1.3;">⚠️ Website routing is not 100% accurate because the AI cannot scrape live websites.</div>
         <div style="background: #1a1a1a; padding: 14px; border-radius: 8px; border-left: 3px solid #007bff; text-align: left; margin-bottom: 15px;">
             🔗 <strong>Resolved Address:</strong> <span style="color: #4da3ff; word-break: break-all;">${url}</span>
         </div>
@@ -267,10 +269,10 @@ function launchTargetUrl(url) {
         </a>
     `;
     
-    if(output.innerHTML.includes("🎲")) {
-        output.innerHTML = output.innerHTML + appendBox.innerHTML;
+    if (isDiceRoll) {
+        output.innerHTML = `<div style="font-size:0.8rem; color:#888; margin-bottom:5px;">🎲 Random selection active</div>` + contentHTML;
     } else {
-        output.innerHTML = appendBox.innerHTML;
+        output.innerHTML = contentHTML;
     }
     
     window.open(url, '_blank');
