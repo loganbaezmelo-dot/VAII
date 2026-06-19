@@ -113,7 +113,6 @@ newsBtn.addEventListener('click', function() {
 
     output.innerText = `Searching information for "${query}"...`;
 
-    // Step 1: Search Wikipedia for the best matching page name
     fetch(`https://en.wikipedia.org/w/api.php?action=query&list=search&srsearch=${encodeURIComponent(query)}&utf8=&format=json&origin=*`)
         .then(res => res.json())
         .then(searchData => {
@@ -125,28 +124,42 @@ newsBtn.addEventListener('click', function() {
             const results = searchData.query.search;
             const topPageTitle = results[0].title;
 
-            // Step 2: Grab the summary snippet from Wikipedia REST API
             fetch(`https://en.wikipedia.org/api/rest_v1/page/summary/${encodeURIComponent(topPageTitle.replace(/ /g, '_'))}`)
                 .then(res => res.json())
                 .then(summaryData => {
                     let infoText = summaryData.extract || "";
+                    let showTitlePrefix = true;
                     let finalTitle = topPageTitle;
                     let articleUrl = summaryData.content_urls?.desktop?.page || `https://en.wikipedia.org/wiki/${encodeURIComponent(topPageTitle)}`;
 
-                    // If it hits a broad disambiguation directory page ("may refer to:"), switch dynamically to list snippets instead
+                    // Fallback to snippets if it hits a broad disambiguation directory page
                     if (summaryData.type === "disambiguation" || infoText.toLowerCase().includes("may refer to")) {
                         let snippets = [];
-                        results.slice(0, 3).forEach((item) => {
+                        showTitlePrefix = false; // Completely hides the redundant title text inside the box
+                        
+                        results.forEach((item) => {
                             let cleanSnippet = item.snippet.replace(/<[^>]*>/g, '').trim();
+                            
+                            // FILTER EXTRACTION: Purge Wiktionary advertisement phrases or generic structural directory code
+                            if (
+                                cleanSnippet.toLowerCase().includes("wiktionary") || 
+                                cleanSnippet.toLowerCase().includes("refer to:") ||
+                                cleanSnippet === ""
+                            ) {
+                                return; // Skip item completely
+                            }
+
                             if (cleanSnippet && !cleanSnippet.endsWith('.')) {
                                 cleanSnippet += "...";
                             }
-                            if (cleanSnippet) {
+                            
+                            // Keep max 3 high quality snippet strings
+                            if (snippets.length < 3) {
                                 snippets.push(cleanSnippet);
                             }
                         });
-                        infoText = snippets.join(" | ");
-                        finalTitle = `Search Results for "${query}"`;
+                        
+                        infoText = snippets.join(" <span style='color: #444;'>|</span> ");
                         articleUrl = `https://en.wikipedia.org/wiki/Special:Search?search=${encodeURIComponent(query)}`;
                     }
 
@@ -157,9 +170,12 @@ newsBtn.addEventListener('click', function() {
 
                     let newsHTML = `<div class="news-header-msg" style="color: #888; font-style: italic; margin-bottom: 12px; font-size: 0.9rem; line-height: 1.4;">I have provided the most relevant text of each information source related to "${query}".</div>`;
                     
+                    // Conditionally appends title header string ONLY if it's a direct definition page
+                    let inlineContent = showTitlePrefix ? `<strong>${finalTitle}:</strong> ${infoText}` : infoText;
+
                     newsHTML += `
                         <div class="aggregated-text" style="font-size: 0.95rem; color: #e0e0e0; line-height: 1.6; margin-bottom: 20px; background: #1a1a1a; padding: 14px; border-radius: 8px; border-left: 3px solid #28a745; text-align: left;">
-                            <strong>${finalTitle}:</strong> ${infoText}
+                            ${inlineContent}
                         </div>
                     `;
 
