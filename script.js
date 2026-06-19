@@ -1,12 +1,30 @@
+// Import direct from Google's official stable Firebase SDK CDN networks
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
 import { 
-    auth, 
-    googleProvider, 
+    getAuth, 
+    GoogleAuthProvider, 
     signInWithPopup, 
     signInWithEmailAndPassword, 
     createUserWithEmailAndPassword, 
     onAuthStateChanged, 
     signOut 
-} from "./firebase-config.js";
+} from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
+
+// Firebase App Configuration Setup
+const firebaseConfig = {
+    apiKey: "AIzaSyA6RmZ6rquzUR1dct30s355PzLu-r1_fwE",
+    authDomain: "vaiinternet.firebaseapp.com",
+    projectId: "vaiinternet",
+    storageBucket: "vaiinternet.firebasestorage.app",
+    messagingSenderId: "367548633672",
+    appId: "1:367548633672:web:44da44d1761085424b3e7d",
+    measurementId: "G-0XBYP585WQ"
+};
+
+// Initialize instances inside our primary module lifecycle context
+const app = initializeApp(firebaseConfig);
+const auth = getAuth(app);
+const googleProvider = new GoogleAuthProvider();
 
 // AUTH CONTROL NODES
 const authContainer = document.getElementById('auth-container');
