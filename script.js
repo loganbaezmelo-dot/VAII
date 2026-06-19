@@ -248,6 +248,51 @@ newsBtn.addEventListener('click', function() {
         return;
     }
 
+    // ----------------------------------------------------
+    // NEW INTEGRATION: IMAGE GENERATION SERVICE ("draw [prompt]")
+    // ----------------------------------------------------
+    if (query.toLowerCase().startsWith("draw ")) {
+        let imagePrompt = query.substring(5).trim();
+        
+        if (!imagePrompt) {
+            output.innerText = "Please specify what you want to draw.";
+            return;
+        }
+
+        // Keep warning hidden since we are generating internally rather than opening a link
+        routingWarning.style.display = "none"; 
+
+        output.innerHTML = `
+            <div style="color: #888; font-style: italic; margin-bottom: 12px; font-size: 0.9rem; line-height: 1.4;">
+                🎨 Generating artwork for "${imagePrompt}"...
+            </div>
+            <div id="image-loader" style="color: #aaa; font-size: 0.85rem; margin-bottom: 5px;">Assembling pixels...</div>
+        `;
+
+        const seed = Math.floor(Math.random() * 1000000);
+        const imageUrl = `https://image.pollinations.ai/p/${encodeURIComponent(imagePrompt)}?width=1080&height=1080&nologo=true&seed=${seed}`;
+
+        const img = new Image();
+        img.src = imageUrl;
+        img.style.width = "100%";
+        img.style.borderRadius = "8px";
+        img.style.marginTop = "10px";
+        img.style.display = "none";
+        img.style.boxShadow = "0 4px 15px rgba(0,0,0,0.5)";
+
+        img.onload = function() {
+            const loader = document.getElementById("image-loader");
+            if (loader) loader.remove();
+            img.style.display = "block";
+        };
+
+        output.appendChild(img);
+        return;
+    }
+
+    // ----------------------------------------------------
+    // EXISTING: OPEN COMMAND ROUTER
+    // ----------------------------------------------------
     if (query.toLowerCase().startsWith("open ")) {
         routingWarning.style.display = "block"; 
         let appName = query.substring(5).trim().toLowerCase().replace(/['"]+/g, '');
