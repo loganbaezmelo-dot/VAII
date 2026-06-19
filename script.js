@@ -15,6 +15,12 @@ cityInput.addEventListener('input', function() {
         return;
     }
 
+    // Skip geocoding lookups completely if the user is typing an internet link
+    if (query.startsWith('http://') || query.startsWith('https://') || /\.[a-z]{2,6}/i.test(query)) {
+        datalist.innerHTML = "";
+        return;
+    }
+
     clearTimeout(debounceTimer);
     debounceTimer = setTimeout(() => {
         fetch(`https://geocoding-api.open-meteo.com/v1/search?name=${encodeURIComponent(query)}&count=5&language=en&format=json`)
@@ -103,28 +109,54 @@ function getWeatherData(lat, lon, displayName) {
         });
 }
 
-// INFO BUTTON ACTION: HYBRID DICTIONARY & ENCYCLOPEDIA ROUTER
+// INFO BUTTON ACTION: HYBRID DICTIONARY, ENCYCLOPEDIA & LINK PASSTHROUGH ROUTER
 newsBtn.addEventListener('click', function() {
-    const query = cityInput.value.trim();
+    let query = cityInput.value.trim();
     if (!query) {
-        output.innerText = "Please type a topic or location.";
+        output.innerText = "Please type a topic, location, or website URL.";
         return;
     }
 
-    // Check if the query is a single word (no spaces inside)
+    // 1. SMART LINK CHECKER
+    // Regular expression looks for standard domain endings like .com, .net, .org, .app etc.
+    const isUrlPattern = /\.[a-z]{2,6}/i.test(query);
+    const hasProtocol = query.startsWith('http://') || query.startsWith('https://');
+
+    if (hasProtocol || isUrlPattern) {
+        // Automatically inject secure https protocol if missing so the browser doesn't break
+        let targetUrl = query;
+        if (!hasProtocol) {
+            targetUrl = 'https://' + query;
+        }
+
+        output.innerHTML = `
+            <div class="news-header-msg" style="color: #888; font-style: italic; margin-bottom: 12px; font-size: 0.9rem; line-height: 1.4;">Navigating to external web link...</div>
+            <div style="background: #1a1a1a; padding: 14px; border-radius: 8px; border-left: 3px solid #007bff; text-align: left; margin-bottom: 15px;">
+                🔗 <strong>Link Detected:</strong> <span style="color: #4da3ff; word-break: break-all;">${targetUrl}</span>
+            </div>
+            <a href="${targetUrl}" target="_blank" style="display: flex; align-items: center; justify-content: space-between; background: #007bff; border-radius: 6px; padding: 10px 14px; color: white; text-decoration: none; font-weight: bold; font-size: 0.95rem;">
+                <span>Launch Link</span>
+                <span>Open Site ↗</span>
+            </a>
+        `;
+        
+        // Instant automated pop-out launch action
+        window.open(targetUrl, '_blank');
+        return;
+    }
+
+    // 2. DICTIONARY CHECKER FOR SINGLE WORDS
     const isSingleWord = !query.includes(" ");
 
     if (isSingleWord) {
         output.innerText = `Looking up definition for "${query}"...`;
         
-        // Fetch pristine dictionary data from open Wiktionary engine
         fetch(`https://en.wiktionary.org/api/rest_v1/page/definition/${encodeURIComponent(query.toLowerCase())}`)
             .then(res => {
                 if (!res.ok) throw new Error("Word not found");
                 return res.json();
             })
             .then(dictData => {
-                // Find first valid part of speech text
                 const key = Object.keys(dictData)[0];
                 if (!dictData[key] || dictData[key].length === 0) {
                     throw new Error("No definition layout");
@@ -132,7 +164,6 @@ newsBtn.addEventListener('click', function() {
                 
                 const definitionObj = dictData[key][0];
                 const partOfSpeech = definitionObj.partOfSpeech;
-                // Strip raw tags out of dictionary snippet lines
                 let rawDefinition = definitionObj.definitions[0].definition.replace(/<[^>]*>/g, '').trim();
                 
                 let infoHTML = `<div class="news-header-msg" style="color: #888; font-style: italic; margin-bottom: 12px; font-size: 0.9rem; line-height: 1.4;">I have provided the most relevant text of each information source related to "${query}".</div>`;
@@ -157,11 +188,9 @@ newsBtn.addEventListener('click', function() {
                 output.innerHTML = infoHTML;
             })
             .catch(() => {
-                // If Wiktionary lookup falls through, route into Wikipedia search index as safety net
                 runWikipediaEngine(query);
             });
     } else {
-        // Multi-word phrase or complete sentence goes straight to Wikipedia
         runWikipediaEngine(query);
     }
 });
