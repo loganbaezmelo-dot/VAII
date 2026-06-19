@@ -1,0 +1,33 @@
+cat << 'EOF' > index.html
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>VAII - Virtual Assistant</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="app-container">
+        <header>
+            <h1>⚡ VAII</h1>
+            <p>Virtual Assistant with Internet Integrations</p>
+        </header>
+
+        <main>
+            <!-- Weather Widget Section -->
+            <section class="widget" id="weather-section">
+                <h3>🌤️ Live Weather</h3>
+                <div class="input-group">
+                    <input type="text" id="city-input" value="Loughman" placeholder="Enter city...">
+                    <button id="weather-btn">Check</button>
+                </div>
+                <div id="weather-output" class="output-box">Click check to fetch data...</div>
+            </section>
+        </main>
+    </div>
+
+    <script src="script.js"></script>
+</body>
+</html>
+EOF
