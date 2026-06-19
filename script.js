@@ -70,12 +70,15 @@ const defaultDrawSuggestions = [
 // Helper to smoothly recalibrate styling and placeholders on context shift
 function setAppInputMode(newMode, placeholderText, activeBtn) {
     currentMode = newMode;
-    cityInput.placeholder = placeholderText;
-    datalist.innerHTML = ""; 
     
-    // Manage input border accent style frames dynamically
-    cityInput.className = ""; 
-    cityInput.classList.add(`mode-${newMode}`);
+    // Safety check to bypass initialization conflicts during auth status loops
+    if (cityInput) {
+        cityInput.placeholder = placeholderText;
+        cityInput.className = ""; 
+        cityInput.classList.add(`mode-${newMode}`);
+    }
+    
+    if (datalist) datalist.innerHTML = ""; 
 
     // Manage button tab highlights cleanly
     document.querySelectorAll('.mode-select').forEach(btn => btn.classList.remove('active'));
@@ -93,6 +96,7 @@ function populateStaticSuggestions() {
 }
 
 function buildDatalistNodes(stringArray) {
+    if (!datalist) return;
     datalist.innerHTML = "";
     stringArray.forEach(item => {
         const option = document.createElement('option');
