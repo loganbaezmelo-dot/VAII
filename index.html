@@ -110,8 +110,10 @@
             gap: 8px;
             width: 100%;
         }
+        
+        /* Scoped globally for text field baselines */
         input {
-            flex: 1;
+            width: 100%;
             padding: 12px;
             border-radius: 8px;
             border: 2px solid #333;
@@ -121,6 +123,7 @@
             box-sizing: border-box;
             transition: border-color 0.2s ease;
         }
+        
         .enter-btn {
             background: #ffffff;
             color: #121212;
@@ -157,7 +160,7 @@
             cursor: pointer;
             text-align: center;
             transition: transform 0.1s ease, opacity 0.2s ease;
-            opacity: 0.4; /* Dimmed by default to make selection clear */
+            opacity: 0.4;
         }
         button.mode-select.active {
             opacity: 1 !important;
