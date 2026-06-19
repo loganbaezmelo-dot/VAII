@@ -18,8 +18,9 @@ cityInput.addEventListener('input', function() {
         // Only show the warning if the output box isn't already showing a launch link
         if (!output.innerHTML.includes('Resolved Address:')) {
             output.innerHTML = `
-                <div style="color: #ffa500; font-size: 0.85rem; font-style: italic; line-height: 1.4; text-align: left; padding: 4px;">
-                    ⚠️ Website routing is not 100% accurate because the AI cannot scrape live websites. Keep typing the app name...
+                <div style="color: #ffa500; font-size: 0.78rem; font-style: italic; margin-bottom: 12px; line-height: 1.3; text-align: left;">⚠️ Website routing is not 100% accurate because the AI cannot scrape live websites.</div>
+                <div style="color: #888; font-size: 0.85rem; font-style: italic; line-height: 1.4; text-align: left;">
+                    Keep typing the app name...
                 </div>
             `;
         }
@@ -256,7 +257,6 @@ newsBtn.addEventListener('click', function() {
 function launchTargetUrl(url) {
     const isDiceRoll = output.innerHTML.includes("🎲");
     
-    // Warning header text setup positioned completely up top
     let contentHTML = `
         <div style="color: #ffa500; font-size: 0.78rem; font-style: italic; margin-bottom: 12px; line-height: 1.3; text-align: left;">⚠️ Website routing is not 100% accurate because the AI cannot scrape live websites.</div>
         <div class="news-header-msg" style="color: #888; font-style: italic; margin-bottom: 4px; font-size: 0.9rem; line-height: 1.4;">Navigating to external web link...</div>
