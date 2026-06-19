@@ -43,6 +43,7 @@ const cityInput = document.getElementById('city-input');
 const datalist = document.getElementById('city-suggestions');
 const weatherBtn = document.getElementById('weather-btn');
 const newsBtn = document.getElementById('news-btn');
+const drawBtn = document.getElementById('draw-btn');
 const output = document.getElementById('weather-output');
 const routingWarning = document.getElementById('routing-warning');
 const helpToggle = document.getElementById('help-toggle');
@@ -241,6 +242,60 @@ function getWeatherData(lat, lon, displayName) {
         });
 }
 
+// ----------------------------------------------------
+// CORE REUSABLE WORKSPACE AI IMAGE ENGINE
+// ----------------------------------------------------
+function executeImageGeneration(imagePrompt) {
+    routingWarning.style.display = "none"; 
+
+    // Insert structured status output featuring the active rotating amber loader
+    output.innerHTML = `
+        <div style="color: #888; font-style: italic; margin-bottom: 12px; font-size: 0.9rem; line-height: 1.4;">
+            🎨 Generating artwork for "${imagePrompt}"...
+        </div>
+        <div class="generation-status" id="image-loader">
+            <div class="loader-spinner"></div>
+            <span style="color: #eee; font-size: 0.9rem;">VAII AI engine is assembling pixels...</span>
+        </div>
+    `;
+
+    const seed = Math.floor(Math.random() * 1000000);
+    const imageUrl = `https://image.pollinations.ai/p/${encodeURIComponent(imagePrompt)}?width=1080&height=1080&nologo=true&seed=${seed}`;
+
+    const img = new Image();
+    img.src = imageUrl;
+    img.style.width = "100%";
+    img.style.borderRadius = "8px";
+    img.style.marginTop = "10px";
+    img.style.display = "none";
+    img.style.boxShadow = "0 4px 15px rgba(0,0,0,0.5)";
+
+    img.onload = function() {
+        const loader = document.getElementById("image-loader");
+        if (loader) loader.remove();
+        img.style.display = "block";
+    };
+
+    output.appendChild(img);
+}
+
+// Dedicated Draw Button Event Handler
+if (drawBtn) {
+    drawBtn.addEventListener('click', function() {
+        let query = cityInput.value.trim();
+        // Automatically drop a manual "draw " keyword prefix if present to isolate the true prompt description
+        if (query.toLowerCase().startsWith("draw ")) {
+            query = query.substring(5).trim();
+        }
+
+        if (!query) {
+            output.innerText = "Please specify what you want to draw.";
+            return;
+        }
+        executeImageGeneration(query);
+    });
+}
+
 newsBtn.addEventListener('click', function() {
     let query = cityInput.value.trim();
     if (!query) {
@@ -248,9 +303,7 @@ newsBtn.addEventListener('click', function() {
         return;
     }
 
-    // ----------------------------------------------------
-    // NEW INTEGRATION: IMAGE GENERATION SERVICE ("draw [prompt]")
-    // ----------------------------------------------------
+    // Secondary Check: Catch standard raw keyword prefix entries typed directly inside the Info engine context
     if (query.toLowerCase().startsWith("draw ")) {
         let imagePrompt = query.substring(5).trim();
         
@@ -258,35 +311,7 @@ newsBtn.addEventListener('click', function() {
             output.innerText = "Please specify what you want to draw.";
             return;
         }
-
-        // Keep warning hidden since we are generating internally rather than opening a link
-        routingWarning.style.display = "none"; 
-
-        output.innerHTML = `
-            <div style="color: #888; font-style: italic; margin-bottom: 12px; font-size: 0.9rem; line-height: 1.4;">
-                🎨 Generating artwork for "${imagePrompt}"...
-            </div>
-            <div id="image-loader" style="color: #aaa; font-size: 0.85rem; margin-bottom: 5px;">Assembling pixels...</div>
-        `;
-
-        const seed = Math.floor(Math.random() * 1000000);
-        const imageUrl = `https://image.pollinations.ai/p/${encodeURIComponent(imagePrompt)}?width=1080&height=1080&nologo=true&seed=${seed}`;
-
-        const img = new Image();
-        img.src = imageUrl;
-        img.style.width = "100%";
-        img.style.borderRadius = "8px";
-        img.style.marginTop = "10px";
-        img.style.display = "none";
-        img.style.boxShadow = "0 4px 15px rgba(0,0,0,0.5)";
-
-        img.onload = function() {
-            const loader = document.getElementById("image-loader");
-            if (loader) loader.remove();
-            img.style.display = "block";
-        };
-
-        output.appendChild(img);
+        executeImageGeneration(imagePrompt);
         return;
     }
 
