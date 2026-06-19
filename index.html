@@ -86,47 +86,6 @@
             max-height: 350px;
             overflow-y: auto;
         }
-        .news-header-msg {
-            color: #888;
-            font-style: italic;
-            margin-bottom: 15px;
-            font-size: 0.9rem;
-            line-height: 1.4;
-        }
-        .news-item {
-            margin-bottom: 16px;
-            padding-bottom: 12px;
-            border-bottom: 1px solid #333;
-        }
-        .news-item:last-child {
-            border-bottom: none;
-            margin-bottom: 0;
-            padding-bottom: 0;
-        }
-        .news-title {
-            color: #ffffff;
-            font-weight: bold;
-            display: block;
-            margin-bottom: 6px;
-            font-size: 1rem;
-            line-height: 1.3;
-        }
-        .news-desc {
-            font-size: 0.88rem;
-            color: #b3b3b3;
-            margin-bottom: 8px;
-            line-height: 1.4;
-        }
-        .news-link {
-            color: #4da3ff;
-            text-decoration: none;
-            font-size: 0.85rem;
-            font-weight: bold;
-            display: inline-block;
-        }
-        .news-link:hover {
-            text-decoration: underline;
-        }
     </style>
 </head>
 <body>
@@ -143,11 +102,12 @@
                     <input type="text" id="city-input" placeholder="Search city, topic, or country..." list="city-suggestions" autocomplete="off">
                     <div class="button-group">
                         <button id="weather-btn">Weather</button>
-                        <button id="news-btn">News</button>
+                        <!-- Renamed button to Info -->
+                        <button id="news-btn">Info</button>
                     </div>
                 </div>
                 <datalist id="city-suggestions"></datalist>
-                <div id="weather-output" class="output-box">Type above to fetch weather or latest news...</div>
+                <div id="weather-output" class="output-box">Type above to fetch weather or latest info...</div>
             </section>
         </main>
     </div>
