@@ -29,17 +29,22 @@ cityInput.addEventListener('input', function() {
                     const state = location.admin1;
                     const country = location.country;
 
-                    // Smart formatting logic to fix "Pyongyang, Pyongyang" and add Country
-                    let label = city;
-                    if (state && state !== city) {
-                        label += `, ${state}`;
+                    // Build array and ignore any duplicate data entries
+                    let parts = [];
+                    
+                    if (city) parts.push(city);
+                    
+                    if (state && !parts.includes(state)) {
+                        parts.push(state);
                     }
-                    if (country) {
-                        label += `, ${country}`;
+                    
+                    if (country && !parts.includes(country)) {
+                        parts.push(country);
                     }
 
-                    option.value = label;
-                    // Stashing the exact coordinates directly on the option so we don't have to search again!
+                    // Joins beautifully without repeating text
+                    option.value = parts.join(', ');
+                    
                     option.setAttribute('data-lat', location.latitude);
                     option.setAttribute('data-lon', location.longitude);
                     
@@ -61,7 +66,6 @@ weatherBtn.addEventListener('click', function() {
     
     output.innerText = "Searching coordinates...";
 
-    // Find the option they clicked to see if we already have the exact coordinates saved
     const options = Array.from(datalist.options);
     const matchedOption = options.find(opt => opt.value === fullInput);
 
@@ -70,7 +74,6 @@ weatherBtn.addEventListener('click', function() {
         const lon = matchedOption.getAttribute('data-lon');
         getWeatherData(lat, lon, fullInput);
     } else {
-        // Fallback: If they manually typed it without clicking a suggestion, search for it
         const searchCity = fullInput.split(',')[0].trim();
         fetch(`https://geocoding-api.open-meteo.com/v1/search?name=${encodeURIComponent(searchCity)}&count=1&language=en&format=json`)
             .then(res => res.json())
@@ -89,7 +92,6 @@ weatherBtn.addEventListener('click', function() {
     }
 });
 
-// Separate function to fetch the weather metrics
 function getWeatherData(lat, lon, displayName) {
     output.innerText = `Fetching forecast for ${displayName}...`;
     
