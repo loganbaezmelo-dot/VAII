@@ -103,11 +103,11 @@ function getWeatherData(lat, lon, displayName) {
         });
 }
 
-// NEWS BUTTON ACTION: RICH SNIPPET PARAGRAPH READOUT
+// INFO BUTTON ACTION: RICH PARAGRAPH READOUT WITHOUT HARSH TRUNCATION
 newsBtn.addEventListener('click', function() {
     const query = cityInput.value.trim();
     if (!query) {
-        output.innerText = "Please type a topic or location for news.";
+        output.innerText = "Please type a topic or location.";
         return;
     }
 
@@ -130,21 +130,24 @@ newsBtn.addEventListener('click', function() {
             
             if (!infoText && data.RelatedTopics && data.RelatedTopics.length > 0) {
                 let snippets = [];
-                data.RelatedTopics.slice(0, 3).forEach((topic, index) => {
-                    if (topic.Text && !topic.Name) {
-                        snippets.push(`${topic.Text.trim()} [${index + 1}]`);
-                        sources.push({ name: `Source [${index + 1}]`, link: topic.FirstURL });
+                let counter = 1;
+                data.RelatedTopics.forEach((topic) => {
+                    if (topic.Text && !topic.Name && snippets.length < 3) {
+                        snippets.push(`${topic.Text.trim()} [${counter}]`);
+                        sources.push({ name: `Source [${counter}]`, link: topic.FirstURL });
+                        counter++;
                     }
                 });
                 infoText = snippets.join(" ");
             }
 
             if (!infoText) {
-                output.innerText = `Could not extract deep summary text for "${query}". Try searching a city or a broader topic!`;
+                output.innerText = `Could not extract summary text for "${query}". Try searching a city or a broader topic!`;
                 return;
             }
 
-            let newsHTML = `<div class="news-header-msg" style="color: #888; font-style: italic; margin-bottom: 12px; font-size: 0.9rem; line-height: 1.4;">I have provided the most relevant text of each news article related to "${query}".</div>`;
+            // Fixed prompt phrase to match broad info queries
+            let newsHTML = `<div class="news-header-msg" style="color: #888; font-style: italic; margin-bottom: 12px; font-size: 0.9rem; line-height: 1.4;">I have provided the most relevant text of each information source related to "${query}".</div>`;
             
             newsHTML += `
                 <div class="aggregated-text" style="font-size: 0.95rem; color: #e0e0e0; line-height: 1.6; margin-bottom: 20px; background: #1a1a1a; padding: 14px; border-radius: 8px; border-left: 3px solid #28a745; text-align: left;">
