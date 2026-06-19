@@ -28,6 +28,18 @@
             color: #888;
             margin-top: 0;
         }
+        /* Style for the warning positioned on top of the hub box */
+        .global-warning-msg {
+            color: #ffa500;
+            font-size: 0.8rem;
+            font-style: italic;
+            line-height: 1.4;
+            text-align: left;
+            margin-top: 20px;
+            margin-bottom: -10px; /* Pulls the hub widget closer up */
+            padding: 0 10px;
+            display: none; /* Controlled dynamically via JS */
+        }
         .widget {
             background-color: #1e1e1e;
             padding: 20px;
@@ -96,13 +108,16 @@
         </header>
 
         <main>
+            <div id="routing-warning" class="global-warning-msg">
+                ⚠️ Website routing is not 100% accurate because the AI cannot scrape live websites.
+            </div>
+
             <section class="widget" id="search-widget">
                 <h3>🔍 Smart Assistant Hub</h3>
                 <div class="search-container">
                     <input type="text" id="city-input" placeholder="Search city, topic, or country..." list="city-suggestions" autocomplete="off">
                     <div class="button-group">
                         <button id="weather-btn">Weather</button>
-                        <!-- Renamed button to Info -->
                         <button id="news-btn">Info</button>
                     </div>
                 </div>
