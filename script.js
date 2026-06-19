@@ -109,7 +109,7 @@ function getWeatherData(lat, lon, displayName) {
         });
 }
 
-// INFO BUTTON ACTION: HYBRID DICTIONARY, ENCYCLOPEDIA, LINK & RANDOMIZED SUBDOMAIN ROUTER
+// INFO BUTTON ACTION
 newsBtn.addEventListener('click', function() {
     let query = cityInput.value.trim();
     if (!query) {
@@ -128,32 +128,33 @@ newsBtn.addEventListener('click', function() {
 
         output.innerText = `Resolving routing for "${appName}"...`;
 
-        // RANDOM SHUFFLE OVERRIDES: Maps apps to arrays of valid standalone domains or subdomains
+        // RANDOM SHUFFLE OVERRIDES
         const randomizedRoutes = {
             "gemini": ["https://gemini.google.com", "https://gemini.com"],
+            "google gemini": ["https://gemini.google.com", "https://gemini.com"], // Added to catch multi-word typing
             "youtube music": ["https://music.youtube.com", "https://youtube.com/music"],
             "minecraft": ["https://minecraft.net"],
             "wikipedia": ["https://wikipedia.org"]
         };
 
-        // If the typed keyword matches a randomized list entry, pull a random choice!
         if (randomizedRoutes[appName]) {
             const routesList = randomizedRoutes[appName];
             const randomChoice = routesList[Math.floor(Math.random() * routesList.length)];
             
-            // Log to output box so you can visually see which one won the dice roll!
             output.innerHTML = `<div style="font-size:0.8rem; color:#888; margin-bottom:5px;">🎲 Random selection active (${routesList.length} choices found)</div>`;
             launchTargetUrl(randomChoice);
             return;
         }
 
-        // Standard mutation fallback logic chain if no special subdomains match
+        // SPACE ELIMINATION FILTER: Strips spaces out entirely for the domain testing string array
+        let safeDomainName = appName.replace(/\s+/g, '');
+
         const domainExtensions = ["com", "org", "net", "co"];
-        let testUrls = domainExtensions.map(ext => `https://${appName}.${ext}`);
+        let testUrls = domainExtensions.map(ext => `https://${safeDomainName}.${ext}`);
 
         let tryFetchVariant = (index) => {
             if (index >= testUrls.length) {
-                launchTargetUrl(`https://${appName}.com`);
+                launchTargetUrl(`https://${safeDomainName}.com`);
                 return;
             }
 
@@ -248,7 +249,6 @@ function launchTargetUrl(url) {
         </a>
     `;
     
-    // Clear old status text block completely or mix with top roll indicators
     if(output.innerHTML.includes("🎲")) {
         output.innerHTML = output.innerHTML + appendBox.innerHTML;
     } else {
