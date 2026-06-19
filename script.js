@@ -109,7 +109,7 @@ function getWeatherData(lat, lon, displayName) {
         });
 }
 
-// INFO BUTTON ACTION: HYBRID DICTIONARY, ENCYCLOPEDIA, LINK & COMMAND ROUTER
+// INFO BUTTON ACTION: HYBRID DICTIONARY, ENCYCLOPEDIA, LINK & RANDOMIZED SUBDOMAIN ROUTER
 newsBtn.addEventListener('click', function() {
     let query = cityInput.value.trim();
     if (!query) {
@@ -117,9 +117,8 @@ newsBtn.addEventListener('click', function() {
         return;
     }
 
-    // 1. SMART COMMAND DETECTOR ("Open ...")
+    // 1. SMART COMMAND DETECTOR WITH RANDOM SUBDOMAIN ROUTING ("Open ...")
     if (query.toLowerCase().startsWith("open ")) {
-        // Strip out the "open " keyword to isolate the app name (e.g., "youtube")
         let appName = query.substring(5).trim().toLowerCase().replace(/['"]+/g, '');
         
         if (!appName) {
@@ -127,41 +126,43 @@ newsBtn.addEventListener('click', function() {
             return;
         }
 
-        output.innerText = `Resolving domain variants for "${appName}"...`;
+        output.innerText = `Resolving routing for "${appName}"...`;
 
-        // Hardcoded primary overrides for unique domains (like minecraft using .net)
-        const domainOverrides = {
-            "minecraft": "https://minecraft.net",
-            "wikipedia": "https://wikipedia.org"
+        // RANDOM SHUFFLE OVERRIDES: Maps apps to arrays of valid standalone domains or subdomains
+        const randomizedRoutes = {
+            "gemini": ["https://gemini.google.com", "https://gemini.com"],
+            "youtube music": ["https://music.youtube.com", "https://youtube.com/music"],
+            "minecraft": ["https://minecraft.net"],
+            "wikipedia": ["https://wikipedia.org"]
         };
 
-        if (domainOverrides[appName]) {
-            launchTargetUrl(domainOverrides[appName]);
+        // If the typed keyword matches a randomized list entry, pull a random choice!
+        if (randomizedRoutes[appName]) {
+            const routesList = randomizedRoutes[appName];
+            const randomChoice = routesList[Math.floor(Math.random() * routesList.length)];
+            
+            // Log to output box so you can visually see which one won the dice roll!
+            output.innerHTML = `<div style="font-size:0.8rem; color:#888; margin-bottom:5px;">🎲 Random selection active (${routesList.length} choices found)</div>`;
+            launchTargetUrl(randomChoice);
             return;
         }
 
-        // Mutation chain testing for standard web platforms (.com, .org, .net, .co)
+        // Standard mutation fallback logic chain if no special subdomains match
         const domainExtensions = ["com", "org", "net", "co"];
         let testUrls = domainExtensions.map(ext => `https://${appName}.${ext}`);
 
-        // Cycle through variants to find which endpoint responds cleanly
-        // Using a sequential head test fallback sequence
         let tryFetchVariant = (index) => {
             if (index >= testUrls.length) {
-                // If all domain testing chains fail, fall back to standard .com format guess
                 launchTargetUrl(`https://${appName}.com`);
                 return;
             }
 
             let targetTest = testUrls[index];
-            
-            // Using no-cors mode to bypass web safety rules during domain mapping tests
             fetch(targetTest, { mode: 'no-cors' })
                 .then(() => {
                     launchTargetUrl(targetTest);
                 })
                 .catch(() => {
-                    // Fail loop triggers next web extension test check
                     tryFetchVariant(index + 1);
                 });
         };
@@ -235,7 +236,8 @@ newsBtn.addEventListener('click', function() {
 
 // SHARED UTILITY TO RENDER LAUNCH INTERFACE AND OPEN LINK
 function launchTargetUrl(url) {
-    output.innerHTML = `
+    const appendBox = document.createElement('div');
+    appendBox.innerHTML = `
         <div class="news-header-msg" style="color: #888; font-style: italic; margin-bottom: 12px; font-size: 0.9rem; line-height: 1.4;">Navigating to external web link...</div>
         <div style="background: #1a1a1a; padding: 14px; border-radius: 8px; border-left: 3px solid #007bff; text-align: left; margin-bottom: 15px;">
             🔗 <strong>Resolved Address:</strong> <span style="color: #4da3ff; word-break: break-all;">${url}</span>
@@ -245,6 +247,14 @@ function launchTargetUrl(url) {
             <span>Open Site ↗</span>
         </a>
     `;
+    
+    // Clear old status text block completely or mix with top roll indicators
+    if(output.innerHTML.includes("🎲")) {
+        output.innerHTML = output.innerHTML + appendBox.innerHTML;
+    } else {
+        output.innerHTML = appendBox.innerHTML;
+    }
+    
     window.open(url, '_blank');
 }
 
