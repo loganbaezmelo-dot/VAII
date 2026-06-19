@@ -52,6 +52,51 @@ const helpGuide = document.getElementById('help-guide');
 let isLoginMode = true;
 let debounceTimer;
 
+// Global tracking variable for current function context ('weather', 'info', or 'draw')
+let currentMode = 'info'; 
+
+// Static smart prompt recommendations to guide developers/users inside non-weather views
+const defaultInfoSuggestions = [
+    "Open Gemini", "Open Deepmind", "Open YouTube Music", "Open Wikipedia", "Open Minecraft"
+];
+const defaultDrawSuggestions = [
+    "A neon cyberpunk switch console artwork",
+    "Retro arcade machine sitting in an empty vaporwave room",
+    "Hyper-detailed digital painting of a cosmic fantasy library",
+    "Futuristic command center terminal minimal vector style"
+];
+
+// Helper to smoothly recalibrate styling and placeholders on context shift
+function setAppInputMode(newMode, placeholderText) {
+    currentMode = newMode;
+    cityInput.placeholder = placeholderText;
+    datalist.innerHTML = ""; // Clear active nodes instantly
+    
+    // Manage accent borders dynamically
+    cityInput.className = ""; 
+    cityInput.classList.add(`mode-${newMode}`);
+    
+    // Inject local context array instantly to save typing effort
+    populateStaticSuggestions();
+}
+
+function populateStaticSuggestions() {
+    if (currentMode === 'info') {
+        buildDatalistNodes(defaultInfoSuggestions);
+    } else if (currentMode === 'draw') {
+        buildDatalistNodes(defaultDrawSuggestions);
+    }
+}
+
+function buildDatalistNodes(stringArray) {
+    datalist.innerHTML = "";
+    stringArray.forEach(item => {
+        const option = document.createElement('option');
+        option.value = item;
+        datalist.appendChild(option);
+    });
+}
+
 // ==========================================
 // 1. FIREBASE AUTHENTICATION INITIALIZATION
 // ==========================================
@@ -64,6 +109,7 @@ onAuthStateChanged(auth, (user) => {
         authEmail.value = "";
         authPassword.value = "";
         authError.style.display = "none";
+        setAppInputMode('info', "Search topic, open apps, or enter URL...");
     } else {
         authContainer.style.display = "block";
         mainApp.style.display = "none";
@@ -138,12 +184,21 @@ cityInput.addEventListener('input', function() {
     const query = cityInput.value; 
     const trimmedQuery = query.trim();
     
+    // Prevent global warnings or API leaks if writing operational flags
     if (query.toLowerCase().startsWith('open ')) {
         datalist.innerHTML = ""; 
         routingWarning.style.display = "block"; 
         return;
     } else {
         routingWarning.style.display = "none";
+    }
+
+    // CRITICAL: Stop meteorological fetch completely if user isn't matching coordinates
+    if (currentMode !== 'weather') {
+        if (trimmedQuery.length === 0) {
+            populateStaticSuggestions();
+        }
+        return;
     }
 
     if (trimmedQuery.length < 3) {
@@ -186,6 +241,12 @@ cityInput.addEventListener('input', function() {
 });
 
 weatherBtn.addEventListener('click', function() {
+    // Arm the location interface if clicked directly with empty states
+    if (currentMode !== 'weather' && !cityInput.value.trim()) {
+        setAppInputMode('weather', "Type global location name for meteorology...");
+        return;
+    }
+    
     routingWarning.style.display = "none"; 
     const fullInput = cityInput.value.trim();
     if (!fullInput) {
@@ -198,7 +259,7 @@ weatherBtn.addEventListener('click', function() {
     const options = Array.from(datalist.options);
     const matchedOption = options.find(opt => opt.value === fullInput);
 
-    if (matchedOption) {
+    if (matchedOption && matchedOption.getAttribute('data-lat')) {
         const lat = matchedOption.getAttribute('data-lat');
         const lon = matchedOption.getAttribute('data-lon');
         getWeatherData(lat, lon, fullInput);
@@ -235,6 +296,8 @@ function getWeatherData(lat, lon, displayName) {
                 🌡️ Temperature: ${tempFahrenheit}°F (${tempCelsius}°C)<br>
                 💨 Wind Speed: ${weatherData.current_weather.windspeed} km/h
             `;
+            // Revert context frame cleanly to baseline
+            setAppInputMode('info', "Search topic, open apps, or enter URL...");
         })
         .catch(err => {
             output.innerText = "Error fetching live weather data.";
@@ -248,7 +311,6 @@ function getWeatherData(lat, lon, displayName) {
 function executeImageGeneration(imagePrompt) {
     routingWarning.style.display = "none"; 
 
-    // Insert structured status output featuring the active rotating amber loader
     output.innerHTML = `
         <div style="color: #888; font-style: italic; margin-bottom: 12px; font-size: 0.9rem; line-height: 1.4;">
             🎨 Generating artwork for "${imagePrompt}"...
@@ -274,6 +336,8 @@ function executeImageGeneration(imagePrompt) {
         const loader = document.getElementById("image-loader");
         if (loader) loader.remove();
         img.style.display = "block";
+        // Reset mode tracker smoothly
+        setAppInputMode('info', "Search topic, open apps, or enter URL...");
     };
 
     output.appendChild(img);
@@ -282,8 +346,12 @@ function executeImageGeneration(imagePrompt) {
 // Dedicated Draw Button Event Handler
 if (drawBtn) {
     drawBtn.addEventListener('click', function() {
+        if (currentMode !== 'draw' && !cityInput.value.trim()) {
+            setAppInputMode('draw', "Describe what you want the AI to render...");
+            return;
+        }
+
         let query = cityInput.value.trim();
-        // Automatically drop a manual "draw " keyword prefix if present to isolate the true prompt description
         if (query.toLowerCase().startsWith("draw ")) {
             query = query.substring(5).trim();
         }
@@ -297,16 +365,19 @@ if (drawBtn) {
 }
 
 newsBtn.addEventListener('click', function() {
+    if (currentMode !== 'info' && !cityInput.value.trim()) {
+        setAppInputMode('info', "Search topic, open apps, or enter URL...");
+        return;
+    }
+
     let query = cityInput.value.trim();
     if (!query) {
         output.innerText = "Please type a topic, location, or website URL.";
         return;
     }
 
-    // Secondary Check: Catch standard raw keyword prefix entries typed directly inside the Info engine context
     if (query.toLowerCase().startsWith("draw ")) {
         let imagePrompt = query.substring(5).trim();
-        
         if (!imagePrompt) {
             output.innerText = "Please specify what you want to draw.";
             return;
