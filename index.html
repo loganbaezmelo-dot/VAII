@@ -5,7 +5,6 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>VAII - Virtual Assistant</title>
     <style>
-        /* Embedded CSS so it never fails to load */
         body {
             background-color: #121212 !important;
             color: #ffffff !important;
@@ -83,9 +82,12 @@
             <section class="widget" id="weather-section">
                 <h3>🌤️ Live Weather</h3>
                 <div class="input-group">
-                    <input type="text" id="city-input" value="Loughman" placeholder="Enter city...">
+                    <!-- Added list link for autocomplete -->
+                    <input type="text" id="city-input" value="Loughman, Florida" placeholder="Type a city..." list="city-suggestions" autocomplete="off">
                     <button id="weather-btn">Check</button>
                 </div>
+                <!-- Container for dropdown suggestions -->
+                <datalist id="city-suggestions"></datalist>
                 <div id="weather-output" class="output-box">Click check to fetch data...</div>
             </section>
         </main>
