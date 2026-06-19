@@ -34,10 +34,9 @@ let isLoginMode = true;
 let debounceTimer;
 
 // ==========================================
-// 1. FIREBASE AUTHENTICATION FLOW MANAGEMENT
+// 1. FIREBASE AUTHENTICATION INITIALIZATION
 // ==========================================
 
-// Monitor Authentication State changes dynamically
 onAuthStateChanged(auth, (user) => {
     if (user) {
         authContainer.style.display = "none";
@@ -52,7 +51,6 @@ onAuthStateChanged(auth, (user) => {
     }
 });
 
-// Toggle between sign in and dynamic user sign up mode UI view
 authToggle.addEventListener('click', () => {
     isLoginMode = !isLoginMode;
     authError.style.display = "none";
@@ -69,7 +67,6 @@ authToggle.addEventListener('click', () => {
     }
 });
 
-// Trigger email & password submission actions
 authSubmitBtn.addEventListener('click', () => {
     const email = authEmail.value.trim();
     const password = authPassword.value;
@@ -89,14 +86,12 @@ authSubmitBtn.addEventListener('click', () => {
     }
 });
 
-// Trigger pop-up integration window login with Google Provider
 googleSigninBtn.addEventListener('click', () => {
     authError.style.display = "none";
     signInWithPopup(auth, googleProvider)
         .catch(err => showAuthError(err.message));
 });
 
-// Handle Sign Out action
 logoutActionBtn.addEventListener('click', () => {
     signOut(auth).catch(err => console.error("Sign out fail:", err));
 });
@@ -107,7 +102,7 @@ function showAuthError(message) {
 }
 
 // ==========================================
-// 2. CORE SYSTEM ASSISTANT LOGIC PIPELINES
+// 2. MAIN HUB INTERFACE OPERATIONAL LOOPS
 // ==========================================
 
 helpToggle.addEventListener('click', function() {
