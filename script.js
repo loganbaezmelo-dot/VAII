@@ -4,8 +4,21 @@ const weatherBtn = document.getElementById('weather-btn');
 const newsBtn = document.getElementById('news-btn');
 const output = document.getElementById('weather-output');
 const routingWarning = document.getElementById('routing-warning');
+const helpToggle = document.getElementById('help-toggle');
+const helpGuide = document.getElementById('help-guide');
 
 let debounceTimer;
+
+// Dynamic toggle handler for Help system walkthrough
+helpToggle.addEventListener('click', function() {
+    if (helpGuide.style.display === "block") {
+        helpGuide.style.display = "none";
+        helpToggle.innerText = "?";
+    } else {
+        helpGuide.style.display = "block";
+        helpToggle.innerText = "✕";
+    }
+});
 
 // Handle live autocomplete suggestions and display warning on top of the box
 cityInput.addEventListener('input', function() {
@@ -14,11 +27,10 @@ cityInput.addEventListener('input', function() {
     
     // Check if user is trying to execute a link command
     if (query.toLowerCase().startsWith('open ')) {
-        datalist.innerHTML = ""; // Kill search suggestions
-        routingWarning.style.display = "block"; // Make warning appear ON TOP of the widget box
+        datalist.innerHTML = ""; 
+        routingWarning.style.display = "block"; 
         return;
     } else {
-        // Hide the top warning if they backspace or clear out the command
         routingWarning.style.display = "none";
     }
 
@@ -65,7 +77,7 @@ cityInput.addEventListener('input', function() {
 
 // WEATHER BUTTON ACTION
 weatherBtn.addEventListener('click', function() {
-    routingWarning.style.display = "none"; // Hide command warning
+    routingWarning.style.display = "none"; 
     const fullInput = cityInput.value.trim();
     if (!fullInput) {
         output.innerText = "Please type a location first.";
@@ -131,7 +143,7 @@ newsBtn.addEventListener('click', function() {
 
     // 1. SMART COMMAND DETECTOR WITH RANDOM SUBDOMAIN ROUTING ("Open ...")
     if (query.toLowerCase().startsWith("open ")) {
-        routingWarning.style.display = "block"; // Keep top header alert locked visible
+        routingWarning.style.display = "block"; 
         let appName = query.substring(5).trim().toLowerCase().replace(/['"]+/g, '');
         
         if (!appName) {
@@ -141,7 +153,6 @@ newsBtn.addEventListener('click', function() {
 
         output.innerText = `Resolving routing for "${appName}"...`;
 
-        // RANDOM SHUFFLE & EXPLICIT OVERRIDES
         const randomizedRoutes = {
             "gemini": ["https://gemini.google.com", "https://gemini.com"],
             "google gemini": ["https://gemini.google.com", "https://gemini.com"],
@@ -191,7 +202,7 @@ newsBtn.addEventListener('click', function() {
     const hasProtocol = query.startsWith('http://') || query.startsWith('https://');
 
     if (hasProtocol || isUrlPattern) {
-        routingWarning.style.display = "block"; // Show top layout alert for manual link passthroughs too
+        routingWarning.style.display = "block"; 
         let targetUrl = query;
         if (!hasProtocol) {
             targetUrl = 'https://' + query;
@@ -200,7 +211,6 @@ newsBtn.addEventListener('click', function() {
         return;
     }
 
-    // If it's a normal lookup, make sure to hide the top alert message box
     routingWarning.style.display = "none";
 
     // 3. DICTIONARY CHECKER FOR SINGLE WORDS
@@ -257,7 +267,6 @@ newsBtn.addEventListener('click', function() {
 function launchTargetUrl(url) {
     const isDiceRoll = output.innerHTML.includes("🎲");
     
-    // Warning text is completely gone from this layout because it is locked on top of the container box
     let contentHTML = `
         <div class="news-header-msg" style="color: #888; font-style: italic; margin-bottom: 4px; font-size: 0.9rem; line-height: 1.4;">Navigating to external web link...</div>
         <div style="background: #1a1a1a; padding: 14px; border-radius: 8px; border-left: 3px solid #007bff; text-align: left; margin-bottom: 15px;">
