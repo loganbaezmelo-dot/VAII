@@ -103,7 +103,7 @@ function getWeatherData(lat, lon, displayName) {
         });
 }
 
-// INFO BUTTON ACTION: RICH PARAGRAPH READOUT WITHOUT HARSH TRUNCATION
+// INFO BUTTON ACTION: CLEAN CONTINUOUS TRANSITIONS & EXPLICIT SOURCE NAMES
 newsBtn.addEventListener('click', function() {
     const query = cityInput.value.trim();
     if (!query) {
@@ -130,15 +130,35 @@ newsBtn.addEventListener('click', function() {
             
             if (!infoText && data.RelatedTopics && data.RelatedTopics.length > 0) {
                 let snippets = [];
-                let counter = 1;
                 data.RelatedTopics.forEach((topic) => {
                     if (topic.Text && !topic.Name && snippets.length < 3) {
-                        snippets.push(`${topic.Text.trim()} [${counter}]`);
-                        sources.push({ name: `Source [${counter}]`, link: topic.FirstURL });
-                        counter++;
+                        let textBlock = topic.Text.trim();
+                        
+                        // Smart RegEx to remove trailing brackets like "[1]" or "..." if present
+                        textBlock = textBlock.replace(/\[\d+\]/g, '').trim();
+
+                        // Cleanly extract a real name from the source URL structure
+                        let namedSource = "Web Resource";
+                        if (topic.FirstURL) {
+                            try {
+                                const urlObj = new URL(topic.FirstURL);
+                                // Turns "en.wikipedia.org" into "Wikipedia"
+                                let domain = urlObj.hostname.replace('www.', '');
+                                if (domain.includes('wikipedia')) namedSource = "Wikipedia";
+                                else if (domain.includes('britannica')) namedSource = "Britannica";
+                                else namedSource = domain.split('.')[0].charAt(0).toUpperCase() + domain.split('.')[0].slice(1);
+                            } catch (e) {
+                                namedSource = "Source Reference";
+                            }
+                        }
+
+                        snippets.push(textBlock);
+                        sources.push({ name: namedSource, link: topic.FirstURL });
                     }
                 });
-                infoText = snippets.join(" ");
+                
+                // Seamlessly join the strings with a clean styled spacer instead of raw numbers
+                infoText = snippets.join(' <span style="color: #555; font-weight: bold; margin: 0 6px;">|</span> ');
             }
 
             if (!infoText) {
@@ -146,7 +166,6 @@ newsBtn.addEventListener('click', function() {
                 return;
             }
 
-            // Fixed prompt phrase to match broad info queries
             let newsHTML = `<div class="news-header-msg" style="color: #888; font-style: italic; margin-bottom: 12px; font-size: 0.9rem; line-height: 1.4;">I have provided the most relevant text of each information source related to "${query}".</div>`;
             
             newsHTML += `
