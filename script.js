@@ -9,75 +9,104 @@ let debounceTimer;
 cityInput.addEventListener('input', function() {
     const query = cityInput.value.trim();
     
-    // Clear list if text is too short
     if (query.length < 3) {
         datalist.innerHTML = "";
         return;
     }
 
-    // Debounce stops it from hitting the API on every single keystroke
     clearTimeout(debounceTimer);
     debounceTimer = setTimeout(() => {
         fetch(`https://geocoding-api.open-meteo.com/v1/search?name=${encodeURIComponent(query)}&count=5&language=en&format=json`)
             .then(res => res.json())
             .then(geoData => {
-                datalist.innerHTML = ""; // Clear old options
+                datalist.innerHTML = ""; 
                 if (!geoData.results) return;
 
                 geoData.results.forEach(location => {
                     const option = document.createElement('option');
-                    // Combine City with State (admin1) or Country
-                    const region = location.admin1 || location.country || "";
-                    option.value = region ? `${location.name}, ${region}` : location.name;
+                    
+                    const city = location.name;
+                    const state = location.admin1;
+                    const country = location.country;
+
+                    // Smart formatting logic to fix "Pyongyang, Pyongyang" and add Country
+                    let label = city;
+                    if (state && state !== city) {
+                        label += `, ${state}`;
+                    }
+                    if (country) {
+                        label += `, ${country}`;
+                    }
+
+                    option.value = label;
+                    // Stashing the exact coordinates directly on the option so we don't have to search again!
+                    option.setAttribute('data-lat', location.latitude);
+                    option.setAttribute('data-lon', location.longitude);
+                    
                     datalist.appendChild(option);
                 });
             })
             .catch(err => console.error("Suggestions error:", err));
-    }, 300); // Waits 300ms after you stop typing to search
+    }, 300);
 });
 
 // Handle Weather Lookup when clicking Check
 weatherBtn.addEventListener('click', function() {
-    // Grab whatever text is inside the box (either typed or clicked from suggestions)
-    let fullInput = cityInput.value.trim();
-    // Take just the city name before the comma to feed the coordinate lookup safely
-    let searchCity = fullInput.split(',')[0].trim();
+    const fullInput = cityInput.value.trim();
+    
+    if (!fullInput) {
+        output.innerText = "Please type a city first.";
+        return;
+    }
     
     output.innerText = "Searching coordinates...";
+
+    // Find the option they clicked to see if we already have the exact coordinates saved
+    const options = Array.from(datalist.options);
+    const matchedOption = options.find(opt => opt.value === fullInput);
+
+    if (matchedOption) {
+        const lat = matchedOption.getAttribute('data-lat');
+        const lon = matchedOption.getAttribute('data-lon');
+        getWeatherData(lat, lon, fullInput);
+    } else {
+        // Fallback: If they manually typed it without clicking a suggestion, search for it
+        const searchCity = fullInput.split(',')[0].trim();
+        fetch(`https://geocoding-api.open-meteo.com/v1/search?name=${encodeURIComponent(searchCity)}&count=1&language=en&format=json`)
+            .then(res => res.json())
+            .then(geoData => {
+                if (!geoData.results || geoData.results.length === 0) {
+                    output.innerText = "Location not found.";
+                    return;
+                }
+                const loc = geoData.results[0];
+                getWeatherData(loc.latitude, loc.longitude, fullInput);
+            })
+            .catch(err => {
+                output.innerText = "Error fetching location.";
+                console.error(err);
+            });
+    }
+});
+
+// Separate function to fetch the weather metrics
+function getWeatherData(lat, lon, displayName) {
+    output.innerText = `Fetching forecast for ${displayName}...`;
     
-    fetch(`https://geocoding-api.open-meteo.com/v1/search?name=${encodeURIComponent(searchCity)}&count=5&language=en&format=json`)
+    fetch(`https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current_weather=true`)
         .then(res => res.json())
-        .then(geoData => {
-            if (!geoData.results || geoData.results.length === 0) {
-                output.innerText = "Location not found.";
-                return;
-            }
+        .then(weatherData => {
+            const tempCelsius = weatherData.current_weather.temperature;
+            const tempFahrenheit = Math.round((tempCelsius * 9/5) + 32);
             
-            // Try to match the exact option chosen by checking state lines, default to first result
-            let targetLocation = geoData.results[0];
-            if (fullInput.includes(',')) {
-                const stateSelected = fullInput.split(',')[1].trim().toLowerCase();
-                const matched = geoData.results.find(loc => (loc.admin1 || '').toLowerCase() === stateSelected);
-                if (matched) targetLocation = matched;
-            }
-            
-            output.innerText = `Fetching forecast for ${targetLocation.name}...`;
-            
-            return fetch(`https://api.open-meteo.com/v1/forecast?latitude=${targetLocation.latitude}&longitude=${targetLocation.longitude}&current_weather=true`)
-                .then(res => res.json())
-                .then(weatherData => {
-                    const tempCelsius = weatherData.current_weather.temperature;
-                    const tempFahrenheit = Math.round((tempCelsius * 9/5) + 32);
-                    
-                    output.innerHTML = `
-                        <strong>📍 ${targetLocation.name}, ${targetLocation.admin1 || targetLocation.country}</strong><br>
-                        🌡️ Temperature: ${tempFahrenheit}°F (${tempCelsius}°C)<br>
-                        💨 Wind Speed: ${weatherData.current_weather.windspeed} km/h
-                    `;
-                });
+            output.innerHTML = `
+                <strong>📍 ${displayName}</strong><br>
+                🌡️ Temperature: ${tempFahrenheit}°F (${tempCelsius}°C)<br>
+                💨 Wind Speed: ${weatherData.current_weather.windspeed} km/h
+            `;
         })
         .catch(err => {
             output.innerText = "Error fetching live weather data.";
             console.error(err);
         });
-});
+}
