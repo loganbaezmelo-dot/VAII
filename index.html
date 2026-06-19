@@ -114,6 +114,7 @@
             color: white;
             font-size: 1rem;
             box-sizing: border-box;
+            transition: border-color 0.2s ease;
         }
         .button-group {
             display: flex;
@@ -129,10 +130,19 @@
             font-size: 1rem;
             cursor: pointer;
             text-align: center;
+            transition: transform 0.1s ease, opacity 0.2s ease;
+        }
+        button:active {
+            transform: scale(0.97);
         }
         #weather-btn { background: #007bff; }
         #news-btn { background: #28a745; }
         #draw-btn { background: #e0a800; color: #121212; }
+        
+        /* Highlight borders to subtly indicate which mode is armed */
+        input.mode-weather { border-color: #007bff !important; }
+        input.mode-info { border-color: #28a745 !important; }
+        input.mode-draw { border-color: #e0a800 !important; }
         
         .output-box {
             margin-top: 15px;
@@ -270,7 +280,7 @@
                     </div>
 
                     <div class="search-container">
-                        <input type="text" id="city-input" placeholder="Search city, topic, or country..." list="city-suggestions" autocomplete="off">
+                        <input type="text" id="city-input" placeholder="Select a service below to begin typing..." list="city-suggestions" autocomplete="off">
                         <div class="button-group">
                             <button id="weather-btn">Weather</button>
                             <button id="news-btn">Info</button>
