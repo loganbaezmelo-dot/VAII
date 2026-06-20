@@ -1,4 +1,3 @@
-// Import direct from Google's official stable Firebase SDK CDN networks
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
 import { 
     getAuth, 
@@ -10,7 +9,6 @@ import {
     signOut 
 } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
 
-// Firebase App Configuration Setup
 const firebaseConfig = {
     apiKey: "AIzaSyA6RmZ6rquzUR1dct30s355PzLu-r1_fwE",
     authDomain: "vaiinternet.firebaseapp.com",
@@ -21,12 +19,11 @@ const firebaseConfig = {
     measurementId: "G-0XBYP585WQ"
 };
 
-// Initialize instances inside our primary module lifecycle context
 const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
 const googleProvider = new GoogleAuthProvider();
 
-// AUTH CONTROL NODES
+// DOM CONTROL NODES
 const authContainer = document.getElementById('auth-container');
 const mainApp = document.getElementById('main-app');
 const authTitle = document.getElementById('auth-title');
@@ -38,11 +35,12 @@ const authToggle = document.getElementById('auth-toggle');
 const authError = document.getElementById('auth-error');
 const logoutActionBtn = document.getElementById('logout-action-btn');
 
-// SYSTEM APP WORKSPACE NODES
 const cityInput = document.getElementById('city-input');
 const datalist = document.getElementById('city-suggestions');
 const weatherBtn = document.getElementById('weather-btn');
 const newsBtn = document.getElementById('news-btn');
+const marketBtn = document.getElementById('market-btn');
+const clockBtn = document.getElementById('clock-btn');
 const drawBtn = document.getElementById('draw-btn');
 const executeActionBtn = document.getElementById('execute-action-btn');
 const output = document.getElementById('weather-output');
@@ -52,14 +50,14 @@ const helpGuide = document.getElementById('help-guide');
 
 let isLoginMode = true;
 let debounceTimer;
-
-// Global tracking variable for current function context ('weather', 'info', or 'draw')
 let currentMode = 'info'; 
 
-// Static smart prompt recommendations to guide developers/users inside non-weather views
+// Keyboards suggestions presets mapping
 const defaultInfoSuggestions = [
     "Open Gemini", "Open DeepMind", "Open YouTube", "Open Wikipedia", "Open Minecraft", "Open YouTube Music"
 ];
+const defaultMarketSuggestions = ["BTC", "ETH", "AAPL", "GOOGL", "SOL"];
+const defaultClockSuggestions = ["London", "Tokyo", "New York", "Paris", "Los Angeles"];
 const defaultDrawSuggestions = [
     "A neon cyberpunk switch console artwork",
     "Retro arcade machine sitting in an empty vaporwave room",
@@ -67,32 +65,25 @@ const defaultDrawSuggestions = [
     "Futuristic command center terminal minimal vector style"
 ];
 
-// Helper to smoothly recalibrate styling and placeholders on context shift
 function setAppInputMode(newMode, placeholderText, activeBtn) {
     currentMode = newMode;
-    
     if (cityInput) {
         cityInput.placeholder = placeholderText;
         cityInput.className = ""; 
         cityInput.classList.add(`mode-${newMode}`);
         cityInput.value = ""; 
     }
-    
     if (datalist) datalist.innerHTML = ""; 
-
-    // Manage button tab highlights cleanly
     document.querySelectorAll('.mode-select').forEach(btn => btn.classList.remove('active'));
     if (activeBtn) activeBtn.classList.add('active');
-    
     populateStaticSuggestions();
 }
 
 function populateStaticSuggestions() {
-    if (currentMode === 'info') {
-        buildDatalistNodes(defaultInfoSuggestions);
-    } else if (currentMode === 'draw') {
-        buildDatalistNodes(defaultDrawSuggestions);
-    }
+    if (currentMode === 'info') buildDatalistNodes(defaultInfoSuggestions);
+    else if (currentMode === 'market') buildDatalistNodes(defaultMarketSuggestions);
+    else if (currentMode === 'clock') buildDatalistNodes(defaultClockSuggestions);
+    else if (currentMode === 'draw') buildDatalistNodes(defaultDrawSuggestions);
 }
 
 function buildDatalistNodes(stringArray) {
@@ -108,7 +99,6 @@ function buildDatalistNodes(stringArray) {
 // ==========================================
 // 1. FIREBASE AUTHENTICATION INITIALIZATION
 // ==========================================
-
 onAuthStateChanged(auth, (user) => {
     if (user) {
         authContainer.style.display = "none";
@@ -130,12 +120,10 @@ authToggle.addEventListener('click', () => {
     if (isLoginMode) {
         authTitle.innerText = "🔒 Account Sign In";
         authSubmitBtn.innerText = "Log In";
-        authSubmitBtn.style.background = "#007bff";
         authToggle.innerText = "Need an account? Register instead";
     } else {
         authTitle.innerText = "✨ Create Account";
         authSubmitBtn.innerText = "Register App User";
-        authSubmitBtn.style.background = "#28a745";
         authToggle.innerText = "Already have an account? Sign In";
     }
 });
@@ -144,25 +132,20 @@ authSubmitBtn.addEventListener('click', () => {
     const email = authEmail.value.trim();
     const password = authPassword.value;
     authError.style.display = "none";
-
     if (!email || !password) {
         showAuthError("Please fill out all credential inputs.");
         return;
     }
-
     if (isLoginMode) {
-        signInWithEmailAndPassword(auth, email, password)
-            .catch(err => showAuthError(err.message));
+        signInWithEmailAndPassword(auth, email, password).catch(err => showAuthError(err.message));
     } else {
-        createUserWithEmailAndPassword(auth, email, password)
-            .catch(err => showAuthError(err.message));
+        createUserWithEmailAndPassword(auth, email, password).catch(err => showAuthError(err.message));
     }
 });
 
 googleSigninBtn.addEventListener('click', () => {
     authError.style.display = "none";
-    signInWithPopup(auth, googleProvider)
-        .catch(err => showAuthError(err.message));
+    signInWithPopup(auth, googleProvider).catch(err => showAuthError(err.message));
 });
 
 logoutActionBtn.addEventListener('click', () => {
@@ -177,7 +160,6 @@ function showAuthError(message) {
 // ==========================================
 // 2. MAIN HUB INTERFACE OPERATIONAL LOOPS
 // ==========================================
-
 helpToggle.addEventListener('click', function() {
     if (helpGuide.style.display === "block") {
         helpGuide.style.display = "none";
@@ -188,17 +170,11 @@ helpToggle.addEventListener('click', function() {
     }
 });
 
-weatherBtn.addEventListener('click', function() {
-    setAppInputMode('weather', "Enter city or country location...", weatherBtn);
-});
-
-newsBtn.addEventListener('click', function() {
-    setAppInputMode('info', "Search topics, apps, or links...", newsBtn);
-});
-
-drawBtn.addEventListener('click', function() {
-    setAppInputMode('draw', "Describe an image prompt...", drawBtn);
-});
+weatherBtn.addEventListener('click', () => setAppInputMode('weather', "Enter city or country location...", weatherBtn));
+newsBtn.addEventListener('click', () => setAppInputMode('info', "Search topics, apps, or links...", newsBtn));
+marketBtn.addEventListener('click', () => setAppInputMode('market', "Enter stock ticker or crypto token...", marketBtn));
+clockBtn.addEventListener('click', () => setAppInputMode('clock', "Enter city name to check timezone...", clockBtn));
+drawBtn.addEventListener('click', () => setAppInputMode('draw', "Describe an image prompt...", drawBtn));
 
 cityInput.addEventListener('input', function() {
     const query = cityInput.value; 
@@ -266,9 +242,10 @@ if (executeActionBtn) {
             return;
         }
 
-        if (currentMode === 'weather') {
-            runWeatherExecution(query);
-        } else if (currentMode === 'draw') {
+        if (currentMode === 'weather') runWeatherExecution(query);
+        else if (currentMode === 'market') runMarketExecution(query);
+        else if (currentMode === 'clock') runClockExecution(query);
+        else if (currentMode === 'draw') {
             let imagePrompt = query;
             if (imagePrompt.toLowerCase().startsWith("draw ")) {
                 imagePrompt = imagePrompt.substring(5).trim();
@@ -342,6 +319,59 @@ function getWeatherData(lat, lon, displayName) {
         });
 }
 
+function runMarketExecution(ticker) {
+    output.innerText = `Fetching price index for "${ticker.toUpperCase()}"...`;
+    const cleanTicker = ticker.trim().toLowerCase();
+    const cryptoMap = { btc: "bitcoin", eth: "ethereum", sol: "solana", doge: "dogecoin", xrp: "ripple" };
+
+    if (cryptoMap[cleanTicker]) {
+        fetch(`https://api.coingecko.com/api/v3/simple/price?ids=${cryptoMap[cleanTicker]}&vs_currencies=usd&include_24hr_change=true`)
+            .then(res => res.json())
+            .then(data => {
+                const coinData = data[cryptoMap[cleanTicker]];
+                const price = coinData.usd;
+                const change = coinData.usd_24h_change.toFixed(2);
+                const indicator = change >= 0 ? "📈" : "📉";
+                output.innerHTML = `
+                    <div style="background: #1a1a1a; padding: 14px; border-radius: 8px; border-left: 3px solid #6f42c1; text-align: left;">
+                        <strong>🪙 ${cryptoMap[cleanTicker].toUpperCase()} (${ticker.toUpperCase()})</strong><br>
+                        💰 Price: $${price.toLocaleString()} USD<br>
+                        ${indicator} 24h Change: ${change}%
+                    </div>
+                `;
+            }).catch(() => { output.innerText = "Error pulling crypto ticker data."; });
+    } else {
+        output.innerHTML = `
+            <div style="background: #1a1a1a; padding: 14px; border-radius: 8px; border-left: 3px solid #6f42c1; text-align: left;">
+                <strong>📈 Stock Ticker Tracker: ${ticker.toUpperCase()}</strong><br>
+                <span style="color: #aaa; font-size: 0.9rem;">To view deep market assets without explicit tokens, launch structural metrics directly:</span>
+                <a href="https://finance.yahoo.com/quote/${ticker.toUpperCase()}" target="_blank" style="display: block; text-align: center; margin-top: 10px; background: #6f42c1; color: white; padding: 8px; border-radius: 6px; text-decoration: none; font-weight: bold;">Open Yahoo Finance Chart ↗</a>
+            </div>
+        `;
+    }
+}
+
+function runClockExecution(location) {
+    output.innerText = `Resolving local clock context for "${location}"...`;
+    fetch(`https://geocoding-api.open-meteo.com/v1/search?name=${encodeURIComponent(location)}&count=1&language=en&format=json`)
+        .then(res => res.json())
+        .then(data => {
+            if (!data.results || data.results.length === 0) throw new Error();
+            const zone = data.results[0].timezone;
+            const timeString = new Date().toLocaleTimeString("en-US", { timeZone: zone, hour: '2-digit', minute: '2-digit' });
+            const dateString = new Date().toLocaleDateString("en-US", { timeZone: zone, weekday: 'long', month: 'short', day: 'numeric' });
+            
+            output.innerHTML = `
+                <div style="background: #1a1a1a; padding: 14px; border-radius: 8px; border-left: 3px solid #fd7e14; text-align: left;">
+                    <strong>🕒 ${data.results[0].name}, ${data.results[0].country}</strong><br>
+                    <span style="font-size: 1.8rem; font-weight: bold; color: #fff; display: block; margin: 5px 0;">${timeString}</span>
+                    📅 ${dateString}<br>
+                    🌐 Time Zone: <code>${zone}</code>
+                </div>
+            `;
+        }).catch(() => { output.innerText = "Time zone data missing for specified territory configuration."; });
+}
+
 function executeImageGeneration(imagePrompt) {
     routingWarning.style.display = "none"; 
 
@@ -377,14 +407,46 @@ function executeImageGeneration(imagePrompt) {
 }
 
 function runInfoExecution(query) {
-    if (query.toLowerCase().startsWith("draw ")) {
-        let imagePrompt = query.substring(5).trim();
-        if (!imagePrompt) {
-            output.innerText = "Please specify what you want to draw.";
+    if (/^[0-9+\-*/().\s]+$/.test(query) || query.toLowerCase().includes("to")) {
+        try {
+            if (!query.toLowerCase().includes("to")) {
+                const result = Function(`"use strict"; return (${query})`)();
+                output.innerHTML = `
+                    <div style="background: #1a1a1a; padding: 14px; border-radius: 8px; border-left: 3px solid #28a745; text-align: left;">
+                        🔢 <strong>Calculation Result:</strong><br>
+                        <span style="font-size: 1.3rem; font-weight: bold;">${query} = ${result}</span>
+                    </div>
+                `;
+                return;
+            }
+        } catch(e) {}
+
+        if (query.toLowerCase().includes(" to ")) {
+            const parts = query.split(/ to /i);
+            const source = parts[0].trim();
+            const targetLanguage = parts[1].trim();
+
+            output.innerText = `Processing processing translation loop...`;
+            fetch(`https://api.mymemory.translated.net/get?q=${encodeURIComponent(source)}&langpair=en|${encodeURIComponent(targetLanguage.substring(0,2))}`)
+                .then(res => res.json())
+                .then(data => {
+                    output.innerHTML = `
+                        <div style="background: #1a1a1a; padding: 14px; border-radius: 8px; border-left: 3px solid #28a745; text-align: left;">
+                            🗣️ <strong>Translation Asset Core:</strong><br>
+                            📥 Original (EN): <em>"${source}"</em><br>
+                            📤 Translated (${targetLanguage.toUpperCase()}): <strong style="color: #4da3ff; font-size: 1.1rem; display:block; margin-top:4px;">"${data.responseData.translatedText}"</strong>
+                        </div>
+                    `;
+                }).catch(() => {
+                    output.innerHTML = `
+                        <div style="background: #1a1a1a; padding: 14px; border-radius: 8px; border-left: 3px solid #28a745; text-align: left;">
+                            🔄 <strong>Conversion / External Routing Core</strong><br>
+                            Evaluating query string parameter link directly: <a href="https://www.google.com/search?q=${encodeURIComponent(query)}" target="_blank" style="color: #4da3ff;">Launch Conversion Card ↗</a>
+                        </div>
+                    `;
+                });
             return;
         }
-        executeImageGeneration(imagePrompt);
-        return;
     }
 
     if (query.toLowerCase().startsWith("open ")) {
@@ -411,32 +473,12 @@ function runInfoExecution(query) {
         if (randomizedRoutes[appName]) {
             const routesList = randomizedRoutes[appName];
             const randomChoice = routesList[Math.floor(Math.random() * routesList.length)];
-            output.innerHTML = `<div style="font-size:0.8rem; color:#888; margin-bottom:5px;">🎲 Random selection active (${routesList.length} choices found)</div>`;
             launchTargetUrl(randomChoice);
             return;
         }
 
         let safeDomainName = appName.replace(/\s+/g, '');
-        const domainExtensions = ["com", "org", "net", "co"];
-        let testUrls = domainExtensions.map(ext => `https://${safeDomainName}.${ext}`);
-
-        let tryFetchVariant = (index) => {
-            if (index >= testUrls.length) {
-                launchTargetUrl(`https://${safeDomainName}.com`);
-                return;
-            }
-
-            let targetTest = testUrls[index];
-            fetch(targetTest, { mode: 'no-cors' })
-                .then(() => {
-                    launchTargetUrl(targetTest);
-                })
-                .catch(() => {
-                    tryFetchVariant(index + 1);
-                });
-        };
-
-        tryFetchVariant(0);
+        launchTargetUrl(`https://${safeDomainName}.com`);
         return;
     }
 
@@ -473,15 +515,13 @@ function runInfoExecution(query) {
                 const definitionObj = dictData[key][0];
                 const partOfSpeech = definitionObj.partOfSpeech;
                 
-                // Safety Guard 1: Verify token lists are array structures before popping strings
                 let rawDefinition = "";
                 if (definitionObj.definitions && definitionObj.definitions.length > 0) {
                     rawDefinition = definitionObj.definitions[0].definition.replace(/<[^>]*>/g, '').trim();
                 }
                 
-                // Safety Guard 2: Clear human-readable fallback message if token text is empty
                 if (!rawDefinition) {
-                    rawDefinition = "No direct text definition available. Use the index link (the blue text saying 'Open Source' next to the text saying 'Wikitionary') on the bottom of the page to view the full dictionary entry.";
+                    rawDefinition = "No direct text definition available. Use the index link (the blue text saying 'Open Source' next to the text saying 'Wiktionary') on the bottom of the page to view the full dictionary entry.";
                 }
                 
                 let infoHTML = `<div class="news-header-msg" style="color: #888; font-style: italic; margin-bottom: 12px; font-size: 0.9rem; line-height: 1.4;">I have provided the most relevant text of each information source related to "${query}".</div>`;
@@ -491,14 +531,12 @@ function runInfoExecution(query) {
                     </div>
                 `;
 
-                // Wikipedia API Request Sequence Hook
                 fetch(`https://en.wikipedia.org/w/api.php?action=query&list=search&srsearch=${encodeURIComponent(query)}&utf8=&format=json&origin=*`)
                     .then(wikiRes => wikiRes.json())
                     .then(wikiSearchData => {
                         if (wikiSearchData.query.search && wikiSearchData.query.search.length > 0) {
                             let topPageTitle = wikiSearchData.query.search[0].title;
                             
-                            // Safety Guard 3: Disambiguation filter bypass loops to skip broken index fragments
                             if (wikiSearchData.query.search[1] && (topPageTitle.toLowerCase().includes("refer to") || wikiSearchData.query.search[0].snippet.toLowerCase().includes("may refer to"))) {
                                 topPageTitle = wikiSearchData.query.search[1].title;
                             }
@@ -508,7 +546,6 @@ function runInfoExecution(query) {
                                 .then(summaryData => {
                                     let wikiText = summaryData.extract || "";
                                     
-                                    // Safety Guard 4: If text returns sub-index tracking summaries, swap text out safely
                                     if (summaryData.type === "disambiguation" || wikiText.toLowerCase().includes("may refer to")) {
                                         wikiText = "Multiple context records have been located. Browse the full article space using the search portal down below.";
                                     }
