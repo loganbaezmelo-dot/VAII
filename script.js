@@ -1,4 +1,3 @@
-// Import direct from Google's official stable Firebase SDK CDN networks
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
 import { 
     getAuth, 
@@ -10,7 +9,6 @@ import {
     signOut 
 } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
 
-// Firebase App Configuration Setup
 const firebaseConfig = {
     apiKey: "AIzaSyA6RmZ6rquzUR1dct30s355PzLu-r1_fwE",
     authDomain: "vaiinternet.firebaseapp.com",
@@ -41,8 +39,6 @@ const cityInput = document.getElementById('city-input');
 const datalist = document.getElementById('city-suggestions');
 const weatherBtn = document.getElementById('weather-btn');
 const newsBtn = document.getElementById('news-btn');
-const marketBtn = document.getElementById('market-btn');
-const clockBtn = document.getElementById('clock-btn');
 const drawBtn = document.getElementById('draw-btn');
 const executeActionBtn = document.getElementById('execute-action-btn');
 const output = document.getElementById('weather-output');
@@ -54,12 +50,10 @@ let isLoginMode = true;
 let debounceTimer;
 let currentMode = 'info'; 
 
-// Keyboards suggestions presets mapping
+// Combined global suggestion lists inside standard 3-button architecture
 const defaultInfoSuggestions = [
     "Open Gemini", "Open DeepMind", "Open YouTube", "Open Wikipedia", "Open Minecraft", "Open YouTube Music"
 ];
-const defaultMarketSuggestions = ["BTC", "ETH", "AAPL", "GOOGL", "SOL"];
-const defaultClockSuggestions = ["London", "Tokyo", "New York", "Paris", "Los Angeles"];
 const defaultDrawSuggestions = [
     "A neon cyberpunk switch console artwork",
     "Retro arcade machine sitting in an empty vaporwave room",
@@ -83,8 +77,6 @@ function setAppInputMode(newMode, placeholderText, activeBtn) {
 
 function populateStaticSuggestions() {
     if (currentMode === 'info') buildDatalistNodes(defaultInfoSuggestions);
-    else if (currentMode === 'market') buildDatalistNodes(defaultMarketSuggestions);
-    else if (currentMode === 'clock') buildDatalistNodes(defaultClockSuggestions);
     else if (currentMode === 'draw') buildDatalistNodes(defaultDrawSuggestions);
 }
 
@@ -174,8 +166,6 @@ helpToggle.addEventListener('click', function() {
 
 weatherBtn.addEventListener('click', () => setAppInputMode('weather', "Enter city or country location...", weatherBtn));
 newsBtn.addEventListener('click', () => setAppInputMode('info', "Search topics, apps, or links...", newsBtn));
-marketBtn.addEventListener('click', () => setAppInputMode('market', "Enter stock ticker or crypto token...", marketBtn));
-clockBtn.addEventListener('click', () => setAppInputMode('clock', "Enter city name to check timezone...", clockBtn));
 drawBtn.addEventListener('click', () => setAppInputMode('draw', "Describe an image prompt...", drawBtn));
 
 cityInput.addEventListener('input', function() {
@@ -245,8 +235,6 @@ if (executeActionBtn) {
         }
 
         if (currentMode === 'weather') runWeatherExecution(query);
-        else if (currentMode === 'market') runMarketExecution(query);
-        else if (currentMode === 'clock') runClockExecution(query);
         else if (currentMode === 'draw') {
             let imagePrompt = query;
             if (imagePrompt.toLowerCase().startsWith("draw ")) {
@@ -312,6 +300,16 @@ function getWeatherData(lat, lon, displayName) {
                 <strong>📍 ${displayName}</strong><br>
                 🌡️ Temperature: ${tempFahrenheit}°F (${tempCelsius}°C)<br>
                 💨 Wind Speed: ${weatherData.current_weather.windspeed} km/h
+                
+                <div class="source-box" style="border-top: 1px solid #333; padding-top: 12px; margin-top: 15px;">
+                    <span style="display: block; font-size: 0.75rem; color: #777; font-weight: bold; text-transform: uppercase; margin-bottom: 8px; letter-spacing: 0.5px;">Sources Index</span>
+                    <div class="source-list" style="display: flex; flex-direction: column;">
+                        <a href="https://open-meteo.com" target="_blank" style="display: flex; align-items: center; justify-content: space-between; background: #2a2a2a; border: 1px solid #3d3d3d; border-radius: 6px; padding: 6px 10px; color: #4da3ff; text-decoration: none; font-size: 0.82rem; font-weight: bold;">
+                            <span style="color: #aaa; font-weight: normal;">☀️ Open-Meteo API</span>
+                            <span>Open Source →</span>
+                        </a>
+                    </div>
+                </div>
             `;
             setAppInputMode('info', "Search topics, apps, or links...", newsBtn);
         })
@@ -340,6 +338,16 @@ function runMarketExecution(ticker) {
                         💰 Price: $${price.toLocaleString()} USD<br>
                         ${indicator} 24h Change: ${change}%
                     </div>
+                    
+                    <div class="source-box" style="border-top: 1px solid #333; padding-top: 12px; margin-top: 15px;">
+                        <span style="display: block; font-size: 0.75rem; color: #777; font-weight: bold; text-transform: uppercase; margin-bottom: 8px; letter-spacing: 0.5px;">Sources Index</span>
+                        <div class="source-list" style="display: flex; flex-direction: column;">
+                            <a href="https://www.coingecko.com" target="_blank" style="display: flex; align-items: center; justify-content: space-between; background: #2a2a2a; border: 1px solid #3d3d3d; border-radius: 6px; padding: 6px 10px; color: #4da3ff; text-decoration: none; font-size: 0.82rem; font-weight: bold;">
+                                <span style="color: #aaa; font-weight: normal;">🪙 CoinGecko Network</span>
+                                <span>Open Source →</span>
+                            </a>
+                        </div>
+                    </div>
                 `;
             }).catch(() => { output.innerText = "Error pulling crypto ticker data."; });
     } else {
@@ -348,6 +356,16 @@ function runMarketExecution(ticker) {
                 <strong>📈 Stock Ticker Tracker: ${ticker.toUpperCase()}</strong><br>
                 <span style="color: #aaa; font-size: 0.9rem;">To view deep market assets without explicit tokens, launch structural metrics directly:</span>
                 <a href="https://finance.yahoo.com/quote/${ticker.toUpperCase()}" target="_blank" style="display: block; text-align: center; margin-top: 10px; background: #6f42c1; color: white; padding: 8px; border-radius: 6px; text-decoration: none; font-weight: bold;">Open Yahoo Finance Chart ↗</a>
+            </div>
+            
+            <div class="source-box" style="border-top: 1px solid #333; padding-top: 12px; margin-top: 15px;">
+                <span style="display: block; font-size: 0.75rem; color: #777; font-weight: bold; text-transform: uppercase; margin-bottom: 8px; letter-spacing: 0.5px;">Sources Index</span>
+                <div class="source-list" style="display: flex; flex-direction: column;">
+                    <a href="https://finance.yahoo.com" target="_blank" style="display: flex; align-items: center; justify-content: space-between; background: #2a2a2a; border: 1px solid #3d3d3d; border-radius: 6px; padding: 6px 10px; color: #4da3ff; text-decoration: none; font-size: 0.82rem; font-weight: bold;">
+                        <span style="color: #aaa; font-weight: normal;">📊 Yahoo Finance Portal</span>
+                        <span>Open Source →</span>
+                    </a>
+                </div>
             </div>
         `;
     }
@@ -369,6 +387,16 @@ function runClockExecution(location) {
                     <span style="font-size: 1.8rem; font-weight: bold; color: #fff; display: block; margin: 5px 0;">${timeString}</span>
                     📅 ${dateString}<br>
                     🌐 Time Zone: <code>${zone}</code>
+                </div>
+                
+                <div class="source-box" style="border-top: 1px solid #333; padding-top: 12px; margin-top: 15px;">
+                    <span style="display: block; font-size: 0.75rem; color: #777; font-weight: bold; text-transform: uppercase; margin-bottom: 8px; letter-spacing: 0.5px;">Sources Index</span>
+                    <div class="source-list" style="display: flex; flex-direction: column;">
+                        <a href="https://open-meteo.com" target="_blank" style="display: flex; align-items: center; justify-content: space-between; background: #2a2a2a; border: 1px solid #3d3d3d; border-radius: 6px; padding: 6px 10px; color: #4da3ff; text-decoration: none; font-size: 0.82rem; font-weight: bold;">
+                            <span style="color: #aaa; font-weight: normal;">🌐 Open-Meteo Geocoding Engine</span>
+                            <span>Open Source →</span>
+                        </a>
+                    </div>
                 </div>
             `;
         }).catch(() => { output.innerText = "Time zone data missing for specified territory configuration."; });
@@ -402,6 +430,21 @@ function executeImageGeneration(imagePrompt) {
         const loader = document.getElementById("image-loader");
         if (loader) loader.remove();
         img.style.display = "block";
+        
+        // Append Source box cleanly underneath the loaded image element
+        const sourceDiv = document.createElement("div");
+        sourceDiv.className = "source-box";
+        sourceDiv.style.cssText = "border-top: 1px solid #333; padding-top: 12px; margin-top: 15px; text-align: left;";
+        sourceDiv.innerHTML = `
+            <span style="display: block; font-size: 0.75rem; color: #777; font-weight: bold; text-transform: uppercase; margin-bottom: 8px; letter-spacing: 0.5px;">Sources Index</span>
+            <div class="source-list" style="display: flex; flex-direction: column;">
+                <a href="https://pollinations.ai" target="_blank" style="display: flex; align-items: center; justify-content: space-between; background: #2a2a2a; border: 1px solid #3d3d3d; border-radius: 6px; padding: 6px 10px; color: #4da3ff; text-decoration: none; font-size: 0.82rem; font-weight: bold;">
+                    <span style="color: #aaa; font-weight: normal;">🎨 Pollinations AI Network</span>
+                    <span>Open Source →</span>
+                </a>
+            </div>
+        `;
+        output.appendChild(sourceDiv);
         setAppInputMode('info', "Search topics, apps, or links...", newsBtn);
     };
 
@@ -409,26 +452,53 @@ function executeImageGeneration(imagePrompt) {
 }
 
 function runInfoExecution(query) {
-    if (/^[0-9+\-*/().\s]+$/.test(query) || query.toLowerCase().includes("to")) {
+    const cleanQuery = query.toLowerCase().trim();
+    const cryptoMap = { btc: "bitcoin", eth: "ethereum", sol: "solana", doge: "dogecoin", xrp: "ripple" };
+
+    // Explicit Context Forwarder 1: Crypto Quick Catch
+    if (cryptoMap[cleanQuery] || cleanQuery.startsWith("price of ")) {
+        let parsedTicker = cleanQuery.startsWith("price of ") ? cleanQuery.substring(9).trim() : cleanQuery;
+        runMarketExecution(parsedTicker);
+        return;
+    }
+
+    // Explicit Context Forwarder 2: Timezone Clock Catch
+    if (cleanQuery.startsWith("time in ") || cleanQuery.startsWith("clock ")) {
+        let parsedLocation = query.replace(/time in /i, "").replace(/clock /i, "").trim();
+        runClockExecution(parsedLocation);
+        return;
+    }
+
+    // Math Parser / Unit Conversion Engine Block
+    if (/^[0-9+\-*/().\s]+$/.test(query) || cleanQuery.includes("to")) {
         try {
-            if (!query.toLowerCase().includes("to")) {
+            if (!cleanQuery.includes("to")) {
                 const result = Function(`"use strict"; return (${query})`)();
                 output.innerHTML = `
                     <div style="background: #1a1a1a; padding: 14px; border-radius: 8px; border-left: 3px solid #28a745; text-align: left;">
                         🔢 <strong>Calculation Result:</strong><br>
                         <span style="font-size: 1.3rem; font-weight: bold;">${query} = ${result}</span>
                     </div>
+                    
+                    <div class="source-box" style="border-top: 1px solid #333; padding-top: 12px; margin-top: 15px;">
+                        <span style="display: block; font-size: 0.75rem; color: #777; font-weight: bold; text-transform: uppercase; margin-bottom: 8px; letter-spacing: 0.5px;">Sources Index</span>
+                        <div class="source-list" style="display: flex; flex-direction: column;">
+                            <div style="display: flex; align-items: center; justify-content: space-between; background: #2a2a2a; border: 1px solid #3d3d3d; border-radius: 6px; padding: 6px 10px; color: #eee; font-size: 0.82rem;">
+                                <span style="color: #aaa;">⚙️ Native V8 Math Runtime</span>
+                                <span style="color: #777; font-size:0.75rem;">Local Execution</span>
+                            </div>
+                        </div>
+                    </div>
                 `;
                 return;
             }
         } catch(e) {}
 
-        if (query.toLowerCase().includes(" to ")) {
+        if (cleanQuery.includes(" to ")) {
             const parts = query.split(/ to /i);
             const source = parts[0].trim();
             const targetLanguage = parts[1].trim();
 
-            // Unit Converter Guard Block: Check for structural conversions before throwing strings to the language API
             const unitRegex = /^([0-9.]+)\s*([a-zA-Z°]+)$/;
             const unitMatch = source.match(unitRegex);
             if (unitMatch) {
@@ -451,12 +521,22 @@ function runInfoExecution(query) {
                             📥 Input Query: <em>"${query}"</em><br>
                             📤 Calculation Result: <strong style="color: #28a745; font-size: 1.3rem; display:block; margin-top:4px;">${conversionResult}</strong>
                         </div>
+                        
+                        <div class="source-box" style="border-top: 1px solid #333; padding-top: 12px; margin-top: 15px;">
+                            <span style="display: block; font-size: 0.75rem; color: #777; font-weight: bold; text-transform: uppercase; margin-bottom: 8px; letter-spacing: 0.5px;">Sources Index</span>
+                            <div class="source-list" style="display: flex; flex-direction: column;">
+                                <div style="display: flex; align-items: center; justify-content: space-between; background: #2a2a2a; border: 1px solid #3d3d3d; border-radius: 6px; padding: 6px 10px; color: #eee; font-size: 0.82rem;">
+                                    <span style="color: #aaa;">📐 Local Metric Transform Equations</span>
+                                    <span style="color: #777; font-size:0.75rem;">Local Execution</span>
+                                </div>
+                            </div>
+                        </div>
                     `;
                     return;
                 }
             }
 
-            output.innerText = `Processing processing translation loop...`;
+            output.innerText = `Processing translation loop...`;
             fetch(`https://api.mymemory.translated.net/get?q=${encodeURIComponent(source)}&langpair=en|${encodeURIComponent(targetLanguage.substring(0,2))}`)
                 .then(res => res.json())
                 .then(data => {
@@ -465,6 +545,16 @@ function runInfoExecution(query) {
                             🗣️ <strong>Translation Asset Core:</strong><br>
                             📥 Original (EN): <em>"${source}"</em><br>
                             📤 Translated (${targetLanguage.toUpperCase()}): <strong style="color: #4da3ff; font-size: 1.1rem; display:block; margin-top:4px;">"${data.responseData.translatedText}"</strong>
+                        </div>
+                        
+                        <div class="source-box" style="border-top: 1px solid #333; padding-top: 12px; margin-top: 15px;">
+                            <span style="display: block; font-size: 0.75rem; color: #777; font-weight: bold; text-transform: uppercase; margin-bottom: 8px; letter-spacing: 0.5px;">Sources Index</span>
+                            <div class="source-list" style="display: flex; flex-direction: column;">
+                                <a href="https://mymemory.translated.net" target="_blank" style="display: flex; align-items: center; justify-content: space-between; background: #2a2a2a; border: 1px solid #3d3d3d; border-radius: 6px; padding: 6px 10px; color: #4da3ff; text-decoration: none; font-size: 0.82rem; font-weight: bold;">
+                                    <span style="color: #aaa; font-weight: normal;">🗣️ MyMemory Translate API</span>
+                                    <span>Open Source →</span>
+                                </a>
+                            </div>
                         </div>
                     `;
                 }).catch(() => {
