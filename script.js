@@ -478,12 +478,11 @@ function runInfoExecution(query) {
                 if (definitionObj.definitions && definitionObj.definitions.length > 0) {
                     rawDefinition = definitionObj.definitions[0].definition.replace(/<[^>]*>/g, '').trim();
                 }
-                // Safety Guard 2: Fill text box with a clear fallback string if token content is blank
-if (!rawDefinition) {
-    rawDefinition = "No direct text definition available. Use the index link at the bottom of the page to view the full dictionary source.";
-}
-
-                } 
+                
+                // Safety Guard 2: Clear human-readable fallback message if token text is empty
+                if (!rawDefinition) {
+                    rawDefinition = "No direct text definition available. Use the index link (the blue text saying 'Wikitionary') on the bottom of the page to view the full dictionary entry.";
+                }
                 
                 let infoHTML = `<div class="news-header-msg" style="color: #888; font-style: italic; margin-bottom: 12px; font-size: 0.9rem; line-height: 1.4;">I have provided the most relevant text of each information source related to "${query}".</div>`;
                 infoHTML += `
