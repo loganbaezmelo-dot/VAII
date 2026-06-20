@@ -597,7 +597,6 @@ function runInfoExecution(query) {
         return;
     }
 
-    // Baseline definitions lookup router
     const isSingleWord = !query.includes(" ");
     if (isSingleWord) {
         output.innerText = `Looking up definition for "${query}"...`;
@@ -620,7 +619,6 @@ function runInfoExecution(query) {
                     </div>
                 `;
                 
-                // Route directly into our priority pipeline framework
                 runUnifiedWikiPipeline(query, infoHTML, true);
             })
             .catch(() => {
@@ -631,7 +629,7 @@ function runInfoExecution(query) {
     }
 }
 
-// Priority Pipeline Layer: Wikitubia takes top slot over standard Wikipedia searches
+// Pipeline Core Framework: Extracts live descriptions directly from the search index lists
 function runUnifiedWikiPipeline(query, baselineHTML, hasWiktionary) {
     if (!baselineHTML) {
         baselineHTML = `<div class="news-header-msg" style="color: #888; font-style: italic; margin-bottom: 12px; font-size: 0.9rem; line-height: 1.4;">I have provided the most relevant text of each information source related to "${query}".</div>`;
@@ -645,32 +643,24 @@ function runUnifiedWikiPipeline(query, baselineHTML, hasWiktionary) {
             
             if (hasTubiaArticle) {
                 const tubiaTitle = fandomSearch.query.search[0].title;
-                fetch(`https://youtube.fandom.com/api.php?action=query&prop=extracts&exintro=1&explaintext=1&titles=${encodeURIComponent(tubiaTitle)}&format=json&origin=*`)
-                    .then(res => res.json())
-                    .then(pageData => {
-                        const pages = pageData.query.pages;
-                        const pageId = Object.keys(pages)[0];
-                        let tubiaExtract = pages[pageId]?.extract || "";
-                        
-                        if (tubiaExtract) {
-                            if (tubiaExtract.length > 350) tubiaExtract = tubiaExtract.substring(0, 350) + "...";
-                            
-                            // If wiktionary already occupies the first block, add the standard header dividing line style
-                            if (hasWiktionary) {
-                                baselineHTML += `<div style="color: #888; font-style: italic; font-size: 0.85rem; margin: 15px 0 8px 0; text-align: left;">This might also be relevant:</div>`;
-                            }
-                            baselineHTML += `
-                                <div class="aggregated-text" style="font-size: 0.95rem; color: #e0e0e0; line-height: 1.6; margin-bottom: 15px; background: #1a1a1a; padding: 14px; border-radius: 8px; border-left: 3px solid #ff4444; text-align: left;">
-                                    <strong>${tubiaTitle} (Wikitubia):</strong> ${tubiaExtract}
-                                </div>
-                            `;
-                        }
-                        
-                        // Proceed to fetch Wikipedia as secondary asset placement match
-                        appendSecondaryWikipediaLayer(query, baselineHTML, true, tubiaTitle, hasWiktionary);
-                    }).catch(() => appendSecondaryWikipediaLayer(query, baselineHTML, false, null, hasWiktionary));
+                let tubiaExtract = fandomSearch.query.search[0].snippet.replace(/<[^>]*>/g, '').replace(/&quot;/g, '"').trim();
+                
+                if (tubiaExtract) {
+                    if (!tubiaExtract.endsWith('.')) tubiaExtract += "...";
+                    
+                    if (hasWiktionary) {
+                        baselineHTML += `<div style="color: #888; font-style: italic; font-size: 0.85rem; margin: 15px 0 8px 0; text-align: left;">This might also be relevant:</div>`;
+                    }
+                    baselineHTML += `
+                        <div class="aggregated-text" style="font-size: 0.95rem; color: #e0e0e0; line-height: 1.6; margin-bottom: 15px; background: #1a1a1a; padding: 14px; border-radius: 8px; border-left: 3px solid #ff4444; text-align: left;">
+                            <strong>${tubiaTitle} (Wikitubia):</strong> ${tubiaExtract}
+                        </div>
+                    `;
+                    appendSecondaryWikipediaLayer(query, baselineHTML, true, tubiaTitle, hasWiktionary);
+                } else {
+                    appendSecondaryWikipediaLayer(query, baselineHTML, false, null, hasWiktionary);
+                }
             } else {
-                // If Wikitubia returns blank parameters, skip it entirely and pull Wikipedia straight up
                 appendSecondaryWikipediaLayer(query, baselineHTML, false, null, hasWiktionary);
             }
         }).catch(() => appendSecondaryWikipediaLayer(query, baselineHTML, false, null, hasWiktionary));
@@ -695,7 +685,6 @@ function appendSecondaryWikipediaLayer(query, currentHTML, includedTubia, tubiaT
                         }
                         
                         if (wikiExtract) {
-                            // Divider rules: show dividing text if EITHER Wikt or Tubia took a spot above it
                             if (includedTubia || hasWiktionary) {
                                 currentHTML += `<div style="color: #888; font-style: italic; font-size: 0.85rem; margin: 15px 0 8px 0; text-align: left;">This might also be relevant:</div>`;
                             }
@@ -714,7 +703,6 @@ function appendSecondaryWikipediaLayer(query, currentHTML, includedTubia, tubiaT
 }
 
 function compileFinalSourceIndexBox(query, totalHTML, includeWikiLink, wikiTitle, includeTubiaLink, tubiaTitle, hasWiktionary) {
-    // If absolutely zero databases return values, display fallback alert core string line
     if (!includeWikiLink && !includeTubiaLink && !hasWiktionary) {
         output.innerText = `Could not extract summary tracking metrics for "${query}". Try a broader topic parameter line!`;
         return;
