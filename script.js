@@ -1,3 +1,4 @@
+// Import direct from Google's official stable Firebase SDK CDN networks
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
 import { 
     getAuth, 
@@ -9,6 +10,7 @@ import {
     signOut 
 } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
 
+// Firebase App Configuration Setup
 const firebaseConfig = {
     apiKey: "AIzaSyA6RmZ6rquzUR1dct30s355PzLu-r1_fwE",
     authDomain: "vaiinternet.firebaseapp.com",
@@ -50,9 +52,16 @@ let isLoginMode = true;
 let debounceTimer;
 let currentMode = 'info'; 
 
-// Combined global suggestion lists inside standard 3-button architecture
+// Mixed topic suggestions showcasing the full feature suite right on the keyboard bar
 const defaultInfoSuggestions = [
-    "Open Gemini", "Open DeepMind", "Open YouTube", "Open Wikipedia", "Open Minecraft", "Open YouTube Music"
+    "Open Gemini", 
+    "193 lbs to kg", 
+    "Open YouTube", 
+    "BTC", 
+    "Time in Tokyo", 
+    "Hello to Spanish", 
+    "Open Minecraft", 
+    "(12 * 4) / 2"
 ];
 const defaultDrawSuggestions = [
     "A neon cyberpunk switch console artwork",
@@ -431,7 +440,6 @@ function executeImageGeneration(imagePrompt) {
         if (loader) loader.remove();
         img.style.display = "block";
         
-        // Append Source box cleanly underneath the loaded image element
         const sourceDiv = document.createElement("div");
         sourceDiv.className = "source-box";
         sourceDiv.style.cssText = "border-top: 1px solid #333; padding-top: 12px; margin-top: 15px; text-align: left;";
@@ -455,21 +463,18 @@ function runInfoExecution(query) {
     const cleanQuery = query.toLowerCase().trim();
     const cryptoMap = { btc: "bitcoin", eth: "ethereum", sol: "solana", doge: "dogecoin", xrp: "ripple" };
 
-    // Explicit Context Forwarder 1: Crypto Quick Catch
     if (cryptoMap[cleanQuery] || cleanQuery.startsWith("price of ")) {
         let parsedTicker = cleanQuery.startsWith("price of ") ? cleanQuery.substring(9).trim() : cleanQuery;
         runMarketExecution(parsedTicker);
         return;
     }
 
-    // Explicit Context Forwarder 2: Timezone Clock Catch
     if (cleanQuery.startsWith("time in ") || cleanQuery.startsWith("clock ")) {
         let parsedLocation = query.replace(/time in /i, "").replace(/clock /i, "").trim();
         runClockExecution(parsedLocation);
         return;
     }
 
-    // Math Parser / Unit Conversion Engine Block
     if (/^[0-9+\-*/().\s]+$/.test(query) || cleanQuery.includes("to")) {
         try {
             if (!cleanQuery.includes("to")) {
@@ -747,6 +752,18 @@ function launchTargetUrl(url) {
     } else {
         output.innerHTML = contentHTML;
     }
+    
+    output.innerHTML += `
+        <div class="source-box" style="border-top: 1px solid #333; padding-top: 12px; margin-top: 15px; text-align: left;">
+            <span style="display: block; font-size: 0.75rem; color: #777; font-weight: bold; text-transform: uppercase; margin-bottom: 8px; letter-spacing: 0.5px;">Sources Index</span>
+            <div class="source-list" style="display: flex; flex-direction: column;">
+                <div style="display: flex; align-items: center; justify-content: space-between; background: #2a2a2a; border: 1px solid #3d3d3d; border-radius: 6px; padding: 6px 10px; color: #eee; font-size: 0.82rem;">
+                    <span style="color: #aaa;">🌐 VAII Multi-Domain Routing Module</span>
+                    <span style="color: #777; font-size:0.75rem;">Local Redirect</span>
+                </div>
+            </div>
+        </div>
+    `;
     window.open(url, '_blank');
 }
 
