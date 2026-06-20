@@ -40,6 +40,7 @@ const logoutActionBtn = document.getElementById('logout-action-btn');
 
 // SYSTEM APP WORKSPACE NODES
 const cityInput = document.getElementById('city-input');
+const datalist = document.getElementById('city-suggestions');
 const weatherBtn = document.getElementById('weather-btn');
 const newsBtn = document.getElementById('news-btn');
 const drawBtn = document.getElementById('draw-btn');
@@ -55,9 +56,16 @@ let debounceTimer;
 // Global tracking variable for current function context ('weather', 'info', or 'draw')
 let currentMode = 'info'; 
 
-// Coordinates tracking cache for weather queries
-let selectedLatitude = null;
-let selectedLongitude = null;
+// Static smart prompt recommendations to guide developers/users inside non-weather views
+const defaultInfoSuggestions = [
+    "Open Gemini", "Open Deepmind", "Open YouTube Music", "Open Wikipedia", "Open Minecraft"
+];
+const defaultDrawSuggestions = [
+    "A neon cyberpunk switch console artwork",
+    "Retro arcade machine sitting in an empty vaporwave room",
+    "Hyper-detailed digital painting of a cosmic fantasy library",
+    "Futuristic command center terminal minimal vector style"
+];
 
 // Helper to smoothly recalibrate styling and placeholders on context shift
 function setAppInputMode(newMode, placeholderText, activeBtn) {
@@ -67,15 +75,34 @@ function setAppInputMode(newMode, placeholderText, activeBtn) {
         cityInput.placeholder = placeholderText;
         cityInput.className = ""; 
         cityInput.classList.add(`mode-${newMode}`);
-        cityInput.value = ""; // Empty string on context jump
+        cityInput.value = ""; 
     }
-
-    selectedLatitude = null;
-    selectedLongitude = null;
+    
+    if (datalist) datalist.innerHTML = ""; 
 
     // Manage button tab highlights cleanly
     document.querySelectorAll('.mode-select').forEach(btn => btn.classList.remove('active'));
     if (activeBtn) activeBtn.classList.add('active');
+    
+    populateStaticSuggestions();
+}
+
+function populateStaticSuggestions() {
+    if (currentMode === 'info') {
+        buildDatalistNodes(defaultInfoSuggestions);
+    } else if (currentMode === 'draw') {
+        buildDatalistNodes(defaultDrawSuggestions);
+    }
+}
+
+function buildDatalistNodes(stringArray) {
+    if (!datalist) return;
+    datalist.innerHTML = "";
+    stringArray.forEach(item => {
+        const option = document.createElement('option');
+        option.value = item;
+        datalist.appendChild(option);
+    });
 }
 
 // ==========================================
@@ -90,7 +117,7 @@ onAuthStateChanged(auth, (user) => {
         authEmail.value = "";
         authPassword.value = "";
         authError.style.display = "none";
-        setAppInputMode('info', "Search topic, open apps,\nor enter URL address...", newsBtn);
+        setAppInputMode('info', "Search topics, open apps, or enter web URLs...", newsBtn);
     } else {
         authContainer.style.display = "block";
         mainApp.style.display = "none";
@@ -161,30 +188,76 @@ helpToggle.addEventListener('click', function() {
     }
 });
 
-// Shortened context strings splitting lines cleanly inside the box using \n
 weatherBtn.addEventListener('click', function() {
-    setAppInputMode('weather', "Type global location name;\nFetch meteorology metrics...", weatherBtn);
+    setAppInputMode('weather', "Type global destination for meteorological tracking...", weatherBtn);
 });
 
 newsBtn.addEventListener('click', function() {
-    setAppInputMode('info', "Search topic, open apps,\nor enter URL address...", newsBtn);
+    setAppInputMode('info', "Search topics, open apps, or enter web URLs...", newsBtn);
 });
 
 drawBtn.addEventListener('click', function() {
-    setAppInputMode('draw', "Describe artwork scene concept;\nAssemble AI image render...", drawBtn);
+    setAppInputMode('draw', "Describe scene concept to execute image generation...", drawBtn);
 });
 
 cityInput.addEventListener('input', function() {
     const query = cityInput.value; 
+    const trimmedQuery = query.trim();
     
     if (query.toLowerCase().startsWith('open ')) {
+        datalist.innerHTML = ""; 
         routingWarning.style.display = "block"; 
+        return;
     } else {
         routingWarning.style.display = "none";
     }
+
+    if (currentMode !== 'weather') {
+        if (trimmedQuery.length === 0) {
+            populateStaticSuggestions();
+        }
+        return;
+    }
+
+    if (trimmedQuery.length < 3) {
+        datalist.innerHTML = "";
+        return;
+    }
+
+    if (trimmedQuery.startsWith('http://') || trimmedQuery.startsWith('https://') || /\.[a-z]{2,6}/i.test(trimmedQuery)) {
+        datalist.innerHTML = "";
+        return;
+    }
+
+    clearTimeout(debounceTimer);
+    debounceTimer = setTimeout(() => {
+        fetch(`https://geocoding-api.open-meteo.com/v1/search?name=${encodeURIComponent(trimmedQuery)}&count=5&language=en&format=json`)
+            .then(res => res.json())
+            .then(geoData => {
+                datalist.innerHTML = ""; 
+                if (!geoData.results) return;
+
+                geoData.results.forEach(location => {
+                    const option = document.createElement('option');
+                    const city = location.name;
+                    const state = location.admin1;
+                    const country = location.country;
+
+                    let parts = [];
+                    if (city) parts.push(city);
+                    if (state && !parts.includes(state)) parts.push(state);
+                    if (country && !parts.includes(country)) parts.push(country);
+
+                    option.value = parts.join(', ');
+                    option.setAttribute('data-lat', location.latitude);
+                    option.setAttribute('data-lon', location.longitude);
+                    datalist.appendChild(option);
+                });
+            })
+            .catch(err => console.error("Suggestions error:", err));
+    }, 300);
 });
 
-// Master Execution Dispatcher: Fired solely by clicking the custom Enter arrow button
 if (executeActionBtn) {
     executeActionBtn.addEventListener('click', function() {
         const query = cityInput.value.trim();
@@ -207,11 +280,9 @@ if (executeActionBtn) {
     });
 }
 
-// Keyboard Passthrough matching textarea key code maps
 cityInput.addEventListener('keypress', function(e) {
-    if (e.key === 'Enter') {
-        e.preventDefault(); // Prevents a literal newline from typing into textarea
-        if (executeActionBtn) executeActionBtn.click();
+    if (e.key === 'Enter' && executeActionBtn) {
+        executeActionBtn.click();
     }
 });
 
@@ -222,21 +293,31 @@ function runWeatherExecution(searchCity) {
     routingWarning.style.display = "none"; 
     output.innerText = "Searching coordinates...";
 
-    fetch(`https://geocoding-api.open-meteo.com/v1/search?name=${encodeURIComponent(searchCity)}&count=1&language=en&format=json`)
-        .then(res => res.json())
-        .then(geoData => {
-            if (!geoData.results || geoData.results.length === 0) {
-                output.innerText = "Location not found.";
-                return;
-            }
-            const loc = geoData.results[0];
-            const displayName = `${loc.name}, ${loc.admin1 || ''} ${loc.country}`;
-            getWeatherData(loc.latitude, loc.longitude, displayName);
-        })
-        .catch(err => {
-            output.innerText = "Error fetching location coordinates.";
-            console.error(err);
-        });
+    const options = Array.from(datalist.options);
+    const matchedOption = options.find(opt => opt.value === searchCity);
+
+    if (matchedOption && matchedOption.getAttribute('data-lat')) {
+        const lat = matchedOption.getAttribute('data-lat');
+        const lon = matchedOption.getAttribute('data-lon');
+        getWeatherData(lat, lon, searchCity);
+    } else {
+        const parseCity = searchCity.split(',')[0].trim();
+        fetch(`https://geocoding-api.open-meteo.com/v1/search?name=${encodeURIComponent(parseCity)}&count=1&language=en&format=json`)
+            .then(res => res.json())
+            .then(geoData => {
+                if (!geoData.results || geoData.results.length === 0) {
+                    output.innerText = "Location not found.";
+                    return;
+                }
+                const loc = geoData.results[0];
+                const displayName = `${loc.name}, ${loc.admin1 || ''} ${loc.country}`;
+                getWeatherData(loc.latitude, loc.longitude, displayName);
+            })
+            .catch(err => {
+                output.innerText = "Error fetching location coordinates.";
+                console.error(err);
+            });
+    }
 }
 
 function getWeatherData(lat, lon, displayName) {
@@ -253,7 +334,7 @@ function getWeatherData(lat, lon, displayName) {
                 🌡️ Temperature: ${tempFahrenheit}°F (${tempCelsius}°C)<br>
                 💨 Wind Speed: ${weatherData.current_weather.windspeed} km/h
             `;
-            setAppInputMode('info', "Search topic, open apps,\nor enter URL address...", newsBtn);
+            setAppInputMode('info', "Search topics, open apps, or enter web URLs...", newsBtn);
         })
         .catch(err => {
             output.innerText = "Error fetching live weather data.";
@@ -289,7 +370,7 @@ function executeImageGeneration(imagePrompt) {
         const loader = document.getElementById("image-loader");
         if (loader) loader.remove();
         img.style.display = "block";
-        setAppInputMode('info', "Search topic, open apps,\nor enter URL address...", newsBtn);
+        setAppInputMode('info', "Search topics, open apps, or enter web URLs...", newsBtn);
     };
 
     output.appendChild(img);
