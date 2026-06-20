@@ -472,7 +472,17 @@ function runInfoExecution(query) {
                 
                 const definitionObj = dictData[key][0];
                 const partOfSpeech = definitionObj.partOfSpeech;
-                let rawDefinition = definitionObj.definitions[0].definition.replace(/<[^>]*>/g, '').trim();
+                
+                // Safety Guard 1: Verify token lists are array structures before popping strings
+                let rawDefinition = "";
+                if (definitionObj.definitions && definitionObj.definitions.length > 0) {
+                    rawDefinition = definitionObj.definitions[0].definition.replace(/<[^>]*>/g, '').trim();
+                }
+                
+                // Safety Guard 2: Fill text box with alternative string frame if token content is blank
+                if (!rawDefinition) {
+                    rawDefinition = "Comprehensive dictionary references are accessible via the portal tracking asset below.";
+                }
                 
                 let infoHTML = `<div class="news-header-msg" style="color: #888; font-style: italic; margin-bottom: 12px; font-size: 0.9rem; line-height: 1.4;">I have provided the most relevant text of each information source related to "${query}".</div>`;
                 infoHTML += `
@@ -481,17 +491,28 @@ function runInfoExecution(query) {
                     </div>
                 `;
 
-                // Custom sequential layout: Pull Wikipedia description right beneath the Wiktionary block
+                // Wikipedia API Request Sequence Hook
                 fetch(`https://en.wikipedia.org/w/api.php?action=query&list=search&srsearch=${encodeURIComponent(query)}&utf8=&format=json&origin=*`)
                     .then(wikiRes => wikiRes.json())
                     .then(wikiSearchData => {
                         if (wikiSearchData.query.search && wikiSearchData.query.search.length > 0) {
-                            const topPageTitle = wikiSearchData.query.search[0].title;
+                            let topPageTitle = wikiSearchData.query.search[0].title;
+                            
+                            // Safety Guard 3: Disambiguation filter bypass loops to skip broken index fragments
+                            if (wikiSearchData.query.search[1] && (topPageTitle.toLowerCase().includes("refer to") || wikiSearchData.query.search[0].snippet.toLowerCase().includes("may refer to"))) {
+                                topPageTitle = wikiSearchData.query.search[1].title;
+                            }
                             
                             fetch(`https://en.wikipedia.org/api/rest_v1/page/summary/${encodeURIComponent(topPageTitle.replace(/ /g, '_'))}`)
                                 .then(summaryRes => summaryRes.json())
                                 .then(summaryData => {
                                     let wikiText = summaryData.extract || "";
+                                    
+                                    // Safety Guard 4: If text returns sub-index tracking summaries, swap text out safely
+                                    if (summaryData.type === "disambiguation" || wikiText.toLowerCase().includes("may refer to")) {
+                                        wikiText = "Multiple context records have been located. Browse the full article space using the search portal down below.";
+                                    }
+                                    
                                     if (wikiText) {
                                         infoHTML += `
                                             <div style="color: #888; font-style: italic; font-size: 0.85rem; margin: 15px 0 8px 0; text-align: left;">
@@ -503,7 +524,6 @@ function runInfoExecution(query) {
                                         `;
                                     }
                                     
-                                    // Append combined source indexing shortcuts cleanly at the absolute baseline
                                     infoHTML += `
                                         <div class="source-box" style="border-top: 1px solid #333; padding-top: 12px; margin-top: 10px;">
                                             <span style="display: block; font-size: 0.75rem; color: #777; font-weight: bold; text-transform: uppercase; margin-bottom: 8px; letter-spacing: 0.5px;">Sources Index</span>
@@ -522,7 +542,6 @@ function runInfoExecution(query) {
                                     output.innerHTML = infoHTML;
                                 });
                         } else {
-                            // Secondary fallback if Wikipedia search returns an empty array frame
                             appendWiktionaryOnlySources(query, infoHTML);
                         }
                     })
@@ -538,10 +557,9 @@ function runInfoExecution(query) {
     }
 }
 
-// Structured baseline appendage handling standalone Wiktionary fallback loads
 function appendWiktionaryOnlySources(query, baselineHTML) {
     baselineHTML += `
-        <div class="source-box" style="border-top: 1px solid #333; padding-top: 12px;">
+        <div class="source-box" style="border-top: 1px solid #333; padding-top: 12px; margin-top: 10px;">
             <span style="display: block; font-size: 0.75rem; color: #777; font-weight: bold; text-transform: uppercase; margin-bottom: 8px; letter-spacing: 0.5px;">Sources Index</span>
             <div class="source-list" style="display: flex; flex-direction: column;">
                 <a href="https://en.wiktionary.org/wiki/${encodeURIComponent(query)}" target="_blank" style="display: flex; align-items: center; justify-content: space-between; background: #2a2a2a; border: 1px solid #3d3d3d; border-radius: 6px; padding: 6px 10px; color: #4da3ff; text-decoration: none; font-size: 0.82rem; font-weight: bold;">
