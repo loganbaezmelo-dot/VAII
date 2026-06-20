@@ -46,6 +46,8 @@ const helpGuide = document.getElementById('help-guide');
 let isLoginMode = true;
 let debounceTimer;
 
+const welcomeMessageText = `Welcome back! Enter a search query, app routing command, calculation sequence, weather location, translation phrase, crypto key, or art prompt to begin...`;
+
 // Integrated universal system suggestion bar
 const defaultAssistantSuggestions = [
     "Open Gemini", 
@@ -106,11 +108,14 @@ onAuthStateChanged(auth, (user) => {
     if (user) {
         authContainer.style.display = "none";
         mainApp.style.display = "block";
-        output.innerText = `Welcome back! Enter a search query, calculation, or command to begin...`;
+        output.innerText = welcomeMessageText;
         authEmail.value = "";
         authPassword.value = "";
         authError.style.display = "none";
-        if (hubInput) hubInput.value = "";
+        if (hubInput) {
+            hubInput.value = "";
+            hubInput.placeholder = "Type a command...";
+        }
         updateDatalist([], []);
     } else {
         authContainer.style.display = "block";
@@ -196,13 +201,11 @@ hubInput.addEventListener('input', function() {
 
     clearTimeout(debounceTimer);
     debounceTimer = setTimeout(() => {
-        // Engine Fetch 1: Open-Meteo Geocoding Lookup
         const geoFetch = fetch(`https://geocoding-api.open-meteo.com/v1/search?name=${encodeURIComponent(trimmedQuery)}&count=3&language=en&format=json`)
             .then(res => res.json())
             .then(data => data.results || [])
             .catch(() => []);
 
-        // Engine Fetch 2: Wikipedia Title Auto-Suggest Indexer
         const wikiFetch = fetch(`https://en.wikipedia.org/w/api.php?action=query&list=search&srsearch=${encodeURIComponent(trimmedQuery)}&utf8=&format=json&origin=*`)
             .then(res => res.json())
             .then(data => {
@@ -213,7 +216,6 @@ hubInput.addEventListener('input', function() {
             })
             .catch(() => []);
 
-        // Synchronize and render both arrays into the layout container smoothly
         Promise.all([geoFetch, wikiFetch]).then(([cities, wikiTitles]) => {
             updateDatalist(cities, wikiTitles);
         });
@@ -228,7 +230,6 @@ if (executeActionBtn) {
             return;
         }
 
-        // Integrated Image Generation Router Interceptor
         if (query.toLowerCase().startsWith("draw ")) {
             let imagePrompt = query.substring(5).trim();
             executeImageGeneration(imagePrompt);
@@ -388,7 +389,10 @@ function executeImageGeneration(imagePrompt) {
             </div>
         `;
         output.appendChild(sourceDiv);
-        if (hubInput) hubInput.value = "";
+        if (hubInput) {
+            hubInput.value = "";
+            hubInput.placeholder = "Type a command...";
+        }
         updateDatalist([], []);
     };
 
