@@ -177,8 +177,7 @@
             opacity: 1 !important;
             transform: scale(1.02);
         }
-        #weather-btn { background: #007bff; }
-        #news-btn { background: #28a745; }
+        #assistant-btn { background: #28a745; }
         #draw-btn { background: #e0a800; color: #121212; }
         
         .auth-btn {
@@ -197,8 +196,7 @@
             transform: scale(0.98);
         }
         
-        input.mode-weather { border-color: #007bff !important; }
-        input.mode-info { border-color: #28a745 !important; }
+        input.mode-assistant { border-color: #28a745 !important; }
         input.mode-draw { border-color: #e0a800 !important; }
         
         .output-box {
@@ -341,22 +339,20 @@
                     <div id="help-guide" class="help-drawer">
                         <strong>💡 VAII Unified Feature Architecture Guide:</strong>
                         <ul>
-                            <li><strong>☀️ Weather View:</strong> Arm Weather, enter any global location string, and hit execution arrow.</li>
-                            <li><strong>📖 Words & Explanations:</strong> Arm Info and look up single tokens (Wiktionary) or multi-word topics (Wikipedia).</li>
-                            <li><strong>🌐 Websites & External Apps:</strong> Under Info view, type an explicit link (e.g., <code>wikipedia.org</code>) or prefix keys with <code>open youtube</code> or <code>open minecraft</code> to execute automated domain resolution testing.</li>
-                            <li><strong>🔢 Computations:</strong> Enter raw equations (e.g., <code>(45 * 2) / 3</code>) directly inside Info to evaluate instantly.</li>
-                            <li><strong>🔄 Unit Converter:</strong> Type strings like <code>193 lbs to kg</code> or <code>100 c to f</code> under Info for local metric mapping.</li>
-                            <li><strong>🗣️ Translator Core:</strong> Type combinations like <code>Hello to Spanish</code> under Info to fetch live dialect text lines.</li>
-                            <li><strong>📈 Stocks & Crypto:</strong> Type tickers natively into Info—use crypto keys like <code>btc</code>/<code>sol</code> or standard symbols like <code>aapl</code>.</li>
-                            <li><strong>🕒 Time Zones:</strong> Prefix location checks with words like <code>time in Tokyo</code> or <code>time in London</code> under Info.</li>
+                            <li><strong>🧠 Core Intelligence Tab:</strong> Arm Assistant to look up single tokens (Wiktionary), multi-word topics (Wikipedia), or get location breakdowns.</li>
+                            <li><strong>☀️ Weather & Global Time:</strong> Simply type a city name (e.g., <code>Paris</code>) or search with keywords like <code>weather in Tokyo</code> under Assistant to stream real-time weather stats and localized clocks simultaneously.</li>
+                            <li><strong>🌐 Websites & External Apps:</strong> Under Assistant view, type an explicit link (e.g., <code>wikipedia.org</code>) or prefix keys with <code>open youtube</code> or <code>open minecraft</code> to execute automated domain resolution testing.</li>
+                            <li><strong>🔢 Computations:</strong> Enter raw equations (e.g., <code>(45 * 2) / 3</code>) directly inside Assistant to evaluate instantly.</li>
+                            <li><strong>🔄 Unit Converter:</strong> Type strings like <code>193 lbs to kg</code> or <code>100 c to f</code> under Assistant for local metric mapping.</li>
+                            <li><strong>🗣️ Translator Core:</strong> Type combinations like <code>Hello to Spanish</code> under Assistant to fetch live dialect text lines.</li>
+                            <li><strong>📈 Stocks & Crypto:</strong> Type tickers natively into Assistant—use crypto keys like <code>btc</code>/<code>sol</code> or standard symbols like <code>aapl</code>.</li>
                             <li><strong>🎨 AI Art Generator:</strong> Arm Draw, describe concepts, and stream automated renders via Pollinations networks.</li>
                         </ul>
                     </div>
 
                     <div class="search-container">
                         <div class="button-group">
-                            <button id="weather-btn" class="mode-select">Weather</button>
-                            <button id="news-btn" class="mode-select active">Info</button>
+                            <button id="assistant-btn" class="mode-select active">Assistant</button>
                             <button id="draw-btn" class="mode-select">Draw</button>
                         </div>
                         <div class="input-row">
