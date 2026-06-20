@@ -481,7 +481,7 @@ function runInfoExecution(query) {
                 
                 // Safety Guard 2: Clear human-readable fallback message if token text is empty
                 if (!rawDefinition) {
-                    rawDefinition = "No direct text definition available. Use the index link (the blue text saying 'Wikitionary') on the bottom of the page to view the full dictionary entry.";
+                    rawDefinition = "No direct text definition available. Use the index link (the blue text saying 'Open Source' next to the text saying 'Wikitionary') on the bottom of the page to view the full dictionary entry.";
                 }
                 
                 let infoHTML = `<div class="news-header-msg" style="color: #888; font-style: italic; margin-bottom: 12px; font-size: 0.9rem; line-height: 1.4;">I have provided the most relevant text of each information source related to "${query}".</div>`;
