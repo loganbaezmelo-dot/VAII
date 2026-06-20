@@ -58,7 +58,7 @@ let currentMode = 'info';
 
 // Static smart prompt recommendations to guide developers/users inside non-weather views
 const defaultInfoSuggestions = [
-    "Open Gemini", "Open Deepmind", "Open YouTube Music", "Open Wikipedia", "Open Minecraft"
+    "Open Gemini", "Open Deepmind", "Open YouTube", "Open Wikipedia", "Open Minecraft", "Open YouTube Music"
 ];
 const defaultDrawSuggestions = [
     "A neon cyberpunk switch console artwork",
