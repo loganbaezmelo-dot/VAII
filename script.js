@@ -71,7 +71,6 @@ const defaultDrawSuggestions = [
 function setAppInputMode(newMode, placeholderText, activeBtn) {
     currentMode = newMode;
     
-    // Safety check to bypass initialization conflicts during auth status loops
     if (cityInput) {
         cityInput.placeholder = placeholderText;
         cityInput.className = ""; 
@@ -117,7 +116,8 @@ onAuthStateChanged(auth, (user) => {
         authEmail.value = "";
         authPassword.value = "";
         authError.style.display = "none";
-        setAppInputMode('info', "Search topic, open apps, or enter URL...", newsBtn);
+        // Shortened text block using \n layout structure
+        setAppInputMode('info', "Search topics or apps;\nEnter custom URL address...", newsBtn);
     } else {
         authContainer.style.display = "block";
         mainApp.style.display = "none";
@@ -188,17 +188,17 @@ helpToggle.addEventListener('click', function() {
     }
 });
 
-// View Setup Controls: Clicking a button ONLY arms that mode context 
+// Shortened context strings splitting lines cleanly inside the button events
 weatherBtn.addEventListener('click', function() {
-    setAppInputMode('weather', "Type global location name for meteorology...", weatherBtn);
+    setAppInputMode('weather', "Input global destination;\nFetch location data...", weatherBtn);
 });
 
 newsBtn.addEventListener('click', function() {
-    setAppInputMode('info', "Search topic, open apps, or enter URL...", newsBtn);
+    setAppInputMode('info', "Search topics or apps;\nEnter custom URL address...", newsBtn);
 });
 
 drawBtn.addEventListener('click', function() {
-    setAppInputMode('draw', "Describe what you want the AI to render...", drawBtn);
+    setAppInputMode('draw', "Describe scene concept;\nAssemble art render...", drawBtn);
 });
 
 cityInput.addEventListener('input', function() {
@@ -213,7 +213,6 @@ cityInput.addEventListener('input', function() {
         routingWarning.style.display = "none";
     }
 
-    // Halt weather engine lookup loops completely if user is in an alternate text window
     if (currentMode !== 'weather') {
         if (trimmedQuery.length === 0) {
             populateStaticSuggestions();
@@ -260,7 +259,6 @@ cityInput.addEventListener('input', function() {
     }, 300);
 });
 
-// Master Execution Dispatcher: Fired solely by clicking the custom Enter arrow button
 if (executeActionBtn) {
     executeActionBtn.addEventListener('click', function() {
         const query = cityInput.value.trim();
@@ -269,7 +267,6 @@ if (executeActionBtn) {
             return;
         }
 
-        // Route internally depending on which mode is armed
         if (currentMode === 'weather') {
             runWeatherExecution(query);
         } else if (currentMode === 'draw') {
@@ -284,7 +281,6 @@ if (executeActionBtn) {
     });
 }
 
-// Keyboard Passthrough: Allow physical computer keyboards to hit Enter as well
 cityInput.addEventListener('keypress', function(e) {
     if (e.key === 'Enter' && executeActionBtn) {
         executeActionBtn.click();
@@ -338,7 +334,7 @@ function getWeatherData(lat, lon, displayName) {
                 🌡️ Temperature: ${tempFahrenheit}°F (${tempCelsius}°C)<br>
                 💨 Wind Speed: ${weatherData.current_weather.windspeed} km/h
             `;
-            setAppInputMode('info', "Search topic, open apps, or enter URL...", newsBtn);
+            setAppInputMode('info', "Search topics or apps;\nEnter custom URL address...", newsBtn);
         })
         .catch(err => {
             output.innerText = "Error fetching live weather data.";
@@ -374,7 +370,7 @@ function executeImageGeneration(imagePrompt) {
         const loader = document.getElementById("image-loader");
         if (loader) loader.remove();
         img.style.display = "block";
-        setAppInputMode('info', "Search topic, open apps, or enter URL...", newsBtn);
+        setAppInputMode('info', "Search topics or apps;\nEnter custom URL address...", newsBtn);
     };
 
     output.appendChild(img);
