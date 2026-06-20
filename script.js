@@ -476,23 +476,59 @@ function runInfoExecution(query) {
                 
                 let infoHTML = `<div class="news-header-msg" style="color: #888; font-style: italic; margin-bottom: 12px; font-size: 0.9rem; line-height: 1.4;">I have provided the most relevant text of each information source related to "${query}".</div>`;
                 infoHTML += `
-                    <div class="aggregated-text" style="font-size: 0.95rem; color: #e0e0e0; line-height: 1.6; margin-bottom: 20px; background: #1a1a1a; padding: 14px; border-radius: 8px; border-left: 3px solid #28a745; text-align: left;">
+                    <div class="aggregated-text" style="font-size: 0.95rem; color: #e0e0e0; line-height: 1.6; margin-bottom: 15px; background: #1a1a1a; padding: 14px; border-radius: 8px; border-left: 3px solid #28a745; text-align: left;">
                         <strong>${query.charAt(0).toUpperCase() + query.slice(1)}</strong> (${partOfSpeech.toLowerCase()}): ${rawDefinition}
                     </div>
                 `;
 
-                infoHTML += `
-                    <div class="source-box" style="border-top: 1px solid #333; padding-top: 12px;">
-                        <span style="display: block; font-size: 0.75rem; color: #777; font-weight: bold; text-transform: uppercase; margin-bottom: 8px; letter-spacing: 0.5px;">Sources Index</span>
-                        <div class="source-list" style="display: flex; flex-direction: column;">
-                            <a href="https://en.wiktionary.org/wiki/${encodeURIComponent(query)}" target="_blank" style="display: flex; align-items: center; justify-content: space-between; background: #2a2a2a; border: 1px solid #3d3d3d; border-radius: 6px; padding: 6px 10px; color: #4da3ff; text-decoration: none; font-size: 0.82rem; font-weight: bold;">
-                                <span style="color: #aaa; font-weight: normal;">📰 Wiktionary</span>
-                                <span>Open Source →</span>
-                            </a>
-                        </div>
-                    </div>
-                `;
-                output.innerHTML = infoHTML;
+                // Custom sequential layout: Pull Wikipedia description right beneath the Wiktionary block
+                fetch(`https://en.wikipedia.org/w/api.php?action=query&list=search&srsearch=${encodeURIComponent(query)}&utf8=&format=json&origin=*`)
+                    .then(wikiRes => wikiRes.json())
+                    .then(wikiSearchData => {
+                        if (wikiSearchData.query.search && wikiSearchData.query.search.length > 0) {
+                            const topPageTitle = wikiSearchData.query.search[0].title;
+                            
+                            fetch(`https://en.wikipedia.org/api/rest_v1/page/summary/${encodeURIComponent(topPageTitle.replace(/ /g, '_'))}`)
+                                .then(summaryRes => summaryRes.json())
+                                .then(summaryData => {
+                                    let wikiText = summaryData.extract || "";
+                                    if (wikiText) {
+                                        infoHTML += `
+                                            <div style="color: #888; font-style: italic; font-size: 0.85rem; margin: 15px 0 8px 0; text-align: left;">
+                                                This might also be relevant:
+                                            </div>
+                                            <div class="aggregated-text" style="font-size: 0.95rem; color: #e0e0e0; line-height: 1.6; margin-bottom: 20px; background: #1a1a1a; padding: 14px; border-radius: 8px; border-left: 3px solid #007bff; text-align: left;">
+                                                <strong>${topPageTitle}:</strong> ${wikiText}
+                                            </div>
+                                        `;
+                                    }
+                                    
+                                    // Append combined source indexing shortcuts cleanly at the absolute baseline
+                                    infoHTML += `
+                                        <div class="source-box" style="border-top: 1px solid #333; padding-top: 12px; margin-top: 10px;">
+                                            <span style="display: block; font-size: 0.75rem; color: #777; font-weight: bold; text-transform: uppercase; margin-bottom: 8px; letter-spacing: 0.5px;">Sources Index</span>
+                                            <div class="source-list" style="display: flex; flex-direction: column; gap: 6px;">
+                                                <a href="https://en.wiktionary.org/wiki/${encodeURIComponent(query)}" target="_blank" style="display: flex; align-items: center; justify-content: space-between; background: #2a2a2a; border: 1px solid #3d3d3d; border-radius: 6px; padding: 6px 10px; color: #4da3ff; text-decoration: none; font-size: 0.82rem; font-weight: bold;">
+                                                    <span style="color: #aaa; font-weight: normal;">📰 Wiktionary</span>
+                                                    <span>Open Source →</span>
+                                                </a>
+                                                <a href="${summaryData.content_urls?.desktop?.page || `https://en.wikipedia.org/wiki/${encodeURIComponent(topPageTitle)}`}" target="_blank" style="display: flex; align-items: center; justify-content: space-between; background: #2a2a2a; border: 1px solid #3d3d3d; border-radius: 6px; padding: 6px 10px; color: #4da3ff; text-decoration: none; font-size: 0.82rem; font-weight: bold;">
+                                                    <span style="color: #aaa; font-weight: normal;">📰 Wikipedia</span>
+                                                    <span>Open Source →</span>
+                                                </a>
+                                            </div>
+                                        </div>
+                                    `;
+                                    output.innerHTML = infoHTML;
+                                });
+                        } else {
+                            // Secondary fallback if Wikipedia search returns an empty array frame
+                            appendWiktionaryOnlySources(query, infoHTML);
+                        }
+                    })
+                    .catch(() => {
+                        appendWiktionaryOnlySources(query, infoHTML);
+                    });
             })
             .catch(() => {
                 runWikipediaEngine(query);
@@ -500,6 +536,22 @@ function runInfoExecution(query) {
     } else {
         runWikipediaEngine(query);
     }
+}
+
+// Structured baseline appendage handling standalone Wiktionary fallback loads
+function appendWiktionaryOnlySources(query, baselineHTML) {
+    baselineHTML += `
+        <div class="source-box" style="border-top: 1px solid #333; padding-top: 12px;">
+            <span style="display: block; font-size: 0.75rem; color: #777; font-weight: bold; text-transform: uppercase; margin-bottom: 8px; letter-spacing: 0.5px;">Sources Index</span>
+            <div class="source-list" style="display: flex; flex-direction: column;">
+                <a href="https://en.wiktionary.org/wiki/${encodeURIComponent(query)}" target="_blank" style="display: flex; align-items: center; justify-content: space-between; background: #2a2a2a; border: 1px solid #3d3d3d; border-radius: 6px; padding: 6px 10px; color: #4da3ff; text-decoration: none; font-size: 0.82rem; font-weight: bold;">
+                    <span style="color: #aaa; font-weight: normal;">📰 Wiktionary</span>
+                    <span>Open Source →</span>
+                </a>
+            </div>
+        </div>
+    `;
+    output.innerHTML = baselineHTML;
 }
 
 function launchTargetUrl(url) {
