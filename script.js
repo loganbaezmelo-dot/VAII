@@ -1,3 +1,4 @@
+// Import direct from Google's official stable Firebase SDK CDN networks
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
 import { 
     getAuth, 
@@ -9,6 +10,7 @@ import {
     signOut 
 } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
 
+// Firebase App Configuration Setup
 const firebaseConfig = {
     apiKey: "AIzaSyA6RmZ6rquzUR1dct30s355PzLu-r1_fwE",
     authDomain: "vaiinternet.firebaseapp.com",
@@ -425,6 +427,34 @@ function runInfoExecution(query) {
             const parts = query.split(/ to /i);
             const source = parts[0].trim();
             const targetLanguage = parts[1].trim();
+
+            // Unit Converter Guard Block: Check for structural conversions before throwing strings to the language API
+            const unitRegex = /^([0-9.]+)\s*([a-zA-Z°]+)$/;
+            const unitMatch = source.match(unitRegex);
+            if (unitMatch) {
+                const num = parseFloat(unitMatch[1]);
+                const fromUnit = unitMatch[2].toLowerCase();
+                const toUnit = targetLanguage.toLowerCase();
+                let conversionResult = null;
+
+                if (fromUnit === "lbs" && toUnit === "kg") conversionResult = `${(num * 0.45359237).toFixed(2)} kg`;
+                if (fromUnit === "kg" && toUnit === "lbs") conversionResult = `${(num / 0.45359237).toFixed(2)} lbs`;
+                if (fromUnit === "miles" && toUnit === "km") conversionResult = `${(num * 1.60934).toFixed(2)} km`;
+                if (fromUnit === "km" && toUnit === "miles") conversionResult = `${(num / 1.60934).toFixed(2)} miles`;
+                if (fromUnit === "f" && toUnit === "c") conversionResult = `${((num - 32) * 5 / 9).toFixed(1)}°C`;
+                if (fromUnit === "c" && toUnit === "f") conversionResult = `${((num * 9 / 5) + 32).toFixed(1)}°F`;
+
+                if (conversionResult) {
+                    output.innerHTML = `
+                        <div style="background: #1a1a1a; padding: 14px; border-radius: 8px; border-left: 3px solid #28a745; text-align: left;">
+                            🔄 <strong>Unit Conversion Core:</strong><br>
+                            📥 Input Query: <em>"${query}"</em><br>
+                            📤 Calculation Result: <strong style="color: #28a745; font-size: 1.3rem; display:block; margin-top:4px;">${conversionResult}</strong>
+                        </div>
+                    `;
+                    return;
+                }
+            }
 
             output.innerText = `Processing processing translation loop...`;
             fetch(`https://api.mymemory.translated.net/get?q=${encodeURIComponent(source)}&langpair=en|${encodeURIComponent(targetLanguage.substring(0,2))}`)
