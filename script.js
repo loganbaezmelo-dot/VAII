@@ -1,4 +1,3 @@
-// Import direct from Google's official stable Firebase SDK CDN networks
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
 import { 
     getAuth, 
@@ -10,7 +9,6 @@ import {
     signOut 
 } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
 
-// Firebase App Configuration Setup
 const firebaseConfig = {
     apiKey: "AIzaSyA6RmZ6rquzUR1dct30s355PzLu-r1_fwE",
     authDomain: "vaiinternet.firebaseapp.com",
@@ -39,8 +37,7 @@ const logoutActionBtn = document.getElementById('logout-action-btn');
 
 const cityInput = document.getElementById('city-input');
 const datalist = document.getElementById('city-suggestions');
-const weatherBtn = document.getElementById('weather-btn');
-const newsBtn = document.getElementById('news-btn');
+const assistantBtn = document.getElementById('assistant-btn');
 const drawBtn = document.getElementById('draw-btn');
 const executeActionBtn = document.getElementById('execute-action-btn');
 const output = document.getElementById('weather-output');
@@ -50,10 +47,10 @@ const helpGuide = document.getElementById('help-guide');
 
 let isLoginMode = true;
 let debounceTimer;
-let currentMode = 'info'; 
+let currentMode = 'assistant'; 
 
-// Mixed topic suggestions showcasing the full feature suite right on the keyboard bar
-const defaultInfoSuggestions = [
+// Mixed suggest layout to showcase integrated features natively
+const defaultAssistantSuggestions = [
     "Open Gemini", 
     "193 lbs to kg", 
     "Open YouTube", 
@@ -85,7 +82,7 @@ function setAppInputMode(newMode, placeholderText, activeBtn) {
 }
 
 function populateStaticSuggestions() {
-    if (currentMode === 'info') buildDatalistNodes(defaultInfoSuggestions);
+    if (currentMode === 'assistant') buildDatalistNodes(defaultAssistantSuggestions);
     else if (currentMode === 'draw') buildDatalistNodes(defaultDrawSuggestions);
 }
 
@@ -110,7 +107,7 @@ onAuthStateChanged(auth, (user) => {
         authEmail.value = "";
         authPassword.value = "";
         authError.style.display = "none";
-        setAppInputMode('info', "Search topics, apps, or links...", newsBtn);
+        setAppInputMode('assistant', "Search topics, apps, or links...", assistantBtn);
     } else {
         authContainer.style.display = "block";
         mainApp.style.display = "none";
@@ -173,8 +170,7 @@ helpToggle.addEventListener('click', function() {
     }
 });
 
-weatherBtn.addEventListener('click', () => setAppInputMode('weather', "Enter city or country location...", weatherBtn));
-newsBtn.addEventListener('click', () => setAppInputMode('info', "Search topics, apps, or links...", newsBtn));
+assistantBtn.addEventListener('click', () => setAppInputMode('assistant', "Search topics, apps, or links...", assistantBtn));
 drawBtn.addEventListener('click', () => setAppInputMode('draw', "Describe an image prompt...", drawBtn));
 
 cityInput.addEventListener('input', function() {
@@ -189,15 +185,19 @@ cityInput.addEventListener('input', function() {
         routingWarning.style.display = "none";
     }
 
-    if (currentMode !== 'weather') {
+    if (currentMode !== 'assistant') {
         if (trimmedQuery.length === 0) {
             populateStaticSuggestions();
         }
         return;
     }
 
+    if (trimmedQuery.length === 0) {
+        populateStaticSuggestions();
+        return;
+    }
+
     if (trimmedQuery.length < 3) {
-        datalist.innerHTML = "";
         return;
     }
 
@@ -212,7 +212,10 @@ cityInput.addEventListener('input', function() {
             .then(res => res.json())
             .then(geoData => {
                 datalist.innerHTML = ""; 
-                if (!geoData.results) return;
+                if (!geoData.results) {
+                    populateStaticSuggestions();
+                    return;
+                }
 
                 geoData.results.forEach(location => {
                     const option = document.createElement('option');
@@ -228,6 +231,7 @@ cityInput.addEventListener('input', function() {
                     option.value = parts.join(', ');
                     option.setAttribute('data-lat', location.latitude);
                     option.setAttribute('data-lon', location.longitude);
+                    option.setAttribute('data-tz', location.timezone);
                     datalist.appendChild(option);
                 });
             })
@@ -243,8 +247,7 @@ if (executeActionBtn) {
             return;
         }
 
-        if (currentMode === 'weather') runWeatherExecution(query);
-        else if (currentMode === 'draw') {
+        if (currentMode === 'draw') {
             let imagePrompt = query;
             if (imagePrompt.toLowerCase().startsWith("draw ")) {
                 imagePrompt = imagePrompt.substring(5).trim();
@@ -263,67 +266,51 @@ cityInput.addEventListener('keypress', function(e) {
 });
 
 // ----------------------------------------------------
-// ROUTED TARGET SYSTEMS
+// UNIFIED WEATHER & CLOCK INTEGRATION SYSTEM
 // ----------------------------------------------------
-function runWeatherExecution(searchCity) {
-    routingWarning.style.display = "none"; 
-    output.innerText = "Searching coordinates...";
-
-    const options = Array.from(datalist.options);
-    const matchedOption = options.find(opt => opt.value === searchCity);
-
-    if (matchedOption && matchedOption.getAttribute('data-lat')) {
-        const lat = matchedOption.getAttribute('data-lat');
-        const lon = matchedOption.getAttribute('data-lon');
-        getWeatherData(lat, lon, searchCity);
-    } else {
-        const parseCity = searchCity.split(',')[0].trim();
-        fetch(`https://geocoding-api.open-meteo.com/v1/search?name=${encodeURIComponent(parseCity)}&count=1&language=en&format=json`)
-            .then(res => res.json())
-            .then(geoData => {
-                if (!geoData.results || geoData.results.length === 0) {
-                    output.innerText = "Location not found.";
-                    return;
-                }
-                const loc = geoData.results[0];
-                const displayName = `${loc.name}, ${loc.admin1 || ''} ${loc.country}`;
-                getWeatherData(loc.latitude, loc.longitude, displayName);
-            })
-            .catch(err => {
-                output.innerText = "Error fetching location coordinates.";
-                console.error(err);
-            });
-    }
-}
-
-function getWeatherData(lat, lon, displayName) {
-    output.innerText = `Fetching forecast for ${displayName}...`;
+function runUnifiedWeatherClock(lat, lon, zone, displayName) {
+    output.innerText = `Fetching synchronized metrics for ${displayName}...`;
     
     fetch(`https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current_weather=true`)
         .then(res => res.json())
         .then(weatherData => {
             const tempCelsius = weatherData.current_weather.temperature;
             const tempFahrenheit = Math.round((tempCelsius * 9/5) + 32);
+            const windSpeed = weatherData.current_weather.windspeed;
+            
+            const timeString = new Date().toLocaleTimeString("en-US", { timeZone: zone, hour: '2-digit', minute: '2-digit' });
+            const dateString = new Date().toLocaleDateString("en-US", { timeZone: zone, weekday: 'long', month: 'short', day: 'numeric' });
             
             output.innerHTML = `
-                <strong>📍 ${displayName}</strong><br>
-                🌡️ Temperature: ${tempFahrenheit}°F (${tempCelsius}°C)<br>
-                💨 Wind Speed: ${weatherData.current_weather.windspeed} km/h
+                <div style="background: #1a1a1a; padding: 14px; border-radius: 8px; border-left: 3px solid #007bff; text-align: left; margin-bottom: 15px;">
+                    <strong>📍 ${displayName}</strong><br><br>
+                    <span style="color: #888; font-style: italic; font-size: 0.9rem;">Here is the weather on that location:</span><br>
+                    🌡️ Temperature: ${tempFahrenheit}°F (${tempCelsius}°C)<br>
+                    💨 Wind Speed: ${windSpeed} km/h
+                    <br><br>
+                    <span style="color: #888; font-style: italic; font-size: 0.9rem;">Here is the current time on that location:</span><br>
+                    🕒 <span style="font-size: 1.5rem; font-weight: bold; color: #fff;">${timeString}</span><br>
+                    📅 ${dateString}<br>
+                    🌐 Time Zone: <code>${zone}</code>
+                </div>
                 
-                <div class="source-box" style="border-top: 1px solid #333; padding-top: 12px; margin-top: 15px;">
+                <div class="source-box" style="border-top: 1px solid #333; padding-top: 12px; margin-top: 10px; text-align: left;">
                     <span style="display: block; font-size: 0.75rem; color: #777; font-weight: bold; text-transform: uppercase; margin-bottom: 8px; letter-spacing: 0.5px;">Sources Index</span>
-                    <div class="source-list" style="display: flex; flex-direction: column;">
+                    <div class="source-list" style="display: flex; flex-direction: column; gap: 6px;">
                         <a href="https://open-meteo.com" target="_blank" style="display: flex; align-items: center; justify-content: space-between; background: #2a2a2a; border: 1px solid #3d3d3d; border-radius: 6px; padding: 6px 10px; color: #4da3ff; text-decoration: none; font-size: 0.82rem; font-weight: bold;">
-                            <span style="color: #aaa; font-weight: normal;">☀️ Open-Meteo API</span>
+                            <span style="color: #aaa; font-weight: normal;">☀️ Open-Meteo Weather API</span>
+                            <span>Open Source →</span>
+                        </a>
+                        <a href="https://open-meteo.com" target="_blank" style="display: flex; align-items: center; justify-content: space-between; background: #2a2a2a; border: 1px solid #3d3d3d; border-radius: 6px; padding: 6px 10px; color: #4da3ff; text-decoration: none; font-size: 0.82rem; font-weight: bold;">
+                            <span style="color: #aaa; font-weight: normal;">🌐 Open-Meteo Geocoding Engine</span>
                             <span>Open Source →</span>
                         </a>
                     </div>
                 </div>
             `;
-            setAppInputMode('info', "Search topics, apps, or links...", newsBtn);
         })
         .catch(err => {
-            output.innerText = "Error fetching live weather data.";
+            output.innerText = "Error fetching live weather and time metrics.";
             console.error(err);
         });
 }
@@ -380,37 +367,6 @@ function runMarketExecution(ticker) {
     }
 }
 
-function runClockExecution(location) {
-    output.innerText = `Resolving local clock context for "${location}"...`;
-    fetch(`https://geocoding-api.open-meteo.com/v1/search?name=${encodeURIComponent(location)}&count=1&language=en&format=json`)
-        .then(res => res.json())
-        .then(data => {
-            if (!data.results || data.results.length === 0) throw new Error();
-            const zone = data.results[0].timezone;
-            const timeString = new Date().toLocaleTimeString("en-US", { timeZone: zone, hour: '2-digit', minute: '2-digit' });
-            const dateString = new Date().toLocaleDateString("en-US", { timeZone: zone, weekday: 'long', month: 'short', day: 'numeric' });
-            
-            output.innerHTML = `
-                <div style="background: #1a1a1a; padding: 14px; border-radius: 8px; border-left: 3px solid #fd7e14; text-align: left;">
-                    <strong>🕒 ${data.results[0].name}, ${data.results[0].country}</strong><br>
-                    <span style="font-size: 1.8rem; font-weight: bold; color: #fff; display: block; margin: 5px 0;">${timeString}</span>
-                    📅 ${dateString}<br>
-                    🌐 Time Zone: <code>${zone}</code>
-                </div>
-                
-                <div class="source-box" style="border-top: 1px solid #333; padding-top: 12px; margin-top: 15px;">
-                    <span style="display: block; font-size: 0.75rem; color: #777; font-weight: bold; text-transform: uppercase; margin-bottom: 8px; letter-spacing: 0.5px;">Sources Index</span>
-                    <div class="source-list" style="display: flex; flex-direction: column;">
-                        <a href="https://open-meteo.com" target="_blank" style="display: flex; align-items: center; justify-content: space-between; background: #2a2a2a; border: 1px solid #3d3d3d; border-radius: 6px; padding: 6px 10px; color: #4da3ff; text-decoration: none; font-size: 0.82rem; font-weight: bold;">
-                            <span style="color: #aaa; font-weight: normal;">🌐 Open-Meteo Geocoding Engine</span>
-                            <span>Open Source →</span>
-                        </a>
-                    </div>
-                </div>
-            `;
-        }).catch(() => { output.innerText = "Time zone data missing for specified territory configuration."; });
-}
-
 function executeImageGeneration(imagePrompt) {
     routingWarning.style.display = "none"; 
 
@@ -453,7 +409,7 @@ function executeImageGeneration(imagePrompt) {
             </div>
         `;
         output.appendChild(sourceDiv);
-        setAppInputMode('info', "Search topics, apps, or links...", newsBtn);
+        setAppInputMode('assistant', "Search topics, apps, or links...", assistantBtn);
     };
 
     output.appendChild(img);
@@ -463,15 +419,38 @@ function runInfoExecution(query) {
     const cleanQuery = query.toLowerCase().trim();
     const cryptoMap = { btc: "bitcoin", eth: "ethereum", sol: "solana", doge: "dogecoin", xrp: "ripple" };
 
-    if (cryptoMap[cleanQuery] || cleanQuery.startsWith("price of ")) {
-        let parsedTicker = cleanQuery.startsWith("price of ") ? cleanQuery.substring(9).trim() : cleanQuery;
-        runMarketExecution(parsedTicker);
+    // Unified Interceptor 1: Explicit Location Routing
+    if (cleanQuery.startsWith("time in ") || cleanQuery.startsWith("weather in ") || cleanQuery.startsWith("weather ") || cleanQuery.startsWith("clock ")) {
+        let parsedLocation = query.replace(/time in /i, "").replace(/weather in /i, "").replace(/weather /i, "").replace(/clock /i, "").trim();
+        fetch(`https://geocoding-api.open-meteo.com/v1/search?name=${encodeURIComponent(parsedLocation)}&count=1&language=en&format=json`)
+            .then(res => res.json())
+            .then(data => {
+                if (data.results && data.results.length > 0) {
+                    const loc = data.results[0];
+                    const displayName = `${loc.name}, ${loc.admin1 || ''} ${loc.country}`;
+                    runUnifiedWeatherClock(loc.latitude, loc.longitude, loc.timezone, displayName);
+                } else {
+                    output.innerText = `Could not resolve location parameters for "${parsedLocation}".`;
+                }
+            })
+            .catch(() => { output.innerText = "Error tracking location parameters."; });
         return;
     }
 
-    if (cleanQuery.startsWith("time in ") || cleanQuery.startsWith("clock ")) {
-        let parsedLocation = query.replace(/time in /i, "").replace(/clock /i, "").trim();
-        runClockExecution(parsedLocation);
+    // Unified Interceptor 2: Suggested Datalist Element Catch
+    const options = Array.from(datalist.options);
+    const matchedOption = options.find(opt => opt.value.toLowerCase() === cleanQuery);
+    if (matchedOption && matchedOption.getAttribute('data-lat')) {
+        const lat = matchedOption.getAttribute('data-lat');
+        const lon = matchedOption.getAttribute('data-lon');
+        const tz = matchedOption.getAttribute('data-tz');
+        runUnifiedWeatherClock(lat, lon, tz, matchedOption.value);
+        return;
+    }
+
+    if (cryptoMap[cleanQuery] || cleanQuery.startsWith("price of ")) {
+        let parsedTicker = cleanQuery.startsWith("price of ") ? cleanQuery.substring(9).trim() : cleanQuery;
+        runMarketExecution(parsedTicker);
         return;
     }
 
