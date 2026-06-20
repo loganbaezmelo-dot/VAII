@@ -174,13 +174,14 @@
         
         .output-box {
             margin-top: 15px;
-            padding: 12px;
+            padding: 14px;
             background: #252525;
             border-radius: 8px;
             font-size: 0.95rem;
             color: #eee;
             max-height: 350px;
             overflow-y: auto;
+            line-height: 1.5;
         }
 
         #auth-container {
@@ -324,12 +325,14 @@
 
                     <div class="search-container">
                         <div class="input-row">
-                            <input type="text" id="hub-input" placeholder="Search topics, apps, links, weather, math..." list="hub-suggestions" autocomplete="off">
+                            <input type="text" id="hub-input" placeholder="Type a command..." list="hub-suggestions" autocomplete="off">
                             <button id="execute-action-btn" class="enter-btn">➔</button>
                         </div>
                     </div>
                     <datalist id="hub-suggestions"></datalist>
-                    <div id="weather-output" class="output-box">Type a command or tap a suggestion above...</div>
+                    <div id="weather-output" class="output-box">
+                        Welcome back! Enter a search query, app routing command, calculation sequence, weather location, translation phrase, crypto key, or art prompt to begin...
+                    </div>
                     
                     <div style="text-align: right;">
                         <button id="logout-action-btn" class="logout-btn">Log Out</button>
