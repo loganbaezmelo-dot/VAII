@@ -35,8 +35,8 @@ const authToggle = document.getElementById('auth-toggle');
 const authError = document.getElementById('auth-error');
 const logoutActionBtn = document.getElementById('logout-action-btn');
 
-const cityInput = document.getElementById('city-input');
-const datalist = document.getElementById('city-suggestions');
+const hubInput = document.getElementById('hub-input');
+const datalist = document.getElementById('hub-suggestions');
 const assistantBtn = document.getElementById('assistant-btn');
 const drawBtn = document.getElementById('draw-btn');
 const executeActionBtn = document.getElementById('execute-action-btn');
@@ -49,7 +49,6 @@ let isLoginMode = true;
 let debounceTimer;
 let currentMode = 'assistant'; 
 
-// Mixed suggest layout to showcase integrated features natively
 const defaultAssistantSuggestions = [
     "Open Gemini", 
     "193 lbs to kg", 
@@ -69,11 +68,11 @@ const defaultDrawSuggestions = [
 
 function setAppInputMode(newMode, placeholderText, activeBtn) {
     currentMode = newMode;
-    if (cityInput) {
-        cityInput.placeholder = placeholderText;
-        cityInput.className = ""; 
-        cityInput.classList.add(`mode-${newMode}`);
-        cityInput.value = ""; 
+    if (hubInput) {
+        hubInput.placeholder = placeholderText;
+        hubInput.className = ""; 
+        hubInput.classList.add(`mode-${newMode}`);
+        hubInput.value = ""; 
     }
     if (datalist) datalist.innerHTML = ""; 
     document.querySelectorAll('.mode-select').forEach(btn => btn.classList.remove('active'));
@@ -173,8 +172,8 @@ helpToggle.addEventListener('click', function() {
 assistantBtn.addEventListener('click', () => setAppInputMode('assistant', "Search topics, apps, or links...", assistantBtn));
 drawBtn.addEventListener('click', () => setAppInputMode('draw', "Describe an image prompt...", drawBtn));
 
-cityInput.addEventListener('input', function() {
-    const query = cityInput.value; 
+hubInput.addEventListener('input', function() {
+    const query = hubInput.value; 
     const trimmedQuery = query.trim();
     
     if (query.toLowerCase().startsWith('open ')) {
@@ -241,7 +240,7 @@ cityInput.addEventListener('input', function() {
 
 if (executeActionBtn) {
     executeActionBtn.addEventListener('click', function() {
-        const query = cityInput.value.trim();
+        const query = hubInput.value.trim();
         if (!query) {
             output.innerText = "Please input a term or prompt value first.";
             return;
@@ -259,7 +258,7 @@ if (executeActionBtn) {
     });
 }
 
-cityInput.addEventListener('keypress', function(e) {
+hubInput.addEventListener('keypress', function(e) {
     if (e.key === 'Enter' && executeActionBtn) {
         executeActionBtn.click();
     }
@@ -367,59 +366,10 @@ function runMarketExecution(ticker) {
     }
 }
 
-function executeImageGeneration(imagePrompt) {
-    routingWarning.style.display = "none"; 
-
-    output.innerHTML = `
-        <div style="color: #888; font-style: italic; margin-bottom: 12px; font-size: 0.9rem; line-height: 1.4;">
-            🎨 Generating artwork for "${imagePrompt}"...
-        </div>
-        <div class="generation-status" id="image-loader">
-            <div class="loader-spinner"></div>
-            <span style="color: #eee; font-size: 0.9rem;">VAII AI engine is assembling pixels...</span>
-        </div>
-    `;
-
-    const seed = Math.floor(Math.random() * 1000000);
-    const imageUrl = `https://image.pollinations.ai/p/${encodeURIComponent(imagePrompt)}?width=1080&height=1080&nologo=true&seed=${seed}`;
-
-    const img = new Image();
-    img.src = imageUrl;
-    img.style.width = "100%";
-    img.style.borderRadius = "8px";
-    img.style.marginTop = "10px";
-    img.style.display = "none";
-    img.style.boxShadow = "0 4px 15px rgba(0,0,0,0.5)";
-
-    img.onload = function() {
-        const loader = document.getElementById("image-loader");
-        if (loader) loader.remove();
-        img.style.display = "block";
-        
-        const sourceDiv = document.createElement("div");
-        sourceDiv.className = "source-box";
-        sourceDiv.style.cssText = "border-top: 1px solid #333; padding-top: 12px; margin-top: 15px; text-align: left;";
-        sourceDiv.innerHTML = `
-            <span style="display: block; font-size: 0.75rem; color: #777; font-weight: bold; text-transform: uppercase; margin-bottom: 8px; letter-spacing: 0.5px;">Sources Index</span>
-            <div class="source-list" style="display: flex; flex-direction: column;">
-                <a href="https://pollinations.ai" target="_blank" style="display: flex; align-items: center; justify-content: space-between; background: #2a2a2a; border: 1px solid #3d3d3d; border-radius: 6px; padding: 6px 10px; color: #4da3ff; text-decoration: none; font-size: 0.82rem; font-weight: bold;">
-                    <span style="color: #aaa; font-weight: normal;">🎨 Pollinations AI Network</span>
-                    <span>Open Source →</span>
-                </a>
-            </div>
-        `;
-        output.appendChild(sourceDiv);
-        setAppInputMode('assistant', "Search topics, apps, or links...", assistantBtn);
-    };
-
-    output.appendChild(img);
-}
-
 function runInfoExecution(query) {
     const cleanQuery = query.toLowerCase().trim();
     const cryptoMap = { btc: "bitcoin", eth: "ethereum", sol: "solana", doge: "dogecoin", xrp: "ripple" };
 
-    // Unified Interceptor 1: Explicit Location Routing
     if (cleanQuery.startsWith("time in ") || cleanQuery.startsWith("weather in ") || cleanQuery.startsWith("weather ") || cleanQuery.startsWith("clock ")) {
         let parsedLocation = query.replace(/time in /i, "").replace(/weather in /i, "").replace(/weather /i, "").replace(/clock /i, "").trim();
         fetch(`https://geocoding-api.open-meteo.com/v1/search?name=${encodeURIComponent(parsedLocation)}&count=1&language=en&format=json`)
@@ -437,7 +387,6 @@ function runInfoExecution(query) {
         return;
     }
 
-    // Unified Interceptor 2: Suggested Datalist Element Catch
     const options = Array.from(datalist.options);
     const matchedOption = options.find(opt => opt.value.toLowerCase() === cleanQuery);
     if (matchedOption && matchedOption.getAttribute('data-lat')) {
