@@ -114,13 +114,14 @@
             display: flex;
             gap: 8px;
             width: 100%;
+            margin-top: 5px;
         }
         
         input {
             width: 100%;
             padding: 12px;
             border-radius: 8px;
-            border: 2px solid #333;
+            border: 2px solid #28a745;
             background: #2a2a2a;
             color: white;
             font-size: 1rem;
@@ -154,31 +155,6 @@
         .enter-btn:active {
             transform: scale(0.95);
         }
-        .button-group {
-            display: flex;
-            gap: 10px;
-            width: 100%;
-        }
-        
-        button.mode-select {
-            flex: 1;
-            padding: 12px;
-            border-radius: 8px;
-            border: none;
-            color: white;
-            font-weight: bold;
-            font-size: 1rem;
-            cursor: pointer;
-            text-align: center;
-            transition: transform 0.1s ease, opacity 0.2s ease;
-            opacity: 0.4;
-        }
-        button.mode-select.active {
-            opacity: 1 !important;
-            transform: scale(1.02);
-        }
-        #assistant-btn { background: #28a745; }
-        #draw-btn { background: #e0a800; color: #121212; }
         
         .auth-btn {
             width: 100%;
@@ -196,9 +172,6 @@
             transform: scale(0.98);
         }
         
-        input.mode-assistant { border-color: #28a745 !important; }
-        input.mode-draw { border-color: #e0a800 !important; }
-        
         .output-box {
             margin-top: 15px;
             padding: 12px;
@@ -213,7 +186,7 @@
         #auth-container {
             display: block;
         }
-        #main-app {
+        .main-app-box {
             display: none;
         }
         .auth-toggle-text {
@@ -325,7 +298,7 @@
                 </div>
             </section>
 
-            <div id="main-app">
+            <div id="main-app" class="main-app-box">
                 <div id="routing-warning" class="global-warning-msg">
                     ⚠️ Website routing is not 100% accurate because the AI cannot scrape live websites.
                 </div>
@@ -339,29 +312,24 @@
                     <div id="help-guide" class="help-drawer">
                         <strong>💡 VAII Unified Feature Architecture Guide:</strong>
                         <ul>
-                            <li><strong>🧠 Core Intelligence Tab:</strong> Arm Assistant to look up single tokens (Wiktionary), multi-word topics (Wikipedia), or get location breakdowns.</li>
-                            <li><strong>☀️ Weather & Global Time:</strong> Simply type a city name (e.g., <code>Paris</code>) or search with keywords like <code>weather in Tokyo</code> under Assistant to stream real-time weather stats and localized clocks simultaneously.</li>
-                            <li><strong>🌐 Websites & External Apps:</strong> Under Assistant view, type an explicit link (e.g., <code>wikipedia.org</code>) or prefix keys with <code>open youtube</code> or <code>open minecraft</code> to execute automated domain resolution testing.</li>
-                            <li><strong>🔢 Computations:</strong> Enter raw equations (e.g., <code>(45 * 2) / 3</code>) directly inside Assistant to evaluate instantly.</li>
-                            <li><strong>🔄 Unit Converter:</strong> Type strings like <code>193 lbs to kg</code> or <code>100 c to f</code> under Assistant for local metric mapping.</li>
-                            <li><strong>🗣️ Translator Core:</strong> Type combinations like <code>Hello to Spanish</code> under Assistant to fetch live dialect text lines.</li>
-                            <li><strong>📈 Stocks & Crypto:</strong> Type tickers natively into Assistant—use crypto keys like <code>btc</code>/<code>sol</code> or standard symbols like <code>aapl</code>.</li>
-                            <li><strong>🎨 AI Art Generator:</strong> Arm Draw, describe concepts, and stream automated renders via Pollinations networks.</li>
+                            <li><strong>🧠 Words & Explanations:</strong> Type single terms to trigger Wiktionary or topics to pull full Wikipedia articles. As you type, live Wikipedia entry names will auto-populate your suggestion bar.</li>
+                            <li><strong>☀️ Weather & Global Time:</strong> Type any city name (e.g., <code>Paris</code>) or use keywords like <code>weather in Tokyo</code> to fetch climate readings and matching timezone clocks simultaneously.</li>
+                            <li><strong>🌐 Websites & External Apps:</strong> Type clear domains (e.g., <code>wikipedia.org</code>) or execution strings like <code>open youtube</code> or <code>open minecraft</code> to process automated link launching.</li>
+                            <li><strong>🔢 Computations & Conversions:</strong> Enter math equations directly (e.g., <code>(12 * 4) / 2</code>) or conversion strings like <code>193 lbs to kg</code> to calculate natively.</li>
+                            <li><strong>🗣️ Translator Core:</strong> Enter translation patterns (e.g., <code>Hello to Spanish</code>) to translate phrases instantly.</li>
+                            <li><strong>📈 Market Trackers:</strong> Input stock symbols or crypto keys directly (e.g., <code>BTC</code> or <code>AAPL</code>) for immediate price updates.</li>
+                            <li><strong>🎨 AI Art Generator:</strong> Prefix any descriptive image concept with the word <code>draw </code> (e.g., <code>Draw a neon cyberpunk switch artwork</code>) to compile a canvas render.</li>
                         </ul>
                     </div>
 
                     <div class="search-container">
-                        <div class="button-group">
-                            <button id="assistant-btn" class="mode-select active">Assistant</button>
-                            <button id="draw-btn" class="mode-select">Draw</button>
-                        </div>
                         <div class="input-row">
-                            <input type="text" id="hub-input" placeholder="Search topics, apps, or links..." list="hub-suggestions" autocomplete="off">
+                            <input type="text" id="hub-input" placeholder="Search topics, apps, links, weather, math..." list="hub-suggestions" autocomplete="off">
                             <button id="execute-action-btn" class="enter-btn">➔</button>
                         </div>
                     </div>
                     <datalist id="hub-suggestions"></datalist>
-                    <div id="weather-output" class="output-box">Select an interface view above...</div>
+                    <div id="weather-output" class="output-box">Type a command or tap a suggestion above...</div>
                     
                     <div style="text-align: right;">
                         <button id="logout-action-btn" class="logout-btn">Log Out</button>
