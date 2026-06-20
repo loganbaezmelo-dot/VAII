@@ -58,47 +58,53 @@
             color: #ffffff;
             margin: 0;
         }
+        
+        /* High-visibility compact help button layout */
         .help-btn {
             all: unset;
             box-sizing: border-box;
-            background: #2a2a2a;
-            color: #aaa;
-            border: 1px solid #444;
-            width: 24px;
-            height: 24px;
-            min-width: 24px;
+            background: #1a2634;
+            color: #4da3ff;
+            border: 2px solid #4da3ff;
+            width: 28px;
+            height: 28px;
+            min-width: 28px;
             border-radius: 50%;
             font-weight: bold;
-            font-size: 0.8rem;
+            font-size: 0.9rem;
             cursor: pointer;
             display: flex;
             align-items: center;
             justify-content: center;
             text-align: center;
+            box-shadow: 0 0 8px rgba(77, 163, 255, 0.2);
             transition: all 0.2s ease;
         }
         .help-btn:hover {
-            background: #3a3a3a;
-            color: #fff;
-            border-color: #666;
+            background: #4da3ff;
+            color: #121212;
+            box-shadow: 0 0 12px rgba(77, 163, 255, 0.5);
         }
+        
         .help-drawer {
             display: none;
             background: #252525;
-            border: 1px solid #333;
+            border: 1px solid #3d3d3d;
             border-radius: 8px;
-            padding: 12px;
+            padding: 14px;
             margin-bottom: 15px;
             font-size: 0.85rem;
             color: #ccc;
-            line-height: 1.4;
+            line-height: 1.45;
+            max-width: 100%;
+            box-sizing: border-box;
         }
         .help-drawer ul {
             margin: 6px 0 0 0;
             padding-left: 18px;
         }
         .help-drawer li {
-            margin-bottom: 6px;
+            margin-bottom: 8px;
         }
         .search-container {
             display: flex;
@@ -151,20 +157,18 @@
         }
         .button-group {
             display: flex;
-            gap: 6px;
-            flex-wrap: wrap;
+            gap: 10px;
             width: 100%;
         }
         
         button.mode-select {
             flex: 1;
-            min-width: 65px;
-            padding: 10px 6px;
+            padding: 12px;
             border-radius: 8px;
             border: none;
             color: white;
             font-weight: bold;
-            font-size: 0.9rem;
+            font-size: 1rem;
             cursor: pointer;
             text-align: center;
             transition: transform 0.1s ease, opacity 0.2s ease;
@@ -176,8 +180,6 @@
         }
         #weather-btn { background: #007bff; }
         #news-btn { background: #28a745; }
-        #market-btn { background: #6f42c1; }
-        #clock-btn { background: #fd7e14; }
         #draw-btn { background: #e0a800; color: #121212; }
         
         .auth-btn {
@@ -198,8 +200,6 @@
         
         input.mode-weather { border-color: #007bff !important; }
         input.mode-info { border-color: #28a745 !important; }
-        input.mode-market { border-color: #6f42c1 !important; }
-        input.mode-clock { border-color: #fd7e14 !important; }
         input.mode-draw { border-color: #e0a800 !important; }
         
         .output-box {
@@ -340,15 +340,16 @@
                     </div>
 
                     <div id="help-guide" class="help-drawer">
-                        <strong>💡 VAII Feature Cheat-Sheet:</strong>
+                        <strong>💡 VAII Unified Feature Architecture Guide:</strong>
                         <ul>
-                            <li><strong>☀️ Weather:</strong> Arm Weather, type any location name, and hit Enter for live climate summaries.</li>
-                            <li><strong>📖 Word Definition:</strong> Arm Info and type a single word to lookup definitions.</li>
-                            <li><strong>🧠 Topic Explainer:</strong> Arm Info and type a phrase to fetch Wikipedia articles.</li>
-                            <li><strong>🔢 Math Converter:</strong> Type basic computations or conversion sequences directly inside Info view.</li>
-                            <li><strong>📈 Market Analysis:</strong> Arm Market and type tickers like AAPL or BTC to extract pricing updates.</li>
-                            <li><strong>🕒 World Clock:</strong> Arm Clock and enter any international territory name to match active tracking times.</li>
-                            <li><strong>🎨 AI Art Generator:</strong> Arm Draw and describe an image concept to spin up creations instantly.</li>
+                            <li><strong>☀️ Weather View:</strong> Arm Weather, enter any global location string, and hit execution arrow.</li>
+                            <li><strong>📖 Words & Explanations:</strong> Arm Info and look up single tokens (Wiktionary) or multi-word topics (Wikipedia).</li>
+                            <li><strong>🔢 Computations:</strong> Enter raw equations (e.g., <code>(45 * 2) / 3</code>) directly inside Info to evaluate instantly.</li>
+                            <li><strong>🔄 Unit Converter:</strong> Type strings like <code>193 lbs to kg</code> or <code>100 c to f</code> under Info for local metric mapping.</li>
+                            <li><strong>🗣️ Translator Core:</strong> Type combinations like <code>Hello to Spanish</code> under Info to fetch live dialect text lines.</li>
+                            <li><strong>📈 Stocks & Crypto:</strong> Type tickers natively into Info—use crypto keys like <code>btc</code>/<code>sol</code> or standard symbols like <code>aapl</code>.</li>
+                            <li><strong>🕒 Time Zones:</strong> Prefix location checks with words like <code>time in Tokyo</code> or <code>time in London</code> under Info.</li>
+                            <li><strong>🎨 AI Art Generator:</strong> Arm Draw, describe concepts, and stream automated renders via Pollinations networks.</li>
                         </ul>
                     </div>
 
@@ -356,8 +357,6 @@
                         <div class="button-group">
                             <button id="weather-btn" class="mode-select">Weather</button>
                             <button id="news-btn" class="mode-select active">Info</button>
-                            <button id="market-btn" class="mode-select">Market</button>
-                            <button id="clock-btn" class="mode-select">Clock</button>
                             <button id="draw-btn" class="mode-select">Draw</button>
                         </div>
                         <div class="input-row">
