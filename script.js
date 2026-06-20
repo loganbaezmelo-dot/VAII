@@ -91,6 +91,7 @@ function updateDatalist(cities = [], wikiTitles = [], wikitubiaTitles = []) {
     // 4. Inject live calculated geocoding location parameters
     cities.forEach(location => {
         const option = document.createElement('option');
+        option.value = location;
         const city = location.name;
         const state = location.admin1;
         const country = location.country;
@@ -186,7 +187,6 @@ helpToggle.addEventListener('click', function() {
     }
 });
 
-// Tri-Engine suggestion parser firing lookups concurrently
 hubInput.addEventListener('input', function() {
     const query = hubInput.value; 
     const trimmedQuery = query.trim();
@@ -635,12 +635,12 @@ function runInfoExecution(query) {
     }
 }
 
+// Fixed Pipeline Core: Guarantees secondary branch progression regardless of textual preview contents
 function runUnifiedWikiPipeline(query, baselineHTML, hasWiktionary) {
     if (!baselineHTML) {
         baselineHTML = `<div class="news-header-msg" style="color: #888; font-style: italic; margin-bottom: 12px; font-size: 0.9rem; line-height: 1.4;">I have provided the most relevant text of each information source related to "${query}".</div>`;
     }
 
-    // Step 1: Hit Wikitubia Fandom network cluster first
     fetch(`https://youtube.fandom.com/api.php?action=query&list=search&srsearch=${encodeURIComponent(query)}&utf8=&format=json&origin=*`)
         .then(res => res.json())
         .then(fandomSearch => {
@@ -648,23 +648,23 @@ function runUnifiedWikiPipeline(query, baselineHTML, hasWiktionary) {
             
             if (hasTubiaArticle) {
                 const tubiaTitle = fandomSearch.query.search[0].title;
-                let tubiaExtract = fandomSearch.query.search[0].snippet.replace(/<[^>]*>/g, '').replace(/&quot;/g, '"').trim();
+                let tubiaExtract = fandomSearch.query.search[0].snippet ? fandomSearch.query.search[0].snippet.replace(/<[^>]*>/g, '').replace(/&quot;/g, '"').trim() : "";
                 
-                if (tubiaExtract) {
-                    if (!tubiaExtract.endsWith('.')) tubiaExtract += "...";
-                    
-                    if (hasWiktionary) {
-                        baselineHTML += `<div style="color: #888; font-style: italic; font-size: 0.85rem; margin: 15px 0 8px 0; text-align: left;">This might also be relevant:</div>`;
-                    }
-                    baselineHTML += `
-                        <div class="aggregated-text" style="font-size: 0.95rem; color: #e0e0e0; line-height: 1.6; margin-bottom: 15px; background: #1a1a1a; padding: 14px; border-radius: 8px; border-left: 3px solid #ff4444; text-align: left;">
-                            <strong>${tubiaTitle} (Wikitubia):</strong> ${tubiaExtract}
-                        </div>
-                    `;
-                    appendSecondaryWikipediaLayer(query, baselineHTML, true, tubiaTitle, hasWiktionary);
-                } else {
-                    appendSecondaryWikipediaLayer(query, baselineHTML, false, null, hasWiktionary);
+                if (!tubiaExtract) {
+                    tubiaExtract = "Profile record located. Use the official Wikitubia link inside the sources index card below to browse full media layouts.";
+                } else if (!tubiaExtract.endsWith('.')) {
+                    tubiaExtract += "...";
                 }
+                
+                if (hasWiktionary) {
+                    baselineHTML += `<div style="color: #888; font-style: italic; font-size: 0.85rem; margin: 15px 0 8px 0; text-align: left;">This might also be relevant:</div>`;
+                }
+                baselineHTML += `
+                    <div class="aggregated-text" style="font-size: 0.95rem; color: #e0e0e0; line-height: 1.6; margin-bottom: 15px; background: #1a1a1a; padding: 14px; border-radius: 8px; border-left: 3px solid #ff4444; text-align: left;">
+                        <strong>${tubiaTitle} (Wikitubia):</strong> ${tubiaExtract}
+                    </div>
+                `;
+                appendSecondaryWikipediaLayer(query, baselineHTML, true, tubiaTitle, hasWiktionary);
             } else {
                 appendSecondaryWikipediaLayer(query, baselineHTML, false, null, hasWiktionary);
             }
