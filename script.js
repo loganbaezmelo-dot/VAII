@@ -109,6 +109,27 @@ function updateDatalist(cities = [], wikiTitles = [], wikitubiaTitles = []) {
     });
 }
 
+// Custom Script Injection Helper to completely bypass domain CORS blocks natively
+function fetchDuckDuckGoInstantAnswer(searchQuery) {
+    return new Promise((resolve, reject) => {
+        const callbackId = 'ddg_api_' + Math.floor(Math.random() * 1000000);
+        window[callbackId] = function(payloadData) {
+            resolve(payloadData);
+            delete window[callbackId];
+            document.getElementById(callbackId)?.remove();
+        };
+        const scriptElement = document.createElement('script');
+        scriptElement.id = callbackId;
+        scriptElement.src = `https://api.duckduckgo.com/?q=${encodeURIComponent(searchQuery)}&format=json&callback=${callbackId}`;
+        scriptElement.onerror = () => {
+            reject();
+            delete window[callbackId];
+            scriptElement.remove();
+        };
+        document.body.appendChild(scriptElement);
+    });
+}
+
 // ==========================================
 // 1. FIREBASE AUTHENTICATION INITIALIZATION
 // ==========================================
@@ -635,43 +656,40 @@ function runInfoExecution(query) {
     }
 }
 
-// Fixed Pipeline Core: Guarantees secondary branch progression regardless of textual preview contents
+// Restricted DuckDuckGo Core Pipeline with strict influencer topic validation
 function runUnifiedWikiPipeline(query, baselineHTML, hasWiktionary) {
     if (!baselineHTML) {
         baselineHTML = `<div class="news-header-msg" style="color: #888; font-style: italic; margin-bottom: 12px; font-size: 0.9rem; line-height: 1.4;">I have provided the most relevant text of each information source related to "${query}".</div>`;
     }
 
-    fetch(`https://youtube.fandom.com/api.php?action=query&list=search&srsearch=${encodeURIComponent(query)}&utf8=&format=json&origin=*`)
-        .then(res => res.json())
-        .then(fandomSearch => {
-            const hasTubiaArticle = fandomSearch.query?.search && fandomSearch.query.search.length > 0;
+    fetchDuckDuckGoInstantAnswer(query)
+        .then(ddgSearch => {
+            const rawText = ddgSearch.AbstractText || ddgSearch.Abstract || "";
+            const lowerText = rawText.toLowerCase();
+            const validKeywords = ["youtuber", "youtube", "influencer", "media personality"];
+            const isMediaPersonality = validKeywords.some(keyword => lowerText.includes(keyword));
             
-            if (hasTubiaArticle) {
-                const tubiaTitle = fandomSearch.query.search[0].title;
-                let tubiaExtract = fandomSearch.query.search[0].snippet ? fandomSearch.query.search[0].snippet.replace(/<[^>]*>/g, '').replace(/&quot;/g, '"').trim() : "";
-                
-                if (!tubiaExtract) {
-                    tubiaExtract = "Profile record located. Use the official Wikitubia link inside the sources index card below to browse full media layouts.";
-                } else if (!tubiaExtract.endsWith('.')) {
-                    tubiaExtract += "...";
-                }
+            if (isMediaPersonality && rawText) {
+                const ddgTitle = ddgSearch.Heading || query;
+                let ddgExtract = rawText;
+                if (ddgExtract.length > 350) ddgExtract = ddgExtract.substring(0, 350) + "...";
                 
                 if (hasWiktionary) {
                     baselineHTML += `<div style="color: #888; font-style: italic; font-size: 0.85rem; margin: 15px 0 8px 0; text-align: left;">This might also be relevant:</div>`;
                 }
                 baselineHTML += `
-                    <div class="aggregated-text" style="font-size: 0.95rem; color: #e0e0e0; line-height: 1.6; margin-bottom: 15px; background: #1a1a1a; padding: 14px; border-radius: 8px; border-left: 3px solid #ff4444; text-align: left;">
-                        <strong>${tubiaTitle} (Wikitubia):</strong> ${tubiaExtract}
+                    <div class="aggregated-text" style="font-size: 0.95rem; color: #e0e0e0; line-height: 1.6; margin-bottom: 15px; background: #1a1a1a; padding: 14px; border-radius: 8px; border-left: 3px solid #de5833; text-align: left;">
+                        <strong>${ddgTitle} (DuckDuckGo):</strong> ${ddgExtract}
                     </div>
                 `;
-                appendSecondaryWikipediaLayer(query, baselineHTML, true, tubiaTitle, hasWiktionary);
+                appendSecondaryWikipediaLayer(query, baselineHTML, true, ddgTitle, hasWiktionary);
             } else {
                 appendSecondaryWikipediaLayer(query, baselineHTML, false, null, hasWiktionary);
             }
         }).catch(() => appendSecondaryWikipediaLayer(query, baselineHTML, false, null, hasWiktionary));
 }
 
-function appendSecondaryWikipediaLayer(query, currentHTML, includedTubia, tubiaTitle, hasWiktionary) {
+function appendSecondaryWikipediaLayer(query, currentHTML, includedDdg, ddgTitle, hasWiktionary) {
     fetch(`https://en.wikipedia.org/w/api.php?action=query&list=search&srsearch=${encodeURIComponent(query)}&utf8=&format=json&origin=*`)
         .then(res => res.json())
         .then(wikiSearch => {
@@ -690,7 +708,7 @@ function appendSecondaryWikipediaLayer(query, currentHTML, includedTubia, tubiaT
                         }
                         
                         if (wikiExtract) {
-                            if (includedTubia || hasWiktionary) {
+                            if (includedDdg || hasWiktionary) {
                                 currentHTML += `<div style="color: #888; font-style: italic; font-size: 0.85rem; margin: 15px 0 8px 0; text-align: left;">This might also be relevant:</div>`;
                             }
                             currentHTML += `
@@ -699,16 +717,16 @@ function appendSecondaryWikipediaLayer(query, currentHTML, includedTubia, tubiaT
                                 </div>
                             `;
                         }
-                        compileFinalSourceIndexBox(query, currentHTML, true, wikipediaTitle, includedTubia, tubiaTitle, hasWiktionary);
-                    }).catch(() => compileFinalSourceIndexBox(query, currentHTML, false, null, includedTubia, tubiaTitle, hasWiktionary));
+                        compileFinalSourceIndexBox(query, currentHTML, true, wikipediaTitle, includedDdg, ddgTitle, hasWiktionary);
+                    }).catch(() => compileFinalSourceIndexBox(query, currentHTML, false, null, includedDdg, ddgTitle, hasWiktionary));
             } else {
-                compileFinalSourceIndexBox(query, currentHTML, false, null, includedTubia, tubiaTitle, hasWiktionary);
+                compileFinalSourceIndexBox(query, currentHTML, false, null, includedDdg, ddgTitle, hasWiktionary);
             }
-        }).catch(() => compileFinalSourceIndexBox(query, currentHTML, false, null, includedTubia, tubiaTitle, hasWiktionary));
+        }).catch(() => compileFinalSourceIndexBox(query, currentHTML, false, null, includedDdg, ddgTitle, hasWiktionary));
 }
 
-function compileFinalSourceIndexBox(query, totalHTML, includeWikiLink, wikiTitle, includeTubiaLink, tubiaTitle, hasWiktionary) {
-    if (!includeWikiLink && !includeTubiaLink && !hasWiktionary) {
+function compileFinalSourceIndexBox(query, totalHTML, includeWikiLink, wikiTitle, includeDdgLink, ddgTitle, hasWiktionary) {
+    if (!includeWikiLink && !includeDdgLink && !hasWiktionary) {
         output.innerText = `Could not extract summary tracking metrics for "${query}". Try a broader topic parameter line!`;
         return;
     }
@@ -728,11 +746,11 @@ function compileFinalSourceIndexBox(query, totalHTML, includeWikiLink, wikiTitle
         `;
     }
 
-    if (includeTubiaLink && tubiaTitle) {
+    if (includeDdgLink && ddgTitle) {
         totalHTML += `
-            <a href="https://youtube.fandom.com/wiki/${encodeURIComponent(tubiaTitle)}" target="_blank" style="display: flex; align-items: center; justify-content: space-between; background: #2a2a2a; border: 1px solid #3d3d3d; border-radius: 6px; padding: 6px 10px; color: #4da3ff; text-decoration: none; font-size: 0.82rem; font-weight: bold;">
-                <span style="color: #aaa; font-weight: normal;">🔥 Wikitubia</span>
-                <span>Fandom Wiki →</span>
+            <a href="https://duckduckgo.com/?q=${encodeURIComponent(ddgTitle)}" target="_blank" style="display: flex; align-items: center; justify-content: space-between; background: #2a2a2a; border: 1px solid #3d3d3d; border-radius: 6px; padding: 6px 10px; color: #4da3ff; text-decoration: none; font-size: 0.82rem; font-weight: bold;">
+                <span style="color: #aaa; font-weight: normal;">🦆 DuckDuckGo</span>
+                <span>Instant Answer →</span>
             </a>
         `;
     }
