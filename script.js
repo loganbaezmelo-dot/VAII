@@ -58,7 +58,7 @@ let currentMode = 'info';
 
 // Static smart prompt recommendations to guide developers/users inside non-weather views
 const defaultInfoSuggestions = [
-    "Open Gemini", "Open Deepmind", "Open YouTube", "Open Wikipedia", "Open Minecraft", "Open YouTube Music"
+    "Open Gemini", "Open DeepMind", "Open YouTube", "Open Wikipedia", "Open Minecraft", "Open YouTube Music"
 ];
 const defaultDrawSuggestions = [
     "A neon cyberpunk switch console artwork",
@@ -400,7 +400,7 @@ function runInfoExecution(query) {
 
         const randomizedRoutes = {
             "gemini": ["https://gemini.google.com", "https://gemini.com"],
-            "google gemini": ["https://gemini.google.com", "https://gemini.com"],
+            "google gemini": ["https://gemini.google.com"],
             "google deepmind": ["https://deepmind.google/"],
             "deepmind": ["https://deepmind.google/"],
             "youtube music": ["https://music.youtube.com", "https://youtube.com/music"],
