@@ -66,6 +66,38 @@ const defaultDrawSuggestions = [
     "Futuristic command center terminal minimal vector style"
 ];
 
+// Unified suggestion builder so locations and onboarding instructions coexist smoothly
+function updateDatalist(cities = []) {
+    if (!datalist) return;
+    datalist.innerHTML = "";
+    
+    // 1. Always seed the core suggestions first so they never vanish
+    defaultAssistantSuggestions.forEach(item => {
+        const option = document.createElement('option');
+        option.value = item;
+        datalist.appendChild(option);
+    });
+    
+    // 2. Append live location models underneath
+    cities.forEach(location => {
+        const option = document.createElement('option');
+        const city = location.name;
+        const state = location.admin1;
+        const country = location.country;
+
+        let parts = [];
+        if (city) parts.push(city);
+        if (state && !parts.includes(state)) parts.push(state);
+        if (country && !parts.includes(country)) parts.push(country);
+
+        option.value = parts.join(', ');
+        option.setAttribute('data-lat', location.latitude);
+        option.setAttribute('data-lon', location.longitude);
+        option.setAttribute('data-tz', location.timezone);
+        datalist.appendChild(option);
+    });
+}
+
 function setAppInputMode(newMode, placeholderText, activeBtn) {
     currentMode = newMode;
     if (hubInput) {
@@ -74,25 +106,23 @@ function setAppInputMode(newMode, placeholderText, activeBtn) {
         hubInput.classList.add(`mode-${newMode}`);
         hubInput.value = ""; 
     }
-    if (datalist) datalist.innerHTML = ""; 
+    populateStaticSuggestions();
     document.querySelectorAll('.mode-select').forEach(btn => btn.classList.remove('active'));
     if (activeBtn) activeBtn.classList.add('active');
-    populateStaticSuggestions();
 }
 
 function populateStaticSuggestions() {
-    if (currentMode === 'assistant') buildDatalistNodes(defaultAssistantSuggestions);
-    else if (currentMode === 'draw') buildDatalistNodes(defaultDrawSuggestions);
-}
-
-function buildDatalistNodes(stringArray) {
-    if (!datalist) return;
-    datalist.innerHTML = "";
-    stringArray.forEach(item => {
-        const option = document.createElement('option');
-        option.value = item;
-        datalist.appendChild(option);
-    });
+    if (currentMode === 'assistant') {
+        updateDatalist([]);
+    } else if (currentMode === 'draw') {
+        if (!datalist) return;
+        datalist.innerHTML = "";
+        defaultDrawSuggestions.forEach(item => {
+            const option = document.createElement('option');
+            option.value = item;
+            datalist.appendChild(option);
+        });
+    }
 }
 
 // ==========================================
@@ -177,31 +207,19 @@ hubInput.addEventListener('input', function() {
     const trimmedQuery = query.trim();
     
     if (query.toLowerCase().startsWith('open ')) {
-        datalist.innerHTML = ""; 
         routingWarning.style.display = "block"; 
-        return;
     } else {
         routingWarning.style.display = "none";
     }
 
-    if (currentMode !== 'assistant') {
-        if (trimmedQuery.length === 0) {
-            populateStaticSuggestions();
-        }
-        return;
-    }
-
-    if (trimmedQuery.length === 0) {
-        populateStaticSuggestions();
-        return;
-    }
+    if (currentMode !== 'assistant') return;
 
     if (trimmedQuery.length < 3) {
+        updateDatalist([]);
         return;
     }
 
     if (trimmedQuery.startsWith('http://') || trimmedQuery.startsWith('https://') || /\.[a-z]{2,6}/i.test(trimmedQuery)) {
-        datalist.innerHTML = "";
         return;
     }
 
@@ -210,31 +228,15 @@ hubInput.addEventListener('input', function() {
         fetch(`https://geocoding-api.open-meteo.com/v1/search?name=${encodeURIComponent(trimmedQuery)}&count=5&language=en&format=json`)
             .then(res => res.json())
             .then(geoData => {
-                datalist.innerHTML = ""; 
-                if (!geoData.results) {
-                    populateStaticSuggestions();
-                    return;
+                if (geoData.results) {
+                    updateDatalist(geoData.results);
+                } else {
+                    updateDatalist([]);
                 }
-
-                geoData.results.forEach(location => {
-                    const option = document.createElement('option');
-                    const city = location.name;
-                    const state = location.admin1;
-                    const country = location.country;
-
-                    let parts = [];
-                    if (city) parts.push(city);
-                    if (state && !parts.includes(state)) parts.push(state);
-                    if (country && !parts.includes(country)) parts.push(country);
-
-                    option.value = parts.join(', ');
-                    option.setAttribute('data-lat', location.latitude);
-                    option.setAttribute('data-lon', location.longitude);
-                    option.setAttribute('data-tz', location.timezone);
-                    datalist.appendChild(option);
-                });
             })
-            .catch(err => console.error("Suggestions error:", err));
+            .catch(() => {
+                updateDatalist([]);
+            });
     }, 300);
 });
 
@@ -364,6 +366,54 @@ function runMarketExecution(ticker) {
             </div>
         `;
     }
+}
+
+function executeImageGeneration(imagePrompt) {
+    routingWarning.style.display = "none"; 
+
+    output.innerHTML = `
+        <div style="color: #888; font-style: italic; margin-bottom: 12px; font-size: 0.9rem; line-height: 1.4;">
+            🎨 Generating artwork for "${imagePrompt}"...
+        </div>
+        <div class="generation-status" id="image-loader">
+            <div class="loader-spinner"></div>
+            <span style="color: #eee; font-size: 0.9rem;">VAII AI engine is assembling pixels...</span>
+        </div>
+    `;
+
+    const seed = Math.floor(Math.random() * 1000000);
+    const imageUrl = `https://image.pollinations.ai/p/${encodeURIComponent(imagePrompt)}?width=1080&height=1080&nologo=true&seed=${seed}`;
+
+    const img = new Image();
+    img.src = imageUrl;
+    img.style.width = "100%";
+    img.style.borderRadius = "8px";
+    img.style.marginTop = "10px";
+    img.style.display = "none";
+    img.style.boxShadow = "0 4px 15px rgba(0,0,0,0.5)";
+
+    img.onload = function() {
+        const loader = document.getElementById("image-loader");
+        if (loader) loader.remove();
+        img.style.display = "block";
+        
+        const sourceDiv = document.createElement("div");
+        sourceDiv.className = "source-box";
+        sourceDiv.style.cssText = "border-top: 1px solid #333; padding-top: 12px; margin-top: 15px; text-align: left;";
+        sourceDiv.innerHTML = `
+            <span style="display: block; font-size: 0.75rem; color: #777; font-weight: bold; text-transform: uppercase; margin-bottom: 8px; letter-spacing: 0.5px;">Sources Index</span>
+            <div class="source-list" style="display: flex; flex-direction: column;">
+                <a href="https://pollinations.ai" target="_blank" style="display: flex; align-items: center; justify-content: space-between; background: #2a2a2a; border: 1px solid #3d3d3d; border-radius: 6px; padding: 6px 10px; color: #4da3ff; text-decoration: none; font-size: 0.82rem; font-weight: bold;">
+                    <span style="color: #aaa; font-weight: normal;">🎨 Pollinations AI Network</span>
+                    <span>Open Source →</span>
+                </a>
+            </div>
+        `;
+        output.appendChild(sourceDiv);
+        setAppInputMode('assistant', "Search topics, apps, or links...", assistantBtn);
+    };
+
+    output.appendChild(img);
 }
 
 function runInfoExecution(query) {
