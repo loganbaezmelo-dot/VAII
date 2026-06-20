@@ -186,6 +186,7 @@ helpToggle.addEventListener('click', function() {
     }
 });
 
+// Tri-Engine suggestion parser firing lookups concurrently
 hubInput.addEventListener('input', function() {
     const query = hubInput.value; 
     const trimmedQuery = query.trim();
@@ -601,15 +602,20 @@ function runInfoExecution(query) {
     if (isSingleWord) {
         output.innerText = `Looking up definition for "${query}"...`;
         fetch(`https://en.wiktionary.org/api/rest_v1/page/definition/${encodeURIComponent(query.toLowerCase())}`)
-            .then(res => res.json())
+            .then(res => {
+                if (!res.ok) throw new Error("Word not found");
+                return res.json();
+            })
             .then(dictData => {
                 const key = Object.keys(dictData)[0];
+                if (!dictData[key] || dictData[key].length === 0) throw new Error();
+                
                 const definitionObj = dictData[key][0];
-                const partOfSpeech = definitionObj.partOfSpeech;
+                const partOfSpeech = definitionObj.partOfSpeech || "noun";
                 let rawDefinition = (definitionObj.definitions && definitionObj.definitions.length > 0) ? definitionObj.definitions[0].definition.replace(/<[^>]*>/g, '').trim() : "";
                 
                 if (!rawDefinition) {
-                    rawDefinition = "No direct text definition available. Use the index link (the blue text saying 'Open Source' next to the text saying 'Wiktionary') on the bottom of the page to view the full dictionary entry.";
+                    rawDefinition = "No direct text definition available. Use the index link on the bottom of the page to view the full dictionary entry.";
                 }
                 
                 let infoHTML = `<div class="news-header-msg" style="color: #888; font-style: italic; margin-bottom: 12px; font-size: 0.9rem; line-height: 1.4;">I have provided the most relevant text of each information source related to "${query}".</div>`;
@@ -629,7 +635,6 @@ function runInfoExecution(query) {
     }
 }
 
-// Pipeline Core Framework: Extracts live descriptions directly from the search index lists
 function runUnifiedWikiPipeline(query, baselineHTML, hasWiktionary) {
     if (!baselineHTML) {
         baselineHTML = `<div class="news-header-msg" style="color: #888; font-style: italic; margin-bottom: 12px; font-size: 0.9rem; line-height: 1.4;">I have provided the most relevant text of each information source related to "${query}".</div>`;
