@@ -37,8 +37,6 @@ const logoutActionBtn = document.getElementById('logout-action-btn');
 
 const hubInput = document.getElementById('hub-input');
 const datalist = document.getElementById('hub-suggestions');
-const assistantBtn = document.getElementById('assistant-btn');
-const drawBtn = document.getElementById('draw-btn');
 const executeActionBtn = document.getElementById('execute-action-btn');
 const output = document.getElementById('weather-output');
 const routingWarning = document.getElementById('routing-warning');
@@ -47,8 +45,8 @@ const helpGuide = document.getElementById('help-guide');
 
 let isLoginMode = true;
 let debounceTimer;
-let currentMode = 'assistant'; 
 
+// Integrated universal system suggestion bar
 const defaultAssistantSuggestions = [
     "Open Gemini", 
     "193 lbs to kg", 
@@ -57,28 +55,31 @@ const defaultAssistantSuggestions = [
     "Time in Tokyo", 
     "Hello to Spanish", 
     "Open Minecraft", 
-    "(12 * 4) / 2"
-];
-const defaultDrawSuggestions = [
-    "A neon cyberpunk switch console artwork",
-    "Retro arcade machine sitting in an empty vaporwave room",
-    "Hyper-detailed digital painting of a cosmic fantasy library",
-    "Futuristic command center terminal minimal vector style"
+    "(12 * 4) / 2",
+    "Draw a neon cyberpunk switch console artwork",
+    "Draw a retro arcade machine sitting in an empty vaporwave room"
 ];
 
-// Unified suggestion builder so locations and onboarding instructions coexist smoothly
-function updateDatalist(cities = []) {
+// Unified suggestion box compiler
+function updateDatalist(cities = [], wikiTitles = []) {
     if (!datalist) return;
     datalist.innerHTML = "";
     
-    // 1. Always seed the core suggestions first so they never vanish
+    // 1. Inject core structural guides first
     defaultAssistantSuggestions.forEach(item => {
         const option = document.createElement('option');
         option.value = item;
         datalist.appendChild(option);
     });
     
-    // 2. Append live location models underneath
+    // 2. Inject live extracted Wikipedia search entry references
+    wikiTitles.forEach(title => {
+        const option = document.createElement('option');
+        option.value = title;
+        datalist.appendChild(option);
+    });
+    
+    // 3. Inject live calculated geocoding location parameters
     cities.forEach(location => {
         const option = document.createElement('option');
         const city = location.name;
@@ -98,33 +99,6 @@ function updateDatalist(cities = []) {
     });
 }
 
-function setAppInputMode(newMode, placeholderText, activeBtn) {
-    currentMode = newMode;
-    if (hubInput) {
-        hubInput.placeholder = placeholderText;
-        hubInput.className = ""; 
-        hubInput.classList.add(`mode-${newMode}`);
-        hubInput.value = ""; 
-    }
-    populateStaticSuggestions();
-    document.querySelectorAll('.mode-select').forEach(btn => btn.classList.remove('active'));
-    if (activeBtn) activeBtn.classList.add('active');
-}
-
-function populateStaticSuggestions() {
-    if (currentMode === 'assistant') {
-        updateDatalist([]);
-    } else if (currentMode === 'draw') {
-        if (!datalist) return;
-        datalist.innerHTML = "";
-        defaultDrawSuggestions.forEach(item => {
-            const option = document.createElement('option');
-            option.value = item;
-            datalist.appendChild(option);
-        });
-    }
-}
-
 // ==========================================
 // 1. FIREBASE AUTHENTICATION INITIALIZATION
 // ==========================================
@@ -132,11 +106,12 @@ onAuthStateChanged(auth, (user) => {
     if (user) {
         authContainer.style.display = "none";
         mainApp.style.display = "block";
-        output.innerText = `Welcome back! Arm an interface tool above and hit the arrow button...`;
+        output.innerText = `Welcome back! Enter a search query, calculation, or command to begin...`;
         authEmail.value = "";
         authPassword.value = "";
         authError.style.display = "none";
-        setAppInputMode('assistant', "Search topics, apps, or links...", assistantBtn);
+        if (hubInput) hubInput.value = "";
+        updateDatalist([], []);
     } else {
         authContainer.style.display = "block";
         mainApp.style.display = "none";
@@ -199,9 +174,7 @@ helpToggle.addEventListener('click', function() {
     }
 });
 
-assistantBtn.addEventListener('click', () => setAppInputMode('assistant', "Search topics, apps, or links...", assistantBtn));
-drawBtn.addEventListener('click', () => setAppInputMode('draw', "Describe an image prompt...", drawBtn));
-
+// Dual-Engine suggestion parser firing lookups concurrently
 hubInput.addEventListener('input', function() {
     const query = hubInput.value; 
     const trimmedQuery = query.trim();
@@ -212,10 +185,8 @@ hubInput.addEventListener('input', function() {
         routingWarning.style.display = "none";
     }
 
-    if (currentMode !== 'assistant') return;
-
     if (trimmedQuery.length < 3) {
-        updateDatalist([]);
+        updateDatalist([], []);
         return;
     }
 
@@ -225,18 +196,27 @@ hubInput.addEventListener('input', function() {
 
     clearTimeout(debounceTimer);
     debounceTimer = setTimeout(() => {
-        fetch(`https://geocoding-api.open-meteo.com/v1/search?name=${encodeURIComponent(trimmedQuery)}&count=5&language=en&format=json`)
+        // Engine Fetch 1: Open-Meteo Geocoding Lookup
+        const geoFetch = fetch(`https://geocoding-api.open-meteo.com/v1/search?name=${encodeURIComponent(trimmedQuery)}&count=3&language=en&format=json`)
             .then(res => res.json())
-            .then(geoData => {
-                if (geoData.results) {
-                    updateDatalist(geoData.results);
-                } else {
-                    updateDatalist([]);
+            .then(data => data.results || [])
+            .catch(() => []);
+
+        // Engine Fetch 2: Wikipedia Title Auto-Suggest Indexer
+        const wikiFetch = fetch(`https://en.wikipedia.org/w/api.php?action=query&list=search&srsearch=${encodeURIComponent(trimmedQuery)}&utf8=&format=json&origin=*`)
+            .then(res => res.json())
+            .then(data => {
+                if (data.query && data.query.search) {
+                    return data.query.search.map(item => item.title);
                 }
+                return [];
             })
-            .catch(() => {
-                updateDatalist([]);
-            });
+            .catch(() => []);
+
+        // Synchronize and render both arrays into the layout container smoothly
+        Promise.all([geoFetch, wikiFetch]).then(([cities, wikiTitles]) => {
+            updateDatalist(cities, wikiTitles);
+        });
     }, 300);
 });
 
@@ -248,11 +228,9 @@ if (executeActionBtn) {
             return;
         }
 
-        if (currentMode === 'draw') {
-            let imagePrompt = query;
-            if (imagePrompt.toLowerCase().startsWith("draw ")) {
-                imagePrompt = imagePrompt.substring(5).trim();
-            }
+        // Integrated Image Generation Router Interceptor
+        if (query.toLowerCase().startsWith("draw ")) {
+            let imagePrompt = query.substring(5).trim();
             executeImageGeneration(imagePrompt);
         } else {
             runInfoExecution(query);
@@ -410,7 +388,8 @@ function executeImageGeneration(imagePrompt) {
             </div>
         `;
         output.appendChild(sourceDiv);
-        setAppInputMode('assistant', "Search topics, apps, or links...", assistantBtn);
+        if (hubInput) hubInput.value = "";
+        updateDatalist([], []);
     };
 
     output.appendChild(img);
