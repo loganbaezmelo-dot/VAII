@@ -123,9 +123,8 @@
             transition: border-color 0.2s ease;
         }
 
-        /* Scaled down placeholder to make sure it never collides with the action button */
         input::placeholder {
-            font-size: 0.78rem !important;
+            font-size: 0.82rem !important;
             opacity: 0.7;
         }
         
@@ -152,18 +151,20 @@
         }
         .button-group {
             display: flex;
-            gap: 10px;
+            gap: 6px;
+            flex-wrap: wrap;
             width: 100%;
         }
         
         button.mode-select {
             flex: 1;
-            padding: 12px;
+            min-width: 65px;
+            padding: 10px 6px;
             border-radius: 8px;
             border: none;
             color: white;
             font-weight: bold;
-            font-size: 1rem;
+            font-size: 0.9rem;
             cursor: pointer;
             text-align: center;
             transition: transform 0.1s ease, opacity 0.2s ease;
@@ -175,6 +176,8 @@
         }
         #weather-btn { background: #007bff; }
         #news-btn { background: #28a745; }
+        #market-btn { background: #6f42c1; }
+        #clock-btn { background: #fd7e14; }
         #draw-btn { background: #e0a800; color: #121212; }
         
         .auth-btn {
@@ -195,6 +198,8 @@
         
         input.mode-weather { border-color: #007bff !important; }
         input.mode-info { border-color: #28a745 !important; }
+        input.mode-market { border-color: #6f42c1 !important; }
+        input.mode-clock { border-color: #fd7e14 !important; }
         input.mode-draw { border-color: #e0a800 !important; }
         
         .output-box {
@@ -338,11 +343,12 @@
                         <strong>💡 VAII Feature Cheat-Sheet:</strong>
                         <ul>
                             <li><strong>☀️ Weather:</strong> Arm Weather, type any location name, and hit Enter for live climate summaries.</li>
-                            <li><strong>📖 Word Definition:</strong> Arm Info and type a single word to lookup explicit definitions from Wiktionary.</li>
-                            <li><strong>🧠 Topic Explainer:</strong> Arm Info and type a full phrase to fetch summary articles from Wikipedia.</li>
-                            <li><strong>🎨 AI Art Generator:</strong> Arm Draw and describe an image concept to spin up automated creations instantly.</li>
-                            <li><strong>🌐 Direct Link Go:</strong> Paste a real URL (e.g., <code>google.com</code>) under Info to jump to that site instantly.</li>
-                            <li><strong>🚀 App Launch Command:</strong> Type <code>open [app]</code> under Info. It handles routing and subdomain randomizers!</li>
+                            <li><strong>📖 Word Definition:</strong> Arm Info and type a single word to lookup definitions.</li>
+                            <li><strong>🧠 Topic Explainer:</strong> Arm Info and type a phrase to fetch Wikipedia articles.</li>
+                            <li><strong>🔢 Math Converter:</strong> Type basic computations or conversion sequences directly inside Info view.</li>
+                            <li><strong>📈 Market Analysis:</strong> Arm Market and type tickers like AAPL or BTC to extract pricing updates.</li>
+                            <li><strong>🕒 World Clock:</strong> Arm Clock and enter any international territory name to match active tracking times.</li>
+                            <li><strong>🎨 AI Art Generator:</strong> Arm Draw and describe an image concept to spin up creations instantly.</li>
                         </ul>
                     </div>
 
@@ -350,10 +356,12 @@
                         <div class="button-group">
                             <button id="weather-btn" class="mode-select">Weather</button>
                             <button id="news-btn" class="mode-select active">Info</button>
+                            <button id="market-btn" class="mode-select">Market</button>
+                            <button id="clock-btn" class="mode-select">Clock</button>
                             <button id="draw-btn" class="mode-select">Draw</button>
                         </div>
                         <div class="input-row">
-                            <input type="text" id="city-input" placeholder="Search topics, open apps, or enter web URLs..." list="city-suggestions" autocomplete="off">
+                            <input type="text" id="city-input" placeholder="Search topics, apps, or links..." list="city-suggestions" autocomplete="off">
                             <button id="execute-action-btn" class="enter-btn">➔</button>
                         </div>
                     </div>
