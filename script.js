@@ -62,8 +62,8 @@ const defaultAssistantSuggestions = [
     "Draw a retro arcade machine sitting in an empty vaporwave room"
 ];
 
-// Unified suggestion box compiler
-function updateDatalist(cities = [], wikiTitles = []) {
+// Unified suggestion box compiler supporting concurrent Wiki sources
+function updateDatalist(cities = [], wikiTitles = [], wikitubiaTitles = []) {
     if (!datalist) return;
     datalist.innerHTML = "";
     
@@ -80,8 +80,15 @@ function updateDatalist(cities = [], wikiTitles = []) {
         option.value = title;
         datalist.appendChild(option);
     });
+
+    // 3. Inject live extracted Wikitubia search entry references
+    wikitubiaTitles.forEach(title => {
+        const option = document.createElement('option');
+        option.value = title;
+        datalist.appendChild(option);
+    });
     
-    // 3. Inject live calculated geocoding location parameters
+    // 4. Inject live calculated geocoding location parameters
     cities.forEach(location => {
         const option = document.createElement('option');
         const city = location.name;
@@ -116,7 +123,7 @@ onAuthStateChanged(auth, (user) => {
             hubInput.value = "";
             hubInput.placeholder = "Type a command...";
         }
-        updateDatalist([], []);
+        updateDatalist([], [], []);
     } else {
         authContainer.style.display = "block";
         mainApp.style.display = "none";
@@ -179,7 +186,7 @@ helpToggle.addEventListener('click', function() {
     }
 });
 
-// Dual-Engine suggestion parser firing lookups concurrently
+// Tri-Engine suggestion parser firing lookups concurrently
 hubInput.addEventListener('input', function() {
     const query = hubInput.value; 
     const trimmedQuery = query.trim();
@@ -191,7 +198,7 @@ hubInput.addEventListener('input', function() {
     }
 
     if (trimmedQuery.length < 3) {
-        updateDatalist([], []);
+        updateDatalist([], [], []);
         return;
     }
 
@@ -216,8 +223,18 @@ hubInput.addEventListener('input', function() {
             })
             .catch(() => []);
 
-        Promise.all([geoFetch, wikiFetch]).then(([cities, wikiTitles]) => {
-            updateDatalist(cities, wikiTitles);
+        const wikitubiaFetch = fetch(`https://youtube.fandom.com/api.php?action=query&list=search&srsearch=${encodeURIComponent(trimmedQuery)}&utf8=&format=json&origin=*`)
+            .then(res => res.json())
+            .then(data => {
+                if (data.query && data.query.search) {
+                    return data.query.search.map(item => item.title);
+                }
+                return [];
+            })
+            .catch(() => []);
+
+        Promise.all([geoFetch, wikiFetch, wikitubiaFetch]).then(([cities, wikiTitles, wikitubiaTitles]) => {
+            updateDatalist(cities, wikiTitles, wikitubiaTitles);
         });
     }, 300);
 });
@@ -246,7 +263,7 @@ hubInput.addEventListener('keypress', function(e) {
 });
 
 // ----------------------------------------------------
-// UNIFIED WEATHER & CLOCK INTEGRATION SYSTEM
+// UNIFIED ASSISTANT SYSTEMS
 // ----------------------------------------------------
 function runUnifiedWeatherClock(lat, lon, zone, displayName) {
     output.innerText = `Fetching synchronized metrics for ${displayName}...`;
@@ -393,10 +410,43 @@ function executeImageGeneration(imagePrompt) {
             hubInput.value = "";
             hubInput.placeholder = "Type a command...";
         }
-        updateDatalist([], []);
+        updateDatalist([], [], []);
     };
 
     output.appendChild(img);
+}
+
+// Reusable asynchronous Fandom MediaWiki core lookup engine
+function fetchWikitubiaData(query, baseHTML, callback) {
+    fetch(`https://youtube.fandom.com/api.php?action=query&list=search&srsearch=${encodeURIComponent(query)}&utf8=&format=json&origin=*`)
+        .then(res => res.json())
+        .then(searchData => {
+            if (searchData.query && searchData.query.search && searchData.query.search.length > 0) {
+                const topTitle = searchData.query.search[0].title;
+                fetch(`https://youtube.fandom.com/api.php?action=query&prop=extracts&exintro=1&explaintext=1&titles=${encodeURIComponent(topTitle)}&format=json&origin=*`)
+                    .then(res => res.json())
+                    .then(pageData => {
+                        const pages = pageData.query.pages;
+                        const pageId = Object.keys(pages)[0];
+                        let extractText = pages[pageId]?.extract || "";
+                        
+                        if (extractText) {
+                            if (extractText.length > 300) extractText = extractText.substring(0, 300) + "...";
+                            baseHTML += `
+                                <div style="color: #888; font-style: italic; font-size: 0.85rem; margin: 15px 0 8px 0; text-align: left;">
+                                    From Wikitubia (YouTube Fandom Wiki):
+                                </div>
+                                <div class="aggregated-text" style="font-size: 0.95rem; color: #e0e0e0; line-height: 1.6; margin-bottom: 20px; background: #1a1a1a; padding: 14px; border-radius: 8px; border-left: 3px solid #ff4444; text-align: left;">
+                                    <strong>${topTitle}:</strong> ${extractText}
+                                </div>
+                            `;
+                        }
+                        callback(baseHTML, topTitle);
+                    }).catch(() => callback(baseHTML, null));
+            } else {
+                callback(baseHTML, null);
+            }
+        }).catch(() => callback(baseHTML, null));
 }
 
 function runInfoExecution(query) {
@@ -620,18 +670,17 @@ function runInfoExecution(query) {
                 fetch(`https://en.wikipedia.org/w/api.php?action=query&list=search&srsearch=${encodeURIComponent(query)}&utf8=&format=json&origin=*`)
                     .then(wikiRes => wikiRes.json())
                     .then(wikiSearchData => {
-                        if (wikiSearchData.query.search && wikiSearchData.query.search.length > 0) {
-                            let topPageTitle = wikiSearchData.query.search[0].title;
-                            
-                            if (wikiSearchData.query.search[1] && (topPageTitle.toLowerCase().includes("refer to") || wikiSearchData.query.search[0].snippet.toLowerCase().includes("may refer to"))) {
-                                topPageTitle = wikiSearchData.query.search[1].title;
-                            }
-                            
+                        let topPageTitle = (wikiSearchData.query && wikiSearchData.query.search && wikiSearchData.query.search.length > 0) ? wikiSearchData.query.search[0].title : "";
+                        
+                        if (topPageTitle && wikiSearchData.query.search[1] && (topPageTitle.toLowerCase().includes("refer to") || wikiSearchData.query.search[0].snippet.toLowerCase().includes("may refer to"))) {
+                            topPageTitle = wikiSearchData.query.search[1].title;
+                        }
+                        
+                        if (topPageTitle) {
                             fetch(`https://en.wikipedia.org/api/rest_v1/page/summary/${encodeURIComponent(topPageTitle.replace(/ /g, '_'))}`)
                                 .then(summaryRes => summaryRes.json())
                                 .then(summaryData => {
                                     let wikiText = summaryData.extract || "";
-                                    
                                     if (summaryData.type === "disambiguation" || wikiText.toLowerCase().includes("may refer to")) {
                                         wikiText = "Multiple context records have been located. Browse the full article space using the search portal down below.";
                                     }
@@ -647,29 +696,55 @@ function runInfoExecution(query) {
                                         `;
                                     }
                                     
-                                    infoHTML += `
-                                        <div class="source-box" style="border-top: 1px solid #333; padding-top: 12px; margin-top: 10px;">
-                                            <span style="display: block; font-size: 0.75rem; color: #777; font-weight: bold; text-transform: uppercase; margin-bottom: 8px; letter-spacing: 0.5px;">Sources Index</span>
-                                            <div class="source-list" style="display: flex; flex-direction: column; gap: 6px;">
-                                                <a href="https://en.wiktionary.org/wiki/${encodeURIComponent(query)}" target="_blank" style="display: flex; align-items: center; justify-content: space-between; background: #2a2a2a; border: 1px solid #3d3d3d; border-radius: 6px; padding: 6px 10px; color: #4da3ff; text-decoration: none; font-size: 0.82rem; font-weight: bold;">
-                                                    <span style="color: #aaa; font-weight: normal;">📰 Wiktionary</span>
-                                                    <span>Open Source →</span>
-                                                </a>
-                                                <a href="${summaryData.content_urls?.desktop?.page || `https://en.wikipedia.org/wiki/${encodeURIComponent(topPageTitle)}`}" target="_blank" style="display: flex; align-items: center; justify-content: space-between; background: #2a2a2a; border: 1px solid #3d3d3d; border-radius: 6px; padding: 6px 10px; color: #4da3ff; text-decoration: none; font-size: 0.82rem; font-weight: bold;">
-                                                    <span style="color: #aaa; font-weight: normal;">📰 Wikipedia</span>
-                                                    <span>Open Source →</span>
-                                                </a>
-                                            </div>
-                                        </div>
-                                    `;
-                                    output.innerHTML = infoHTML;
+                                    fetchWikitubiaData(query, infoHTML, (finalHTML, wikitubiaTitle) => {
+                                        finalHTML += `
+                                            <div class="source-box" style="border-top: 1px solid #333; padding-top: 12px; margin-top: 10px;">
+                                                <span style="display: block; font-size: 0.75rem; color: #777; font-weight: bold; text-transform: uppercase; margin-bottom: 8px; letter-spacing: 0.5px;">Sources Index</span>
+                                                <div class="source-list" style="display: flex; flex-direction: column; gap: 6px;">
+                                                    <a href="https://en.wiktionary.org/wiki/${encodeURIComponent(query)}" target="_blank" style="display: flex; align-items: center; justify-content: space-between; background: #2a2a2a; border: 1px solid #3d3d3d; border-radius: 6px; padding: 6px 10px; color: #4da3ff; text-decoration: none; font-size: 0.82rem; font-weight: bold;">
+                                                        <span style="color: #aaa; font-weight: normal;">📰 Wiktionary</span>
+                                                        <span>Open Source →</span>
+                                                    </a>
+                                                    <a href="${summaryData.content_urls?.desktop?.page || `https://en.wikipedia.org/wiki/${encodeURIComponent(topPageTitle)}`}" target="_blank" style="display: flex; align-items: center; justify-content: space-between; background: #2a2a2a; border: 1px solid #3d3d3d; border-radius: 6px; padding: 6px 10px; color: #4da3ff; text-decoration: none; font-size: 0.82rem; font-weight: bold;">
+                                                        <span style="color: #aaa; font-weight: normal;">📰 Wikipedia</span>
+                                                        <span>Open Source →</span>
+                                                    </a>
+                                        `;
+                                        if (wikitubiaTitle) {
+                                            finalHTML += `
+                                                    <a href="https://youtube.fandom.com/wiki/${encodeURIComponent(wikitubiaTitle)}" target="_blank" style="display: flex; align-items: center; justify-content: space-between; background: #2a2a2a; border: 1px solid #3d3d3d; border-radius: 6px; padding: 6px 10px; color: #4da3ff; text-decoration: none; font-size: 0.82rem; font-weight: bold;">
+                                                        <span style="color: #aaa; font-weight: normal;">🔥 Wikitubia</span>
+                                                        <span>Fandom Wiki →</span>
+                                                    </a>
+                                            `;
+                                        }
+                                        finalHTML += `</div></div>`;
+                                        output.innerHTML = finalHTML;
+                                    });
                                 });
                         } else {
-                            appendWiktionaryOnlySources(query, infoHTML);
+                            fetchWikitubiaData(query, infoHTML, (finalHTML, wikitubiaTitle) => {
+                                finalHTML += `
+                                    <div class="source-box" style="border-top: 1px solid #333; padding-top: 12px; margin-top: 10px;">
+                                        <span style="display: block; font-size: 0.75rem; color: #777; font-weight: bold; text-transform: uppercase; margin-bottom: 8px; letter-spacing: 0.5px;">Sources Index</span>
+                                        <div class="source-list" style="display: flex; flex-direction: column; gap: 6px;">
+                                            <a href="https://en.wiktionary.org/wiki/${encodeURIComponent(query)}" target="_blank" style="display: flex; align-items: center; justify-content: space-between; background: #2a2a2a; border: 1px solid #3d3d3d; border-radius: 6px; padding: 6px 10px; color: #4da3ff; text-decoration: none; font-size: 0.82rem; font-weight: bold;">
+                                                <span style="color: #aaa; font-weight: normal;">📰 Wiktionary</span>
+                                                <span>Open Source →</span>
+                                            </a>
+                                `;
+                                if (wikitubiaTitle) {
+                                    finalHTML += `
+                                            <a href="https://youtube.fandom.com/wiki/${encodeURIComponent(wikitubiaTitle)}" target="_blank" style="display: flex; align-items: center; justify-content: space-between; background: #2a2a2a; border: 1px solid #3d3d3d; border-radius: 6px; padding: 6px 10px; color: #4da3ff; text-decoration: none; font-size: 0.82rem; font-weight: bold;">
+                                                <span style="color: #aaa; font-weight: normal;">🔥 Wikitubia</span>
+                                                <span>Fandom Wiki →</span>
+                                            </a>
+                                    `;
+                                }
+                                finalHTML += `</div></div>`;
+                                output.innerHTML = finalHTML;
+                            });
                         }
-                    })
-                    .catch(() => {
-                        appendWiktionaryOnlySources(query, infoHTML);
                     });
             })
             .catch(() => {
@@ -678,21 +753,6 @@ function runInfoExecution(query) {
     } else {
         runWikipediaEngine(query);
     }
-}
-
-function appendWiktionaryOnlySources(query, baselineHTML) {
-    baselineHTML += `
-        <div class="source-box" style="border-top: 1px solid #333; padding-top: 12px; margin-top: 10px;">
-            <span style="display: block; font-size: 0.75rem; color: #777; font-weight: bold; text-transform: uppercase; margin-bottom: 8px; letter-spacing: 0.5px;">Sources Index</span>
-            <div class="source-list" style="display: flex; flex-direction: column;">
-                <a href="https://en.wiktionary.org/wiki/${encodeURIComponent(query)}" target="_blank" style="display: flex; align-items: center; justify-content: space-between; background: #2a2a2a; border: 1px solid #3d3d3d; border-radius: 6px; padding: 6px 10px; color: #4da3ff; text-decoration: none; font-size: 0.82rem; font-weight: bold;">
-                    <span style="color: #aaa; font-weight: normal;">📰 Wiktionary</span>
-                    <span>Open Source →</span>
-                </a>
-            </div>
-        </div>
-    `;
-    output.innerHTML = baselineHTML;
 }
 
 function launchTargetUrl(url) {
@@ -735,12 +795,35 @@ function runWikipediaEngine(query) {
         .then(res => res.json())
         .then(searchData => {
             if (!searchData.query.search || searchData.query.search.length === 0) {
-                output.innerText = `Could not extract summary text for "${query}". Try a broader topic!`;
+                fetchWikitubiaData(query, "", (finalHTML, wikitubiaTitle) => {
+                    if (wikitubiaTitle) {
+                        let headerHTML = `<div class="news-header-msg" style="color: #888; font-style: italic; margin-bottom: 12px; font-size: 0.9rem; line-height: 1.4;">I have provided the most relevant text of each information source related to "${query}".</div>`;
+                        headerHTML += finalHTML;
+                        headerHTML += `
+                            <div class="source-box" style="border-top: 1px solid #333; padding-top: 12px; margin-top: 10px;">
+                                <span style="display: block; font-size: 0.75rem; color: #777; font-weight: bold; text-transform: uppercase; margin-bottom: 8px; letter-spacing: 0.5px;">Sources Index</span>
+                                <div class="source-list" style="display: flex; flex-direction: column;">
+                                    <a href="https://youtube.fandom.com/wiki/${encodeURIComponent(wikitubiaTitle)}" target="_blank" style="display: flex; align-items: center; justify-content: space-between; background: #2a2a2a; border: 1px solid #3d3d3d; border-radius: 6px; padding: 6px 10px; color: #4da3ff; text-decoration: none; font-size: 0.82rem; font-weight: bold;">
+                                        <span style="color: #aaa; font-weight: normal;">🔥 Wikitubia</span>
+                                        <span>Fandom Wiki →</span>
+                                    </a>
+                                </div>
+                            </div>
+                        `;
+                        output.innerHTML = headerHTML;
+                    } else {
+                        output.innerText = `Could not extract summary text for "${query}". Try a broader topic!`;
+                    }
+                });
                 return;
             }
 
             const results = searchData.query.search;
-            const topPageTitle = results[0].title;
+            let topPageTitle = results[0].title;
+
+            if (results[1] && (topPageTitle.toLowerCase().includes("refer to") || results[0].snippet.toLowerCase().includes("may refer to"))) {
+                topPageTitle = results[1].title;
+            }
 
             fetch(`https://en.wikipedia.org/api/rest_v1/page/summary/${encodeURIComponent(topPageTitle.replace(/ /g, '_'))}`)
                 .then(res => res.json())
@@ -769,32 +852,41 @@ function runWikipediaEngine(query) {
                         articleUrl = `https://en.wikipedia.org/wiki/Special:Search?search=${encodeURIComponent(query)}`;
                     }
 
-                    if (!infoText) {
-                        output.innerText = `No clear summary found for "${query}".`;
-                        return;
-                    }
-
                     let newsHTML = `<div class="news-header-msg" style="color: #888; font-style: italic; margin-bottom: 12px; font-size: 0.9rem; line-height: 1.4;">I have provided the most relevant text of each information source related to "${query}".</div>`;
                     let inlineContent = showTitlePrefix ? `<strong>${finalTitle}:</strong> ${infoText}` : infoText;
 
-                    newsHTML += `
-                        <div class="aggregated-text" style="font-size: 0.95rem; color: #e0e0e0; line-height: 1.6; margin-bottom: 20px; background: #1a1a1a; padding: 14px; border-radius: 8px; border-left: 3px solid #28a745; text-align: left;">
-                            ${inlineContent}
-                        </div>
-                    `;
-
-                    newsHTML += `
-                        <div class="source-box" style="border-top: 1px solid #333; padding-top: 12px;">
-                            <span style="display: block; font-size: 0.75rem; color: #777; font-weight: bold; text-transform: uppercase; margin-bottom: 8px; letter-spacing: 0.5px;">Sources Index</span>
-                            <div class="source-list" style="display: flex; flex-direction: column;">
-                                <a href="${articleUrl}" target="_blank" style="display: flex; align-items: center; justify-content: space-between; background: #2a2a2a; border: 1px solid #3d3d3d; border-radius: 6px; padding: 6px 10px; color: #4da3ff; text-decoration: none; font-size: 0.82rem; font-weight: bold;">
-                                    <span style="color: #aaa; font-weight: normal;">📰 Wikipedia</span>
-                                    <span>Open Source →</span>
-                                </a>
+                    if (infoText) {
+                        newsHTML += `
+                            <div class="aggregated-text" style="font-size: 0.95rem; color: #e0e0e0; line-height: 1.6; margin-bottom: 20px; background: #1a1a1a; padding: 14px; border-radius: 8px; border-left: 3px solid #007bff; text-align: left;">
+                                ${inlineContent}
                             </div>
-                        </div>
-                    `;
-                    output.innerHTML = newsHTML;
+                        `;
+                    }
+
+                    fetchWikitubiaData(query, newsHTML, (finalHTML, wikitubiaTitle) => {
+                        finalHTML += `
+                            <div class="source-box" style="border-top: 1px solid #333; padding-top: 12px;">
+                                <span style="display: block; font-size: 0.75rem; color: #777; font-weight: bold; text-transform: uppercase; margin-bottom: 8px; letter-spacing: 0.5px;">Sources Index</span>
+                                <div class="source-list" style="display: flex; flex-direction: column; gap: 6px;">
+                                    <a href="${articleUrl}" target="_blank" style="display: flex; align-items: center; justify-content: space-between; background: #2a2a2a; border: 1px solid #3d3d3d; border-radius: 6px; padding: 6px 10px; color: #4da3ff; text-decoration: none; font-size: 0.82rem; font-weight: bold;">
+                                        <span style="color: #aaa; font-weight: normal;">📰 Wikipedia</span>
+                                        <span>Open Source →</span>
+                                    </a>
+                        `;
+                        if (wikitubiaTitle) {
+                            finalHTML += `
+                                    <a href="https://youtube.fandom.com/wiki/${encodeURIComponent(wikitubiaTitle)}" target="_blank" style="display: flex; align-items: center; justify-content: space-between; background: #2a2a2a; border: 1px solid #3d3d3d; border-radius: 6px; padding: 6px 10px; color: #4da3ff; text-decoration: none; font-size: 0.82rem; font-weight: bold;">
+                                        <span style="color: #aaa; font-weight: normal;">🔥 Wikitubia</span>
+                                        <span>Fandom Wiki →</span>
+                                    </a>
+                            `;
+                        }
+                        finalHTML += `</div></div>`;
+                        output.innerHTML = finalHTML;
+                    });
+                })
+                .catch(() => {
+                    output.innerText = "Error pulling content summary.";
                 });
         })
         .catch(err => {
