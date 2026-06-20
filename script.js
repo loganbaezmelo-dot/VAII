@@ -208,6 +208,7 @@ helpToggle.addEventListener('click', function() {
     }
 });
 
+// Tri-Engine suggestion parser firing lookups concurrently
 hubInput.addEventListener('input', function() {
     const query = hubInput.value; 
     const trimmedQuery = query.trim();
@@ -565,7 +566,7 @@ function runInfoExecution(query) {
                     output.innerHTML = `
                         <div style="background: #1a1a1a; padding: 14px; border-radius: 8px; border-left: 3px solid #28a745; text-align: left;">
                             🔄 <strong>Conversion / External Routing Core</strong><br>
-                            Evaluating query string parameter link directly: <a href="https://www.google.com/search?q=${encodeURIComponent(query)}" target="_blank" style="color: #4da3ff;">Launch Conversion Card ↗</a>
+                            Evaluating query string parameter link directly: <a href="https://www.google.com/search?q=${encodeURIComponent(query)}" target="_blank; color: #4da3ff;">Launch Conversion Card ↗</a>
                         </div>
                     `;
                 });
