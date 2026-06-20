@@ -109,30 +109,24 @@
             display: flex;
             gap: 8px;
             width: 100%;
-            align-items: center;
         }
         
-        /* Updated baseline supporting multi-line text blocks */
-        textarea {
+        input {
             width: 100%;
-            padding: 10px 12px;
+            padding: 12px;
             border-radius: 8px;
             border: 2px solid #333;
             background: #2a2a2a;
             color: white;
-            font-size: 0.95rem;
+            font-size: 1rem;
             box-sizing: border-box;
             transition: border-color 0.2s ease;
-            resize: none; /* Keeps layout height static */
-            height: 46px; /* Perfectly aligns height with your 46px arrow button */
-            font-family: inherit;
-            line-height: 1.2;
         }
 
-        textarea::placeholder {
-            font-size: 0.8rem !important;
+        /* Scaled down placeholder to make sure it never collides with the action button */
+        input::placeholder {
+            font-size: 0.78rem !important;
             opacity: 0.7;
-            line-height: 1.3;
         }
         
         .enter-btn {
@@ -199,10 +193,9 @@
             transform: scale(0.98);
         }
         
-        /* Interactive dynamic border accent structures */
-        textarea.mode-weather { border-color: #007bff !important; }
-        textarea.mode-info { border-color: #28a745 !important; }
-        textarea.mode-draw { border-color: #e0a800 !important; }
+        input.mode-weather { border-color: #007bff !important; }
+        input.mode-info { border-color: #28a745 !important; }
+        input.mode-draw { border-color: #e0a800 !important; }
         
         .output-box {
             margin-top: 15px;
@@ -258,7 +251,6 @@
             color: white;
         }
 
-        /* Loading Spinner Infrastructure */
         .loader-spinner {
             display: inline-block;
             width: 18px;
@@ -284,7 +276,6 @@
             text-align: left;
         }
         
-        /* Auth screen field adjustments */
         .auth-field {
             width: 100%;
             padding: 12px;
@@ -362,10 +353,11 @@
                             <button id="draw-btn" class="mode-select">Draw</button>
                         </div>
                         <div class="input-row">
-                            <textarea id="city-input" placeholder="Search topic, open apps,&#10;or enter URL address..." autocomplete="off"></textarea>
+                            <input type="text" id="city-input" placeholder="Search topics, open apps, or enter web URLs..." list="city-suggestions" autocomplete="off">
                             <button id="execute-action-btn" class="enter-btn">➔</button>
                         </div>
                     </div>
+                    <datalist id="city-suggestions"></datalist>
                     <div id="weather-output" class="output-box">Select an interface view above...</div>
                     
                     <div style="text-align: right;">
