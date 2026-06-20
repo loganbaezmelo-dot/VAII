@@ -117,7 +117,7 @@ onAuthStateChanged(auth, (user) => {
         authEmail.value = "";
         authPassword.value = "";
         authError.style.display = "none";
-        setAppInputMode('info', "Search topics, open apps, or enter web URLs...", newsBtn);
+        setAppInputMode('info', "Search topics, apps, or enter web URLs...", newsBtn);
     } else {
         authContainer.style.display = "block";
         mainApp.style.display = "none";
@@ -189,15 +189,15 @@ helpToggle.addEventListener('click', function() {
 });
 
 weatherBtn.addEventListener('click', function() {
-    setAppInputMode('weather', "Type global destination for meteorological tracking...", weatherBtn);
+    setAppInputMode('weather', "Enter city or country location...", weatherBtn);
 });
 
 newsBtn.addEventListener('click', function() {
-    setAppInputMode('info', "Search topics, open apps, or enter web URLs...", newsBtn);
+    setAppInputMode('info', "Search topics, apps, or enter web URLs...", newsBtn);
 });
 
 drawBtn.addEventListener('click', function() {
-    setAppInputMode('draw', "Describe scene concept to execute image generation...", drawBtn);
+    setAppInputMode('draw', "Describe scene concept for AI art...", drawBtn);
 });
 
 cityInput.addEventListener('input', function() {
@@ -334,7 +334,7 @@ function getWeatherData(lat, lon, displayName) {
                 🌡️ Temperature: ${tempFahrenheit}°F (${tempCelsius}°C)<br>
                 💨 Wind Speed: ${weatherData.current_weather.windspeed} km/h
             `;
-            setAppInputMode('info', "Search topics, open apps, or enter web URLs...", newsBtn);
+            setAppInputMode('info', "Search topics, apps, or enter web URLs...", newsBtn);
         })
         .catch(err => {
             output.innerText = "Error fetching live weather data.";
@@ -370,7 +370,7 @@ function executeImageGeneration(imagePrompt) {
         const loader = document.getElementById("image-loader");
         if (loader) loader.remove();
         img.style.display = "block";
-        setAppInputMode('info', "Search topics, open apps, or enter web URLs...", newsBtn);
+        setAppInputMode('info', "Search topics, apps, or enter web URLs...", newsBtn);
     };
 
     output.appendChild(img);
