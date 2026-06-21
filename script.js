@@ -112,6 +112,32 @@ window.initVaiiMap = function() {
     console.log("Maps system ready.");
 };
 
+// =========================================================
+// 3.5 LIGHTWEIGHT MARKDOWN RENDERING TRANSLATION ENGINE
+// =========================================================
+function renderMarkdownTextToHtml(rawMarkdownText) {
+    if (!rawMarkdownText) return "";
+    
+    let safeHtml = rawMarkdownText
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;");
+    
+    // Convert bold weights (**text**)
+    safeHtml = safeHtml.replace(/\*\*(.*?)\*\*/g, "<strong>$1</strong>");
+    
+    // Convert inline emphasis italic strings (*text*)
+    safeHtml = safeHtml.replace(/\*(.*?)\*/g, "<em>$1</em>");
+    
+    // Convert clear layout list blocks (* item or - item)
+    safeHtml = safeHtml.replace(/^[\s]*[\*\-]\s+(.*)$/gm, "<li style='margin-left: 15px; margin-bottom: 4px;'>$1</li>");
+    
+    // Swap continuous line breaks into functional web layout breaks
+    safeHtml = safeHtml.replace(/\n/g, "<br>");
+    
+    return safeHtml;
+}
+
 // ==========================================
 // 4. CHAT HISTORY MATRIX STATE PERSISTENCE
 // ==========================================
@@ -131,7 +157,7 @@ function saveCurrentSessionState() {
     if (chatHistory.length <= 2) return; 
     let sessions = getSavedSessions();
     
-    let firstUserMsg = chatHistory.find(m => m.role === 'user' && m.parts && m.parts[0] && !m.parts[0].text.includes("advanced conversational core"));
+    let firstUserMsg = chatHistory.find(m => m.role === 'user' && m.parts && m.parts[0] && !m.parts[0].text.includes("proprietary features belong exclusively"));
     let rawTitle = firstUserMsg ? firstUserMsg.parts[0].text.trim() : "Gemini Chat";
     let formattedTitle = rawTitle.length > 28 ? rawTitle.substring(0, 25) + "..." : rawTitle;
     
@@ -150,7 +176,6 @@ function saveCurrentSessionState() {
     renderHistoryListItems();
 }
 
-// History Renderer
 function renderHistoryListItems() {
     if (!historyList) return;
     historyList.innerHTML = "";
@@ -213,7 +238,7 @@ function renderFullChatLogBubble() {
     
     let dialogueItems = chatHistory.filter(msg => {
         let textStr = msg.parts[0].text;
-        return !textStr.includes("advanced conversational core") && !textStr.includes("System connection established");
+        return !textStr.includes("proprietary features belong exclusively") && !textStr.includes("System connection established");
     });
     
     if (dialogueItems.length === 0) {
@@ -228,11 +253,12 @@ function renderFullChatLogBubble() {
             ? "background: #2a2a2a; padding: 10px 14px; border-radius: 8px; border-left: 3px solid #28a745; text-align: left; margin-bottom: 10px;"
             : "background: #1a1a1a; padding: 14px; border-radius: 8px; border-left: 3px solid #6f42c1; text-align: left; margin-bottom: 10px;";
             
+        // CHANGED: Wired text elements directly into renderMarkdownTextToHtml parser to resolve raw asterisk views
         bubble.innerHTML = `
             <div style="font-size: 0.72rem; color: #888; text-transform: uppercase; font-weight: bold; margin-bottom: 4px;">
                 ${isUserTurn ? '👤 You' : '✨ Gemini 3.5'}
             </div>
-            <div style="color: #eee; font-size: 0.95rem; line-height: 1.5; white-space: pre-wrap;">${msg.parts[0].text}</div>
+            <div style="color: #eee; font-size: 0.95rem; line-height: 1.5;">${renderMarkdownTextToHtml(msg.parts[0].text)}</div>
         `;
         output.appendChild(bubble);
     });
@@ -400,13 +426,17 @@ function clearActiveImage() {
     if (cameraTriggerBtn) cameraTriggerBtn.classList.remove('active');
 }
 
-// ==========================================
-// 8. DIRECT CHAT CONNECTOR: GEMINI 3.5
-// ==========================================
+// =========================================================
+// 8. DIRECT CHAT CONNECTOR: PURE GEMINI 3.5 PIPELINE
+// =========================================================
 async function executeGeminiDirectChat(userInput) {
     if (chatHistory.length === 0) {
-        chatHistory.push({ role: "user", parts: [{ text: "You are Gemini 3.5, an advanced conversational core engine running inside the VAII interface assistant frame. Keep statements concise, clear, and direct." }] });
-        chatHistory.push({ role: "model", parts: [{ text: "System connection established. Conversation initialization parameters synced." }] });
+        // CHANGED: Force a strict identity baseline injection prompt so Gemini stops claiming credit for VAII Native structures
+        chatHistory.push({ 
+            role: "user", 
+            parts: [{ text: "You are Gemini 3.5, an advanced conversational core engine running inside the VAII architecture frame. STRICT STRUCTURAL RULE: You do NOT possess built-in web services, maps, currency handlers, weather telemetry, or drawing capabilities. All of those proprietary features belong exclusively to a completely separate system engine option on this dashboard named 'VAII Native'. Your singular purpose here is providing deep, persistent multi-turn conversational reasoning and textual chat history records. Keep statements direct and clear." }] 
+        });
+        chatHistory.push({ role: "model", parts: [{ text: "System connection established. Isolated chat parameters synced. I am fully aware I do not contain VAII Native utilities." }] });
     }
 
     chatHistory.push({ role: "user", parts: [{ text: userInput }] });
@@ -803,6 +833,7 @@ function executeImageGeneration(imagePrompt) {
     output.appendChild(img);
 }
 
+// URL Redirection
 function launchTargetUrl(url) {
     routingWarning.style.display = "block"; 
     const htmlOutput = `
@@ -998,7 +1029,6 @@ function runUnifiedWikiPipeline(query, wikiData) {
             .then(res => res.json())
             .then(searchData => {
                 if (searchData.items?.length > 0) {
-                    // FIXED: Extracted literal escape string layers out of the routing expression
                     return fetch(`https://www.googleapis.com/youtube/v3/channels?part=statistics,snippet&id=${searchData.items[0].id.channelId}&key=${GOOGLE_API_KEY}`)
                         .then(res => res.json())
                         .then(channelData => {
