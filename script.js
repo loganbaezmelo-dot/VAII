@@ -32,7 +32,7 @@ const _k3 = "ZB_zjIcN";
 const _k4 = "QCAQQsff";
 const _k5 = "HEp4WH8";
 
-const YOUTUBE_API_KEY = _k1 + _k2 + _k3 + _k4 + _k5;
+const GOOGLE_API_KEY = _k1 + _k2 + _k3 + _k4 + _k5;
 
 // DOM CONTROL NODES
 const authContainer = document.getElementById('auth-container');
@@ -69,9 +69,15 @@ const defaultAssistantSuggestions = [
     "Hello to Spanish", 
     "Open Minecraft", 
     "(12 * 4) / 2",
-    "Draw a neon cyberpunk switch console artwork",
-    "Draw a retro arcade machine sitting in an empty vaporwave room"
+    "Show my calendar",
+    "Map of Orlando",
+    "Draw a neon cyberpunk switch console artwork"
 ];
+
+// Global dynamic map initializer assignment
+window.initVaiiMap = function() {
+    console.log("Maps API successfully authorized and booted.");
+};
 
 function updateDatalist(cities = [], wikiTitles = [], wikitubiaTitles = []) {
     if (!datalist) return;
@@ -322,10 +328,6 @@ function runUnifiedWeatherClock(lat, lon, zone, displayName) {
                             <span style="color: #aaa; font-weight: normal;">☀️ Open-Meteo Weather API</span>
                             <span>Open Source →</span>
                         </a>
-                        <a href="https://open-meteo.com" target="_blank" style="display: flex; align-items: center; justify-content: space-between; background: #2a2a2a; border: 1px solid #3d3d3d; border-radius: 6px; padding: 6px 10px; color: #4da3ff; text-decoration: none; font-size: 0.82rem; font-weight: bold;">
-                            <span style="color: #aaa; font-weight: normal;">🌐 Open-Meteo Geocoding Engine</span>
-                            <span>Open Source →</span>
-                        </a>
                     </div>
                 </div>
             `;
@@ -374,18 +376,55 @@ function runMarketExecution(ticker) {
                 <span style="color: #aaa; font-size: 0.9rem;">To view deep market assets without explicit tokens, launch structural metrics directly:</span>
                 <a href="https://finance.yahoo.com/quote/${ticker.toUpperCase()}" target="_blank">Open Yahoo Finance Chart ↗</a>
             </div>
-            
-            <div class="source-box" style="border-top: 1px solid #333; padding-top: 12px; margin-top: 15px;">
-                <span style="display: block; font-size: 0.75rem; color: #777; font-weight: bold; text-transform: uppercase; margin-bottom: 8px; letter-spacing: 0.5px;">Sources Index</span>
-                <div class="source-list" style="display: flex; flex-direction: column;">
-                    <a href="https://finance.yahoo.com" target="_blank" style="display: flex; align-items: center; justify-content: space-between; background: #2a2a2a; border: 1px solid #3d3d3d; border-radius: 6px; padding: 6px 10px; color: #4da3ff; text-decoration: none; font-size: 0.82rem; font-weight: bold;">
-                        <span style="color: #aaa; font-weight: normal;">📊 Yahoo Finance Portal</span>
-                        <span>Open Source →</span>
-                    </a>
-                </div>
-            </div>
         `;
     }
+}
+
+function launchTargetUrl(url) {
+    let contentHTML = `
+        <div class="news-header-msg" style="color: #888; font-style: italic; margin-bottom: 4px; font-size: 0.9rem; line-height: 1.4;">Navigating to external web link...</div>
+        <div style="background: #1a1a1a; padding: 14px; border-radius: 8px; border-left: 3px solid #007bff; text-align: left; margin-bottom: 15px;">
+            🔗 <strong>Resolved Address:</strong> <span style="color: #4da3ff; word-break: break-all;">${url}</span>
+        </div>
+        <a href="${url}" target="_blank" style="display: flex; align-items: center; justify-content: space-between; background: #007bff; border-radius: 6px; padding: 10px 14px; color: white; text-decoration: none; font-weight: bold; font-size: 0.95rem;">
+            <span>Launch Link</span>
+            <span>Open Site ↗</span>
+        </a>
+    `;
+    output.innerHTML = contentHTML;
+    window.open(url, '_blank');
+}
+
+function executeImageGeneration(imagePrompt) {
+    routingWarning.style.display = "none"; 
+
+    output.innerHTML = `
+        <div style="color: #888; font-style: italic; margin-bottom: 12px; font-size: 0.9rem; line-height: 1.4;">
+            🎨 Generating artwork for "${imagePrompt}"...
+        </div>
+        <div class="generation-status" id="image-loader">
+            <div class="loader-spinner"></div>
+            <span style="color: #eee; font-size: 0.9rem;">VAII AI engine is assembling pixels...</span>
+        </div>
+    `;
+
+    const seed = Math.floor(Math.random() * 1000000);
+    const imageUrl = `https://image.pollinations.ai/p/${encodeURIComponent(imagePrompt)}?width=1080&height=1080&nologo=true&seed=${seed}`;
+
+    const img = new Image();
+    img.src = imageUrl;
+    img.style.width = "100%";
+    img.style.borderRadius = "8px";
+    img.style.marginTop = "10px";
+    img.style.display = "none";
+    img.style.boxShadow = "0 4px 15px rgba(0,0,0,0.5)";
+
+    img.onload = function() {
+        const loader = document.getElementById("image-loader");
+        if (loader) loader.remove();
+        img.style.display = "block";
+    };
+    output.appendChild(img);
 }
 
 function runInfoExecution(query) {
@@ -401,6 +440,33 @@ function runInfoExecution(query) {
                 <span>Hello! How can I help you today? Baseline parameters initialized.</span>
             </div>
         `;
+    }
+
+    // 1. ISOLATED INTENT GATE: Google Calendar Pipeline Check
+    if (cleanQuery.includes("calendar") || cleanQuery.includes("schedule") || cleanQuery === "agenda") {
+        output.innerHTML = greetingHTML + `
+            <div style="background: #1a1a1a; padding: 14px; border-radius: 8px; border-left: 3px solid #ffc107; text-align: left; margin-bottom: 15px;">
+                📅 <strong>VAII Calendar Module:</strong><br><br>
+                <span style="color: #aaa; font-size: 0.9rem;">To scan personal calendar entries, complete your OAuth permission consent toggle inside the Firebase identity popup.</span>
+            </div>
+        `;
+        return; 
+    }
+
+    // 2. ISOLATED INTENT GATE: Live Interactive Maps SDK Core
+    if (cleanQuery.startsWith("map of ") || cleanQuery.startsWith("show map ")) {
+        const targetLocation = query.replace(/map of /i, "").replace(/show map /i, "").trim();
+        output.innerHTML = greetingHTML + `
+            <div style="background: #1a1a1a; padding: 14px; border-radius: 8px; border-left: 3px solid #4da3ff; text-align: left;">
+                🗺️ <strong>Interactive Map: ${targetLocation}</strong><br><br>
+                <div style="width:100%; height:250px; border-radius:6px; overflow:hidden;">
+                    <iframe width="100%" height="100%" frameborder="0" style="border:0" 
+                        src="https://www.google.com/maps/embed/v1/place?key=${GOOGLE_API_KEY}&q=${encodeURIComponent(targetLocation)}" allowfullscreen>
+                    </iframe>
+                </div>
+            </div>
+        `;
+        return;
     }
 
     if (cleanQuery.startsWith("time in ") || cleanQuery.startsWith("weather in ") || cleanQuery.startsWith("weather ") || cleanQuery.startsWith("clock ")) {
@@ -491,16 +557,6 @@ function runInfoExecution(query) {
                         🔢 <strong>Calculation Result:</strong><br>
                         <span style="font-size: 1.3rem; font-weight: bold;">${query} = ${result}</span>
                     </div>
-                    
-                    <div class="source-box" style="border-top: 1px solid #333; padding-top: 12px; margin-top: 15px;">
-                        <span style="display: block; font-size: 0.75rem; color: #777; font-weight: bold; text-transform: uppercase; margin-bottom: 8px; letter-spacing: 0.5px;">Sources Index</span>
-                        <div class="source-list" style="display: flex; flex-direction: column;">
-                            <div style="display: flex; align-items: center; justify-content: space-between; background: #2a2a2a; border: 1px solid #3d3d3d; border-radius: 6px; padding: 6px 10px; color: #eee; font-size: 0.82rem;">
-                                <span style="color: #aaa;">⚙️ Native V8 Math Runtime</span>
-                                <span style="color: #777; font-size:0.75rem;">Local Execution</span>
-                            </div>
-                        </div>
-                    </div>
                 `;
                 return;
             }
@@ -533,16 +589,6 @@ function runInfoExecution(query) {
                             📥 Input Query: <em>"${query}"</em><br>
                             📤 Calculation Result: <strong style="color: #28a745; font-size: 1.3rem; display:block; margin-top:4px;">${conversionResult}</strong>
                         </div>
-                        
-                        <div class="source-box" style="border-top: 1px solid #333; padding-top: 12px; margin-top: 15px;">
-                            <span style="display: block; font-size: 0.75rem; color: #777; font-weight: bold; text-transform: uppercase; margin-bottom: 8px; letter-spacing: 0.5px;">Sources Index</span>
-                            <div class="source-list" style="display: flex; flex-direction: column;">
-                                <div style="display: flex; align-items: center; justify-content: space-between; background: #2a2a2a; border: 1px solid #3d3d3d; border-radius: 6px; padding: 6px 10px; color: #eee; font-size: 0.82rem;">
-                                    <span style="color: #aaa;">📐 Local Metric Transform Equations</span>
-                                    <span style="color: #777; font-size:0.75rem;">Local Execution</span>
-                                </div>
-                            </div>
-                        </div>
                     `;
                     return;
                 }
@@ -557,16 +603,6 @@ function runInfoExecution(query) {
                             🗣️ <strong>Translation Asset Core:</strong><br>
                             📥 Original (EN): <em>"${source}"</em><br>
                             📤 Translated (${targetLanguage.toUpperCase()}): <strong style="color: #4da3ff; font-size: 1.1rem; display:block; margin-top:4px;">"${data.responseData.translatedText}"</strong>
-                        </div>
-                        
-                        <div class="source-box" style="border-top: 1px solid #333; padding-top: 12px; margin-top: 15px;">
-                            <span style="display: block; font-size: 0.75rem; color: #777; font-weight: bold; text-transform: uppercase; margin-bottom: 8px; letter-spacing: 0.5px;">Sources Index</span>
-                            <div class="source-list" style="display: flex; flex-direction: column;">
-                                <a href="https://mymemory.translated.net" target="_blank" style="display: flex; align-items: center; justify-content: space-between; background: #2a2a2a; border: 1px solid #3d3d3d; border-radius: 6px; padding: 6px 10px; color: #4da3ff; text-decoration: none; font-size: 0.82rem; font-weight: bold;">
-                                    <span style="color: #aaa; font-weight: normal;">🗣️ MyMemory Translate API</span>
-                                    <span>Open Source →</span>
-                                </a>
-                            </div>
                         </div>
                     `;
                 }).catch(() => {
@@ -637,13 +673,13 @@ function runUnifiedWikiPipeline(query, wikiData, hasWiktionary) {
     const lowerQuery = query.toLowerCase().trim();
     const isInfluencer = wikitubiaCache.has(lowerQuery) || famousYoutubersList.some(name => lowerQuery.includes(name));
 
-    const youtubeFetch = (isInfluencer && YOUTUBE_API_KEY && YOUTUBE_API_KEY !== "YOUR_API_KEY_HERE")
-        ? fetch(`https://www.googleapis.com/youtube/v3/search?part=snippet&type=channel&q=${encodeURIComponent(query)}&key=${YOUTUBE_API_KEY}`)
+    const youtubeFetch = (isInfluencer && GOOGLE_API_KEY)
+        ? fetch(`https://www.googleapis.com/youtube/v3/search?part=snippet&type=channel&q=${encodeURIComponent(query)}&key=${GOOGLE_API_KEY}`)
             .then(res => res.json())
             .then(searchData => {
                 if (searchData.items && searchData.items.length > 0) {
                     const channelId = searchData.items[0].id.channelId;
-                    return fetch(`https://www.googleapis.com/youtube/v3/channels?part=statistics,snippet&id=${channelId}&key=${YOUTUBE_API_KEY}`)
+                    return fetch(`https://www.googleapis.com/youtube/v3/channels?part=statistics,snippet&id=${channelId}&key=${GOOGLE_API_KEY}`)
                         .then(res => res.json())
                         .then(channelData => {
                             if (channelData.items && channelData.items.length > 0) {
@@ -704,7 +740,7 @@ function compileFinalSourceIndexBox(query, wikiData, hasWiktionary) {
 
         if (showWiktionary) {
             const wiktTitleClean = wikiData.wiktionary.title.toLowerCase().trim();
-            const wiktTextClean = wiktionaryText.toLowerCase().replace(/[^a-z0-9]/g, '');
+            const wiktTextClean = wikitionaryText.toLowerCase().replace(/[^a-z0-9]/g, '');
             
             if (wikiTitleClean === wiktTitleClean || wikiTextClean.includes(wiktTextClean) || wiktTextClean.includes(wikiTextClean)) {
                 showWiktionary = false;
