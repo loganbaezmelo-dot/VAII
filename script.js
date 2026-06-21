@@ -47,8 +47,11 @@ const _v5 = "HU4b4Xmg_CYURTOmgJQ";
 
 const GEMINI_VISION_KEY = _v1 + _v2 + _v3 + _v4 + _v5;
 
-// Cascading multi-model fallback chain configuration array
-const FALLBACK_MODELS = [
+// Global model array stack populated dynamically via the Google directory API
+let dynamicModelChain = [];
+
+// Your preferred fallback routing configuration order hierarchy
+const BASELINE_FALLBACK_TREE = [
     { name: "Gemini 3.5", id: "gemini-3.5-flash" },
     { name: "Gemini 3.1", id: "gemini-3.1-flash" },
     { name: "Gemini 3", id: "gemini-3-flash" },
@@ -132,7 +135,7 @@ function renderMarkdownTextToHtml(rawMarkdownText) {
     let safeHtml = rawMarkdownText
         .replace(/&/g, "&amp;")
         .replace(/</g, "&lt;")
-        .replace(/>/g, "&gt bridge;");
+        .replace(/>/g, "&gt;");
     
     safeHtml = safeHtml.replace(/\*\*(.*?)\*\*/g, "<strong>$1</strong>");
     safeHtml = safeHtml.replace(/\*(.*?)\*/g, "<em>$1</em>");
@@ -140,6 +143,43 @@ function renderMarkdownTextToHtml(rawMarkdownText) {
     safeHtml = safeHtml.replace(/\n/g, "<br>");
     
     return safeHtml;
+}
+
+// ==========================================================
+// 3.8 FUTURE-PROOF INTELLIGENT MODEL DISCOVERY DIRECTORY
+// ==========================================================
+async function discoverActiveModelChain() {
+    const listUrl = `https://generativelanguage.googleapis.com/v1beta/models?key=${GEMINI_VISION_KEY}`;
+    
+    try {
+        const response = await fetch(listUrl);
+        const data = await response.json();
+        
+        if (data && data.models) {
+            // Filter out models that explicitly support core generation methods
+            const liveIds = data.models
+                .filter(m => m.supportedGenerationMethods && m.supportedGenerationMethods.includes("generateContent"))
+                .map(m => m.name.replace("models/", ""));
+                
+            // Match against preferred configuration stack hierarchy order
+            dynamicModelChain = BASELINE_FALLBACK_TREE.filter(model => liveIds.includes(model.id));
+            
+            // Auto-append any newly deployed models that weren't explicit in baseline settings
+            data.models.forEach(m => {
+                const cleanId = m.name.replace("models/", "");
+                if (!dynamicModelChain.some(model => model.id === cleanId) && (cleanId.includes("gemini") || cleanId.includes("gemma"))) {
+                    dynamicModelChain.push({ name: cleanId.toUpperCase(), id: cleanId });
+                }
+            });
+        }
+    } catch (e) {
+        console.warn("Dynamic discovery tracking failed. Restoring hardcoded recovery layout array branch.", e);
+    }
+    
+    // Safety check fallback layer configuration validation gate
+    if (dynamicModelChain.length === 0) {
+        dynamicModelChain = [...BASELINE_FALLBACK_TREE];
+    }
 }
 
 // ==========================================
@@ -153,7 +193,6 @@ function getSavedSessions() {
     }
 }
 
-// Fixed title generator to prevent raw code loops
 function saveSessionsToDisk(sessions) {
     localStorage.setItem('vaii_chat_sessions', JSON.stringify(sessions));
 }
@@ -161,7 +200,6 @@ function saveSessionsToDisk(sessions) {
 function saveCurrentSessionState(customGeneratedTitle = null) {
     if (chatHistory.length <= 2) return; 
     let sessions = getSavedSessions();
-    
     let currentSession = sessions.find(s => s.id === currentSessionId);
     
     if (!currentSessionId) {
@@ -333,6 +371,7 @@ onAuthStateChanged(auth, (user) => {
         initializeFreshChatSession();
         clearActiveImage();
         renderHistoryListItems();
+        discoverActiveModelChain(); // Run directory mapping verification checks at system boot boundaries
         updateDatalist([], [], []);
     } else {
         if (authContainer) authContainer.style.display = "block";
@@ -460,12 +499,17 @@ async function executeGeminiDirectChat(userInput) {
     output.appendChild(spinnerBubble);
     output.scrollTop = output.scrollHeight;
 
+    // Safety initialization gate check loop
+    if (dynamicModelChain.length === 0) {
+        await discoverActiveModelChain();
+    }
+
     let successfulResponseText = null;
     let successfulModelLabel = "";
 
-    // Intercept engine loop: try models sequentially until one responds successfully 😭
-    for (let i = 0; i < FALLBACK_MODELS.length; i++) {
-        const modelObj = FALLBACK_MODELS[i];
+    // Intercept engine loop: pass full history arrays cleanly down active endpoints stack
+    for (let i = 0; i < dynamicModelChain.length; i++) {
+        const modelObj = dynamicModelChain[i];
         const visionUrl = `https://generativelanguage.googleapis.com/v1beta/models/${modelObj.id}:generateContent?key=${GEMINI_VISION_KEY}`;
         
         try {
@@ -477,7 +521,7 @@ async function executeGeminiDirectChat(userInput) {
             const data = await response.json();
 
             if (data.error || !data.candidates || !data.candidates[0].content.parts[0].text) {
-                console.warn(`Model variant [${modelObj.name}] quota exhausted or rejected. Cascading down fallback engine matrix...`);
+                console.warn(`Model variant [${modelObj.name}] exhausted or rejected. Cascading down fallback engine matrix...`);
                 continue; 
             }
 
@@ -503,12 +547,12 @@ async function executeGeminiDirectChat(userInput) {
         renderFullChatLogBubble();
         saveCurrentSessionState();
 
-        // Title Generation Hook: Fire dynamic title builder quietly on your second message turn
+        // Title Generation Hook: Trigger dynamic compiler automatically on message turn 2
         if (chatHistory.length === 4) {
             triggerBackgroundTitleGeneration(chatHistory[2].parts[0].text, successfulResponseText, successfulModelLabel);
         }
     } else {
-        // Custom Outage text payload catch block if everything drops offline completely 🥀
+        // High-density descriptive outage layout explanation
         const errorDiv = document.createElement('div');
         errorDiv.style = "background: #1a1a1a; padding: 14px; border-radius: 8px; border-left: 3px solid #ff4d4d; text-align: left; margin-bottom: 10px;";
         errorDiv.innerHTML = `
@@ -522,16 +566,15 @@ async function executeGeminiDirectChat(userInput) {
     }
 }
 
-// Background Dynamic Title Compiler Engine
+// Background Title Generator Loop Function
 async function triggerBackgroundTitleGeneration(userMsg, modelResponse, runningModelId) {
-    const titlePrompt = `Generate a short, concise, highly relevant 3 to 5 word title for this chat based on these two messages. Respond with ONLY the title text strings directly, no preamble, no markdown formatting symbols, and no surrounding quotes.\n\nUser Message: "${userMsg}"\nModel Response: "${modelResponse}"`;
+    const titlePrompt = `Generate a short, highly descriptive 3 to 5 word summary title for this chat based on these two statements. Respond with ONLY the clean summary text directly, no intro text, no markdown styling markers, and no outer quotation characters.\n\nUser text: "${userMsg}"\nModel text: "${modelResponse}"`;
     
     const payloadContents = [
         { role: "user", parts: [{ text: titlePrompt }] }
     ];
 
-    // Use the model that just worked to compile the title
-    const activeModel = FALLBACK_MODELS.find(m => m.name === runningModelId) || FALLBACK_MODELS[0];
+    const activeModel = BASELINE_FALLBACK_TREE.find(m => m.name === runningModelId) || BASELINE_FALLBACK_TREE[0];
     const url = `https://generativelanguage.googleapis.com/v1beta/models/${activeModel.id}:generateContent?key=${GEMINI_VISION_KEY}`;
 
     try {
@@ -543,13 +586,13 @@ async function triggerBackgroundTitleGeneration(userMsg, modelResponse, runningM
         const data = await response.json();
         
         let cleanedTitle = data.candidates[0].content.parts[0].text.trim();
-        cleanedTitle = cleanedTitle.replace(/['"]+/g, ''); // Strip quotes
+        cleanedTitle = cleanedTitle.replace(/['"]+/g, ''); // Clear quote remnants safely
         
         if (cleanedTitle && cleanedTitle.length > 2) {
             saveCurrentSessionState(cleanedTitle);
         }
     } catch (e) {
-        console.error("Dynamic summary title generation failed to resolve context parameters safely:", e);
+        console.error("Dynamic title layout thread broke parameter limits:", e);
     }
 }
 
@@ -567,6 +610,7 @@ if (helpToggle) {
             helpGuide.style.display = "none";
             helpToggle.innerText = "?";
         } else {
+            helpGuide.style.display = "block";
             helpGuide.style.display = "block";
             helpToggle.innerText = "✕";
             if (historyDrawer) historyDrawer.style.display = "none";
