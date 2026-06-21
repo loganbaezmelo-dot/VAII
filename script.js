@@ -347,7 +347,6 @@ function renderUnifiedLocationCard(lat, lon, zone, displayName, greetingHTML = "
                 </div>
             `;
             
-            // Native Map Injection Loop inside the active card layer
             if (typeof google !== 'undefined' && google.maps) {
                 const mapCoordinates = { lat: parseFloat(lat), lng: parseFloat(lon) };
                 const loadedMapInstance = new google.maps.Map(document.getElementById('vaii-merged-map-canvas'), {
@@ -600,7 +599,7 @@ function runInfoExecution(query) {
                 runUnifiedWikiPipeline(query, wikiData);
             }).catch(() => {
                 let wikiData = {};
-                if (greetingHTML) wikiData.greeting = greetingHTML;
+                if (greetingHTML) wikiData.greeting = wikiData.greeting = greetingHTML;
                 runUnifiedWikiPipeline(query, wikiData);
             });
     } else {
@@ -664,6 +663,46 @@ function compileFinalSourceIndexBox(query, wikiData) {
         output.innerHTML = totalHTML + `<div>No matches found for "${query}".</div>`;
         return;
     }
+    
     totalHTML += `<div style="color: #888; font-style: italic; margin-bottom: 12px; font-size: 0.9rem;">Information cards for "${query}":</div>` + blocksHtml.join('<div style="margin: 10px 0;"></div>');
+
+    // ==========================================
+    // RESTORED: MASTER SOURCE INDEX LINK FOOTER
+    // ==========================================
+    totalHTML += `
+        <div class="source-box" style="border-top: 1px solid #333; padding-top: 12px; margin-top: 15px;">
+            <span style="display: block; font-size: 0.75rem; color: #777; font-weight: bold; text-transform: uppercase; margin-bottom: 8px; letter-spacing: 0.5px;">Sources Index</span>
+            <div class="source-list" style="display: flex; flex-direction: column; gap: 6px;">
+    `;
+
+    if (wikiData.wiktionary) {
+        totalHTML += `
+            <a href="https://en.wiktionary.org/wiki/${encodeURIComponent(query)}" target="_blank" style="display: flex; align-items: center; justify-content: space-between; background: #2a2a2a; border: 1px solid #3d3d3d; border-radius: 6px; padding: 6px 10px; color: #4da3ff; text-decoration: none; font-size: 0.82rem; font-weight: bold;">
+                <span style="color: #aaa; font-weight: normal;">📰 Wiktionary</span>
+                <span>Open Source →</span>
+            </a>
+        `;
+    }
+
+    if (wikiData.youtube) {
+        const channelPath = wikiData.youtube.customUrl ? wikiData.youtube.customUrl : `@channel`;
+        totalHTML += `
+            <a href="https://www.youtube.com/${channelPath}" target="_blank" style="display: flex; align-items: center; justify-content: space-between; background: #2a2a2a; border: 1px solid #3d3d3d; border-radius: 6px; padding: 6px 10px; color: #ff4444; text-decoration: none; font-size: 0.82rem; font-weight: bold;">
+                <span style="color: #aaa; font-weight: normal;">🔴 YouTube Channel</span>
+                <span>Live Metrics →</span>
+            </a>
+        `;
+    }
+
+    if (wikiData.wikipedia) {
+        totalHTML += `
+            <a href="https://en.wikipedia.org/wiki/${encodeURIComponent(wikiData.wikipedia.title)}" target="_blank" style="display: flex; align-items: center; justify-content: space-between; background: #2a2a2a; border: 1px solid #3d3d3d; border-radius: 6px; padding: 6px 10px; color: #4da3ff; text-decoration: none; font-size: 0.82rem; font-weight: bold;">
+                <span style="color: #aaa; font-weight: normal;">📰 Wikipedia</span>
+                <span>Open Source →</span>
+            </a>
+        `;
+    }
+
+    totalHTML += `</div></div>`;
     output.innerHTML = totalHTML;
 }
