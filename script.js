@@ -432,19 +432,52 @@ function runInfoExecution(query) {
         return; 
     }
 
-    // 2. CORERCTED ENDPOINT INTENT GATE: Official Live Maps Embed REST URL
+    // 2. MIGRATED INTENT GATE: Native Maps JavaScript SDK Canvas Constructor
     if (cleanQuery.startsWith("map of ") || cleanQuery.startsWith("show map ")) {
         const targetLocation = query.replace(/map of /i, "").replace(/show map /i, "").trim();
-        output.innerHTML = greetingHTML + `
-            <div style="background: #1a1a1a; padding: 14px; border-radius: 8px; border-left: 3px solid #4da3ff; text-align: left;">
-                🗺️ <strong>Interactive Map: ${targetLocation}</strong><br><br>
-                <div style="width:100%; height:250px; border-radius:6px; overflow:hidden;">
-                    <iframe width="100%" height="100%" frameborder="0" style="border:0" 
-                        src="https://www.google.com/maps/embed/v1/place?key=${GOOGLE_API_KEY}&q=${encodeURIComponent(targetLocation)}" allowfullscreen>
-                    </iframe>
-                </div>
-            </div>
-        `;
+        output.innerHTML = greetingHTML + `<div style="color:#888; font-style:italic;">Resolving coordinates...</div>`;
+        
+        fetch(`https://geocoding-api.open-meteo.com/v1/search?name=${encodeURIComponent(targetLocation)}&count=1&language=en&format=json`)
+            .then(res => res.json())
+            .then(data => {
+                if (data.results && data.results.length > 0) {
+                    const loc = data.results[0];
+                    
+                    output.innerHTML = greetingHTML + `
+                        <div style="background: #1a1a1a; padding: 14px; border-radius: 8px; border-left: 3px solid #4da3ff; text-align: left;">
+                            🗺️ <strong>Interactive Map: ${loc.name}, ${loc.country || ''}</strong><br><br>
+                            <div id="vaii-js-map-canvas" style="width:100%; height:250px; border-radius:6px; background:#252525;"></div>
+                        </div>
+                    `;
+                    
+                    // Runs instance generation safely using your enabled Maps JavaScript API
+                    if (typeof google !== 'undefined' && google.maps) {
+                        const mapCoordinates = { lat: loc.latitude, lng: loc.longitude };
+                        const loadedMapInstance = new google.maps.Map(document.getElementById('vaii-js-map-canvas'), {
+                            center: mapCoordinates,
+                            zoom: 12,
+                            disableDefaultUI: false
+                        });
+                        
+                        new google.maps.Marker({
+                            position: mapCoordinates,
+                            map: loadedMapInstance,
+                            title: loc.name
+                        });
+                    } else {
+                        document.getElementById('vaii-js-map-canvas').innerHTML = `
+                            <div style="padding:20px; color:#ff4d4d; font-size:0.85rem;">
+                                Google Maps script library missing or unauthorized. Verify runtime console logs.
+                            </div>
+                        `;
+                    }
+                } else {
+                    output.innerText = `Could not track coordinates for "${targetLocation}".`;
+                }
+            })
+            .catch(() => {
+                output.innerText = "Failed parsing spatial lookups.";
+            });
         return;
     }
 
@@ -637,7 +670,6 @@ function runInfoExecution(query) {
     }
 }
 
-// REST OF THE FILE UNCHANGED FROM PREVIOUS TURN (Wiki/YouTube compilation frameworks)
 function runUnifiedWikiPipeline(query, wikiData, hasWiktionary) {
     const famousYoutubersList = [
         "jacksucksatlife", "mrbeast", "pewdiepie", "markiplier", "jacksepticeye", 
