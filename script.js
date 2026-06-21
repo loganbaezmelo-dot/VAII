@@ -208,6 +208,7 @@ helpToggle.addEventListener('click', function() {
     }
 });
 
+// Tri-Engine suggestion parser firing lookups concurrently
 hubInput.addEventListener('input', function() {
     const query = hubInput.value; 
     const trimmedQuery = query.trim();
@@ -474,6 +475,18 @@ function runInfoExecution(query) {
     const cleanQuery = query.toLowerCase().trim();
     const cryptoMap = { btc: "bitcoin", eth: "ethereum", sol: "solana", doge: "dogecoin", xrp: "ripple" };
 
+    // Greeting Core Filter Interceptor
+    const greetingsList = ["hello", "hi", "hey", "sup", "yo", "greetings", "whats up", "what's up"];
+    let greetingHTML = "";
+    if (greetingsList.includes(cleanQuery)) {
+        greetingHTML = `
+            <div style="background: #1a1a1a; padding: 14px; border-radius: 8px; border-left: 3px solid #17a2b8; text-align: left; margin-bottom: 15px;">
+                👋 <strong>VAII Assistant:</strong><br>
+                <span>Hello! How can I help you today? Baseline parameters initialized.</span>
+            </div>
+        `;
+    }
+
     // 1. Unified Location / Time Interceptor
     if (cleanQuery.startsWith("time in ") || cleanQuery.startsWith("weather in ") || cleanQuery.startsWith("weather ") || cleanQuery.startsWith("clock ")) {
         let parsedLocation = query.replace(/time in /i, "").replace(/weather in /i, "").replace(/weather /i, "").replace(/clock /i, "").trim();
@@ -684,14 +697,19 @@ function runInfoExecution(query) {
                 let wikiData = {
                     wiktionary: { title: query, text: rawDefinition, pos: partOfSpeech }
                 };
+                if (greetingHTML) wikiData.greeting = greetingHTML;
                 
                 runUnifiedWikiPipeline(query, wikiData, true);
             })
             .catch(() => {
-                runUnifiedWikiPipeline(query, {}, false);
+                let wikiData = {};
+                if (greetingHTML) wikiData.greeting = greetingHTML;
+                runUnifiedWikiPipeline(query, wikiData, false);
             });
     } else {
-        runUnifiedWikiPipeline(query, {}, false);
+        let wikiData = {};
+        if (greetingHTML) wikiData.greeting = greetingHTML;
+        runUnifiedWikiPipeline(query, wikiData, false);
     }
 }
 
@@ -761,7 +779,6 @@ function appendSecondaryWikipediaLayer(query, wikiData, hasWiktionary) {
         }).catch(() => compileFinalSourceIndexBox(query, wikiData, hasWiktionary));
 }
 
-// Rendering Matrix Engine: Upgraded to look at fuzzy title values and string fraction fragments
 function compileFinalSourceIndexBox(query, wikiData, hasWiktionary) {
     let showWiktionary = !!wikiData.wiktionary;
     let showDdg = !!wikiData.ddg;
@@ -771,7 +788,6 @@ function compileFinalSourceIndexBox(query, wikiData, hasWiktionary) {
     const ddgText = wikiData.ddg?.text?.trim();
     const wiktionaryText = wikiData.wiktionary?.text?.trim();
 
-    // Deep deduplication clean logic loops
     if (showWikipedia) {
         const wikiTitleClean = wikiData.wikipedia.title.toLowerCase().trim();
         const wikiTextClean = wikiText.toLowerCase().replace(/[^a-z0-9]/g, '');
@@ -780,7 +796,6 @@ function compileFinalSourceIndexBox(query, wikiData, hasWiktionary) {
             const ddgTitleClean = wikiData.ddg.title.toLowerCase().trim();
             const ddgTextClean = ddgText.toLowerCase().replace(/[^a-z0-9]/g, '').replace('...', '');
             
-            // Check if the titles match exactly or if the descriptions contain chunks of one another
             if (wikiTitleClean === ddgTitleClean || 
                 wikiTextClean.includes(ddgTextClean) || 
                 ddgTextClean.includes(wikiTextClean) ||
@@ -800,7 +815,14 @@ function compileFinalSourceIndexBox(query, wikiData, hasWiktionary) {
     }
 
     if (!showWikipedia && !showDdg && !showWiktionary) {
-        output.innerText = `Could not extract summary tracking metrics for "${query}". Try a broader topic parameter line!`;
+        let totalHTML = "";
+        if (wikiData.greeting) {
+            totalHTML += wikiData.greeting;
+            totalHTML += `<div class="news-header-msg" style="color: #888; font-style: italic; margin-bottom: 12px; font-size: 0.9rem; line-height: 1.4;">Could not extract additional summary metrics for "${query}".</div>`;
+            output.innerHTML = totalHTML;
+        } else {
+            output.innerText = `Could not extract summary tracking metrics for "${query}". Try a broader topic parameter line!`;
+        }
         return;
     }
 
@@ -827,7 +849,12 @@ function compileFinalSourceIndexBox(query, wikiData, hasWiktionary) {
         `);
     }
 
-    let totalHTML = `<div class="news-header-msg" style="color: #888; font-style: italic; margin-bottom: 12px; font-size: 0.9rem; line-height: 1.4;">I have provided the most relevant text of each information source related to "${query}".</div>`;
+    let totalHTML = "";
+    if (wikiData.greeting) {
+        totalHTML += wikiData.greeting;
+    }
+    
+    totalHTML += `<div class="news-header-msg" style="color: #888; font-style: italic; margin-bottom: 12px; font-size: 0.9rem; line-height: 1.4;">I have provided the most relevant text of each information source related to "${query}".</div>`;
     totalHTML += blocksHtml.join(`<div style="color: #888; font-style: italic; font-size: 0.85rem; margin: 15px 0 8px 0; text-align: left;">This might also be relevant:</div>`);
 
     totalHTML += `
