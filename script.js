@@ -599,7 +599,7 @@ function runInfoExecution(query) {
                 runUnifiedWikiPipeline(query, wikiData);
             }).catch(() => {
                 let wikiData = {};
-                if (greetingHTML) wikiData.greeting = wikiData.greeting = greetingHTML;
+                if (greetingHTML) wikiData.greeting = greetingHTML;
                 runUnifiedWikiPipeline(query, wikiData);
             });
     } else {
@@ -664,11 +664,10 @@ function compileFinalSourceIndexBox(query, wikiData) {
         return;
     }
     
-    totalHTML += `<div style="color: #888; font-style: italic; margin-bottom: 12px; font-size: 0.9rem;">Information cards for "${query}":</div>` + blocksHtml.join('<div style="margin: 10px 0;"></div>');
+    // RESTORED: Original prewritten text heading layout override
+    totalHTML += `<div style="color: #888; font-style: italic; margin-bottom: 12px; font-size: 0.9rem;">Relevant documentation indices for "${query}":</div>` + blocksHtml.join('<div style="margin: 10px 0;"></div>');
 
-    // ==========================================
-    // RESTORED: MASTER SOURCE INDEX LINK FOOTER
-    // ==========================================
+    // MASTER SOURCE INDEX LINK FOOTER
     totalHTML += `
         <div class="source-box" style="border-top: 1px solid #333; padding-top: 12px; margin-top: 15px;">
             <span style="display: block; font-size: 0.75rem; color: #777; font-weight: bold; text-transform: uppercase; margin-bottom: 8px; letter-spacing: 0.5px;">Sources Index</span>
