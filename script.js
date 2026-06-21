@@ -47,6 +47,17 @@ const _v5 = "HU4b4Xmg_CYURTOmgJQ";
 
 const GEMINI_VISION_KEY = _v1 + _v2 + _v3 + _v4 + _v5;
 
+// Cascading multi-model fallback chain configuration array
+const FALLBACK_MODELS = [
+    { name: "Gemini 3.5", id: "gemini-3.5-flash" },
+    { name: "Gemini 3.1", id: "gemini-3.1-flash" },
+    { name: "Gemini 3", id: "gemini-3-flash" },
+    { name: "Gemini 2.5", id: "gemini-2.5-flash" },
+    { name: "Gemini 2", id: "gemini-2-flash" },
+    { name: "Gemma 4 31B", id: "gemma-4-31b" },
+    { name: "Gemma 4 26B", id: "gemma-4-26b" }
+];
+
 // ==========================================
 // 3. DOM NODE CONTROL HOOKS
 // ==========================================
@@ -121,18 +132,11 @@ function renderMarkdownTextToHtml(rawMarkdownText) {
     let safeHtml = rawMarkdownText
         .replace(/&/g, "&amp;")
         .replace(/</g, "&lt;")
-        .replace(/>/g, "&gt;");
+        .replace(/>/g, "&gt bridge;");
     
-    // Convert bold weights (**text**)
     safeHtml = safeHtml.replace(/\*\*(.*?)\*\*/g, "<strong>$1</strong>");
-    
-    // Convert inline emphasis italic strings (*text*)
     safeHtml = safeHtml.replace(/\*(.*?)\*/g, "<em>$1</em>");
-    
-    // Convert clear layout list blocks (* item or - item)
     safeHtml = safeHtml.replace(/^[\s]*[\*\-]\s+(.*)$/gm, "<li style='margin-left: 15px; margin-bottom: 4px;'>$1</li>");
-    
-    // Swap continuous line breaks into functional web layout breaks
     safeHtml = safeHtml.replace(/\n/g, "<br>");
     
     return safeHtml;
@@ -149,29 +153,32 @@ function getSavedSessions() {
     }
 }
 
+// Fixed title generator to prevent raw code loops
 function saveSessionsToDisk(sessions) {
     localStorage.setItem('vaii_chat_sessions', JSON.stringify(sessions));
 }
 
-function saveCurrentSessionState() {
+function saveCurrentSessionState(customGeneratedTitle = null) {
     if (chatHistory.length <= 2) return; 
     let sessions = getSavedSessions();
     
-    let firstUserMsg = chatHistory.find(m => m.role === 'user' && m.parts && m.parts[0] && !m.parts[0].text.includes("proprietary features belong exclusively"));
-    let rawTitle = firstUserMsg ? firstUserMsg.parts[0].text.trim() : "Gemini Chat";
-    let formattedTitle = rawTitle.length > 28 ? rawTitle.substring(0, 25) + "..." : rawTitle;
+    let currentSession = sessions.find(s => s.id === currentSessionId);
     
     if (!currentSessionId) {
         currentSessionId = 'session_' + Date.now();
-        sessions.unshift({ id: currentSessionId, title: formattedTitle, history: chatHistory });
-    } else {
-        let existingSession = sessions.find(s => s.id === currentSessionId);
-        if (existingSession) {
-            existingSession.history = chatHistory;
-        } else {
-            sessions.unshift({ id: currentSessionId, title: formattedTitle, history: chatHistory });
+        let fallbackTitle = "Gemini Chat Thread";
+        if (chatHistory[2] && chatHistory[2].role === 'user') {
+            fallbackTitle = chatHistory[2].parts[0].text.substring(0, 25) + "...";
+        }
+        currentSession = { id: currentSessionId, title: customGeneratedTitle || fallbackTitle, history: chatHistory };
+        sessions.unshift(currentSession);
+    } else if (currentSession) {
+        currentSession.history = chatHistory;
+        if (customGeneratedTitle) {
+            currentSession.title = customGeneratedTitle;
         }
     }
+    
     saveSessionsToDisk(sessions);
     renderHistoryListItems();
 }
@@ -253,12 +260,17 @@ function renderFullChatLogBubble() {
             ? "background: #2a2a2a; padding: 10px 14px; border-radius: 8px; border-left: 3px solid #28a745; text-align: left; margin-bottom: 10px;"
             : "background: #1a1a1a; padding: 14px; border-radius: 8px; border-left: 3px solid #6f42c1; text-align: left; margin-bottom: 10px;";
             
-        // CHANGED: Wired text elements directly into renderMarkdownTextToHtml parser to resolve raw asterisk views
+        let footerMetadataLabel = "";
+        if (!isUserTurn && msg.activeModelName) {
+            footerMetadataLabel = `<div style="font-size: 0.68rem; color: #555; border-top: 1px solid #222; margin-top: 8px; padding-top: 4px; font-style: italic;">Running on this model: "${msg.activeModelName}"</div>`;
+        }
+
         bubble.innerHTML = `
             <div style="font-size: 0.72rem; color: #888; text-transform: uppercase; font-weight: bold; margin-bottom: 4px;">
-                ${isUserTurn ? '👤 You' : '✨ Gemini 3.5'}
+                ${isUserTurn ? '👤 You' : '✨ Gemini Ecosystem'}
             </div>
             <div style="color: #eee; font-size: 0.95rem; line-height: 1.5;">${renderMarkdownTextToHtml(msg.parts[0].text)}</div>
+            ${footerMetadataLabel}
         `;
         output.appendChild(bubble);
     });
@@ -427,14 +439,13 @@ function clearActiveImage() {
 }
 
 // =========================================================
-// 8. DIRECT CHAT CONNECTOR: PURE GEMINI 3.5 PIPELINE
+// 8. COGNITIVE CHAT CONNECTORS & DYNAMIC FALLBACK LOOPS
 // =========================================================
 async function executeGeminiDirectChat(userInput) {
     if (chatHistory.length === 0) {
-        // CHANGED: Force a strict identity baseline injection prompt so Gemini stops claiming credit for VAII Native structures
         chatHistory.push({ 
             role: "user", 
-            parts: [{ text: "You are Gemini 3.5, an advanced conversational core engine running inside the VAII architecture frame. STRICT STRUCTURAL RULE: You do NOT possess built-in web services, maps, currency handlers, weather telemetry, or drawing capabilities. All of those proprietary features belong exclusively to a completely separate system engine option on this dashboard named 'VAII Native'. Your singular purpose here is providing deep, persistent multi-turn conversational reasoning and textual chat history records. Keep statements direct and clear." }] 
+            parts: [{ text: "You are Gemini, an advanced conversational core running inside the VAII architecture frame. STRICT STRUCTURAL RULE: You do NOT possess built-in web services, maps, currency handlers, weather telemetry, or drawing capabilities. All of those proprietary features belong exclusively to a completely separate system engine option on this dashboard named 'VAII Native'. Your singular purpose here is providing deep, persistent multi-turn conversational reasoning and textual chat history records. Keep statements direct and clear." }] 
         });
         chatHistory.push({ role: "model", parts: [{ text: "System connection established. Isolated chat parameters synced. I am fully aware I do not contain VAII Native utilities." }] });
     }
@@ -445,44 +456,100 @@ async function executeGeminiDirectChat(userInput) {
     const spinnerBubble = document.createElement('div');
     spinnerBubble.id = "gemini-active-typing-indicator";
     spinnerBubble.style = "text-align: left; padding: 10px; color: #aaa; font-style: italic; display: flex; align-items: center;";
-    spinnerBubble.innerHTML = `<div class="loader-spinner"></div> Gemini 3.5 is typing...`;
+    spinnerBubble.innerHTML = `<div class="loader-spinner"></div> Processing cascading multi-model fallback sequences...`;
     output.appendChild(spinnerBubble);
     output.scrollTop = output.scrollHeight;
 
-    const visionUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-3.5-flash:generateContent?key=${GEMINI_VISION_KEY}`;
+    let successfulResponseText = null;
+    let successfulModelLabel = "";
 
-    try {
-        const response = await fetch(visionUrl, {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ contents: chatHistory })
-        });
-        const data = await response.json();
+    // Intercept engine loop: try models sequentially until one responds successfully 😭
+    for (let i = 0; i < FALLBACK_MODELS.length; i++) {
+        const modelObj = FALLBACK_MODELS[i];
+        const visionUrl = `https://generativelanguage.googleapis.com/v1beta/models/${modelObj.id}:generateContent?key=${GEMINI_VISION_KEY}`;
+        
+        try {
+            const response = await fetch(visionUrl, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ contents: chatHistory })
+            });
+            const data = await response.json();
 
-        const indicatorNode = document.getElementById("gemini-active-typing-indicator");
-        if (indicatorNode) indicatorNode.remove();
+            if (data.error || !data.candidates || !data.candidates[0].content.parts[0].text) {
+                console.warn(`Model variant [${modelObj.name}] quota exhausted or rejected. Cascading down fallback engine matrix...`);
+                continue; 
+            }
 
-        if (data.error) {
-            throw new Error(data.error.message);
+            successfulResponseText = data.candidates[0].content.parts[0].text;
+            successfulModelLabel = modelObj.name;
+            break; 
+        } catch (err) {
+            console.error(`Network pipeline exception on model block [${modelObj.name}]:`, err);
+            continue;
         }
+    }
 
-        const modelResponseText = data.candidates[0].content.parts[0].text;
-        chatHistory.push({ role: "model", parts: [{ text: modelResponseText }] });
+    const indicatorNode = document.getElementById("gemini-active-typing-indicator");
+    if (indicatorNode) indicatorNode.remove();
+
+    if (successfulResponseText !== null) {
+        chatHistory.push({ 
+            role: "model", 
+            parts: [{ text: successfulResponseText }],
+            activeModelName: successfulModelLabel 
+        });
 
         renderFullChatLogBubble();
         saveCurrentSessionState();
-    } catch (err) {
-        const indicatorNode = document.getElementById("gemini-active-typing-indicator");
-        if (indicatorNode) indicatorNode.remove();
 
+        // Title Generation Hook: Fire dynamic title builder quietly on your second message turn
+        if (chatHistory.length === 4) {
+            triggerBackgroundTitleGeneration(chatHistory[2].parts[0].text, successfulResponseText, successfulModelLabel);
+        }
+    } else {
+        // Custom Outage text payload catch block if everything drops offline completely 🥀
         const errorDiv = document.createElement('div');
         errorDiv.style = "background: #1a1a1a; padding: 14px; border-radius: 8px; border-left: 3px solid #ff4d4d; text-align: left; margin-bottom: 10px;";
         errorDiv.innerHTML = `
-            <div style="font-size: 0.75rem; color: #ff4d4d; text-transform: uppercase; font-weight: bold; margin-bottom: 8px;">⚠️ Gemini API Error</div>
-            <div style="color: #eee; font-size: 0.95rem; line-height: 1.5;">${err.message}</div>
+            <div style="font-size: 0.75rem; color: #ff4d4d; text-transform: uppercase; font-weight: bold; margin-bottom: 8px;">🚨 Critical Server Outage Alert</div>
+            <div style="color: #eee; font-size: 0.95rem; line-height: 1.5; font-weight: 500;">
+                Every single fallback layer inside the model matrix—including all Gemini clusters, backup frameworks, and local Gemma configurations—has completely exhausted its rate-limit quotas simultaneously. The AI core cannot resolve text vectors right now. Please wait for the token limits to clear.
+            </div>
         `;
         output.appendChild(errorDiv);
         chatHistory.pop(); 
+    }
+}
+
+// Background Dynamic Title Compiler Engine
+async function triggerBackgroundTitleGeneration(userMsg, modelResponse, runningModelId) {
+    const titlePrompt = `Generate a short, concise, highly relevant 3 to 5 word title for this chat based on these two messages. Respond with ONLY the title text strings directly, no preamble, no markdown formatting symbols, and no surrounding quotes.\n\nUser Message: "${userMsg}"\nModel Response: "${modelResponse}"`;
+    
+    const payloadContents = [
+        { role: "user", parts: [{ text: titlePrompt }] }
+    ];
+
+    // Use the model that just worked to compile the title
+    const activeModel = FALLBACK_MODELS.find(m => m.name === runningModelId) || FALLBACK_MODELS[0];
+    const url = `https://generativelanguage.googleapis.com/v1beta/models/${activeModel.id}:generateContent?key=${GEMINI_VISION_KEY}`;
+
+    try {
+        const response = await fetch(url, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ contents: payloadContents })
+        });
+        const data = await response.json();
+        
+        let cleanedTitle = data.candidates[0].content.parts[0].text.trim();
+        cleanedTitle = cleanedTitle.replace(/['"]+/g, ''); // Strip quotes
+        
+        if (cleanedTitle && cleanedTitle.length > 2) {
+            saveCurrentSessionState(cleanedTitle);
+        }
+    } catch (e) {
+        console.error("Dynamic summary title generation failed to resolve context parameters safely:", e);
     }
 }
 
@@ -833,7 +900,6 @@ function executeImageGeneration(imagePrompt) {
     output.appendChild(img);
 }
 
-// URL Redirection
 function launchTargetUrl(url) {
     routingWarning.style.display = "block"; 
     const htmlOutput = `
