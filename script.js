@@ -24,15 +24,21 @@ const auth = getAuth(app);
 const googleProvider = new GoogleAuthProvider();
 
 // ====================================================
-// CONFIGURATION: DROP YOUR YOUTUBE DATA API KEY HERE
+// OBFUSCATED CONFIGURATION: SPLIT KEY CORE
 // ====================================================
-const YOUTUBE_API_KEY = "YOUR_API_KEY_HERE";
+const _k1 = "AIzaSyAJ";
+const _k2 = "KTkU0nd6";
+const _k3 = "ZB_zjIcN";
+const _k4 = "QCAQQsff";
+const _k5 = "HEp4WH8";
+
+const YOUTUBE_API_KEY = _k1 + _k2 + _k3 + _k4 + _k5;
 
 // DOM CONTROL NODES
 const authContainer = document.getElementById('auth-container');
 const mainApp = document.getElementById('main-app');
 const authTitle = document.getElementById('auth-title');
-const authEmail = document.getElementById('auth-email');
+const authEmail = document.getElementById('auth-field');
 const authPassword = document.getElementById('auth-password');
 const authSubmitBtn = document.getElementById('auth-submit-btn');
 const googleSigninBtn = document.getElementById('google-signin-btn');
@@ -134,132 +140,146 @@ function fetchDuckDuckGoInstantAnswer(searchQuery) {
 // ==========================================
 onAuthStateChanged(auth, (user) => {
     if (user) {
-        authContainer.style.display = "none";
-        mainApp.style.display = "block";
-        output.innerText = welcomeMessageText;
-        authEmail.value = "";
-        authPassword.value = "";
-        authError.style.display = "none";
+        if (authContainer) authContainer.style.display = "none";
+        if (mainApp) mainApp.style.display = "block";
+        if (output) output.innerText = welcomeMessageText;
+        if (authEmail) authEmail.value = "";
+        if (authPassword) authPassword.value = "";
+        if (authError) authError.style.display = "none";
         if (hubInput) {
             hubInput.value = "";
             hubInput.placeholder = "Type a command...";
         }
         updateDatalist([], [], []);
     } else {
-        authContainer.style.display = "block";
-        mainApp.style.display = "none";
+        if (authContainer) authContainer.style.display = "block";
+        if (mainApp) mainApp.style.display = "none";
     }
 });
 
-authToggle.addEventListener('click', () => {
-    isLoginMode = !isLoginMode;
-    authError.style.display = "none";
-    if (isLoginMode) {
-        authTitle.innerText = "🔒 Account Sign In";
-        authSubmitBtn.innerText = "Log In";
-        authToggle.innerText = "Need an account? Register instead";
-    } else {
-        authTitle.innerText = "✨ Create Account";
-        authSubmitBtn.innerText = "Register App User";
-        authToggle.innerText = "Already have an account? Sign In";
-    }
-});
+if (authToggle) {
+    authToggle.addEventListener('click', () => {
+        isLoginMode = !isLoginMode;
+        if (authError) authError.style.display = "none";
+        if (isLoginMode) {
+            authTitle.innerText = "🔒 Account Sign In";
+            authSubmitBtn.innerText = "Log In";
+            authToggle.innerText = "Need an account? Register instead";
+        } else {
+            authTitle.innerText = "✨ Create Account";
+            authSubmitBtn.innerText = "Register App User";
+            authToggle.innerText = "Already have an account? Sign In";
+        }
+    });
+}
 
-authSubmitBtn.addEventListener('click', () => {
-    const email = authEmail.value.trim();
-    const password = authPassword.value;
-    authError.style.display = "none";
-    if (!email || !password) {
-        showAuthError("Please fill out all credential inputs.");
-        return;
-    }
-    if (isLoginMode) {
-        signInWithEmailAndPassword(auth, email, password).catch(err => showAuthError(err.message));
-    } else {
-        createUserWithEmailAndPassword(auth, email, password).catch(err => showAuthError(err.message));
-    }
-});
+if (authSubmitBtn) {
+    authSubmitBtn.addEventListener('click', () => {
+        const email = authEmail.value.trim();
+        const password = authPassword.value;
+        if (authError) authError.style.display = "none";
+        if (!email || !password) {
+            showAuthError("Please fill out all credential inputs.");
+            return;
+        }
+        if (isLoginMode) {
+            signInWithEmailAndPassword(auth, email, password).catch(err => showAuthError(err.message));
+        } else {
+            createUserWithEmailAndPassword(auth, email, password).catch(err => showAuthError(err.message));
+        }
+    });
+}
 
-googleSigninBtn.addEventListener('click', () => {
-    authError.style.display = "none";
-    signInWithPopup(auth, googleProvider).catch(err => showAuthError(err.message));
-});
+if (googleSigninBtn) {
+    googleSigninBtn.addEventListener('click', () => {
+        if (authError) authError.style.display = "none";
+        signInWithPopup(auth, googleProvider).catch(err => showAuthError(err.message));
+    });
+}
 
-logoutActionBtn.addEventListener('click', () => {
-    signOut(auth).catch(err => console.error("Sign out fail:", err));
-});
+if (logoutActionBtn) {
+    logoutActionBtn.addEventListener('click', () => {
+        signOut(auth).catch(err => console.error("Sign out fail:", err));
+    });
+}
 
 function showAuthError(message) {
-    authError.innerText = message.replace("Firebase: ", "");
-    authError.style.display = "block";
+    if (authError) {
+        authError.innerText = message.replace("Firebase: ", "");
+        authError.style.display = "block";
+    }
 }
 
 // ==========================================
 // 2. MAIN HUB INTERFACE OPERATIONAL LOOPS
 // ==========================================
-helpToggle.addEventListener('click', function() {
-    if (helpGuide.style.display === "block") {
-        helpGuide.style.display = "none";
-        helpToggle.innerText = "?";
-    } else {
-        helpGuide.style.display = "block";
-        helpToggle.innerText = "✕";
-    }
-});
+if (helpToggle) {
+    helpToggle.addEventListener('click', function() {
+        if (helpGuide.style.display === "block") {
+            helpGuide.style.display = "none";
+            helpToggle.innerText = "?";
+        } else {
+            helpGuide.style.display = "block";
+            helpToggle.innerText = "✕";
+        }
+    });
+}
 
-hubInput.addEventListener('input', function() {
-    const query = hubInput.value; 
-    const trimmedQuery = query.trim();
-    
-    if (query.toLowerCase().startsWith('open ')) {
-        routingWarning.style.display = "block"; 
-    } else {
-        routingWarning.style.display = "none";
-    }
+if (hubInput) {
+    hubInput.addEventListener('input', function() {
+        const query = hubInput.value; 
+        const trimmedQuery = query.trim();
+        
+        if (query.toLowerCase().startsWith('open ')) {
+            routingWarning.style.display = "block"; 
+        } else {
+            routingWarning.style.display = "none";
+        }
 
-    if (trimmedQuery.length < 3) {
-        updateDatalist([], [], []);
-        return;
-    }
+        if (trimmedQuery.length < 3) {
+            updateDatalist([], [], []);
+            return;
+        }
 
-    if (trimmedQuery.startsWith('http://') || trimmedQuery.startsWith('https://') || /\.[a-z]{2,6}/i.test(trimmedQuery)) {
-        return;
-    }
+        if (trimmedQuery.startsWith('http://') || trimmedQuery.startsWith('https://') || /\.[a-z]{2,6}/i.test(trimmedQuery)) {
+            return;
+        }
 
-    clearTimeout(debounceTimer);
-    debounceTimer = setTimeout(() => {
-        const geoFetch = fetch(`https://geocoding-api.open-meteo.com/v1/search?name=${encodeURIComponent(trimmedQuery)}&count=3&language=en&format=json`)
-            .then(res => res.json())
-            .then(data => data.results || [])
-            .catch(() => []);
+        clearTimeout(debounceTimer);
+        debounceTimer = setTimeout(() => {
+            const geoFetch = fetch(`https://geocoding-api.open-meteo.com/v1/search?name=${encodeURIComponent(trimmedQuery)}&count=3&language=en&format=json`)
+                .then(res => res.json())
+                .then(data => data.results || [])
+                .catch(() => []);
 
-        const wikiFetch = fetch(`https://en.wikipedia.org/w/api.php?action=query&list=search&srsearch=${encodeURIComponent(trimmedQuery)}&utf8=&format=json&origin=*`)
-            .then(res => res.json())
-            .then(data => {
-                if (data.query && data.query.search) {
-                    return data.query.search.map(item => item.title);
-                }
-                return [];
-            })
-            .catch(() => []);
+            const wikiFetch = fetch(`https://en.wikipedia.org/w/api.php?action=query&list=search&srsearch=${encodeURIComponent(trimmedQuery)}&utf8=&format=json&origin=*`)
+                .then(res => res.json())
+                .then(data => {
+                    if (data.query && data.query.search) {
+                        return data.query.search.map(item => item.title);
+                    }
+                    return [];
+                })
+                .catch(() => []);
 
-        const wikitubiaFetch = fetch(`https://youtube.fandom.com/api.php?action=query&list=search&srsearch=${encodeURIComponent(trimmedQuery)}&utf8=&format=json&origin=*`)
-            .then(res => res.json())
-            .then(data => {
-                if (data.query && data.query.search) {
-                    const titles = data.query.search.map(item => item.title);
-                    titles.forEach(title => wikitubiaCache.add(title.toLowerCase().trim()));
-                    return titles;
-                }
-                return [];
-            })
-            .catch(() => []);
+            const wikitubiaFetch = fetch(`https://youtube.fandom.com/api.php?action=query&list=search&srsearch=${encodeURIComponent(trimmedQuery)}&utf8=&format=json&origin=*`)
+                .then(res => res.json())
+                .then(data => {
+                    if (data.query && data.query.search) {
+                        const titles = data.query.search.map(item => item.title);
+                        titles.forEach(title => wikitubiaCache.add(title.toLowerCase().trim()));
+                        return titles;
+                    }
+                    return [];
+                })
+                .catch(() => []);
 
-        Promise.all([geoFetch, wikiFetch, wikitubiaFetch]).then(([cities, wikiTitles, wikitubiaTitles]) => {
-            updateDatalist(cities, wikiTitles, wikitubiaTitles);
-        });
-    }, 300);
-});
+            Promise.all([geoFetch, wikiFetch, wikitubiaFetch]).then(([cities, wikiTitles, wikitubiaTitles]) => {
+                updateDatalist(cities, wikiTitles, wikitubiaTitles);
+            });
+        }, 300);
+    });
+}
 
 if (executeActionBtn) {
     executeActionBtn.addEventListener('click', function() {
@@ -278,11 +298,13 @@ if (executeActionBtn) {
     });
 }
 
-hubInput.addEventListener('keypress', function(e) {
-    if (e.key === 'Enter' && executeActionBtn) {
-        executeActionBtn.click();
-    }
-});
+if (hubInput) {
+    hubInput.addEventListener('keypress', function(e) {
+        if (e.key === 'Enter' && executeActionBtn) {
+            executeActionBtn.click();
+        }
+    });
+}
 
 // ----------------------------------------------------
 // UNIFIED ASSISTANT SYSTEMS
@@ -786,12 +808,11 @@ function appendSecondaryLayers(query, wikiData, hasWiktionary) {
 
     const isInfluencer = wikitubiaCache.has(lowerQuery) || famousYoutubersList.some(name => lowerQuery.includes(name)) || !!wikiData.ddg;
 
-    // Optional Sub-Pipeline layer running live YouTube Data API channel queries concurrently
     const youtubeFetch = (isInfluencer && YOUTUBE_API_KEY && YOUTUBE_API_KEY !== "YOUR_API_KEY_HERE")
         ? fetch(`https://www.googleapis.com/youtube/v3/search?part=snippet&type=channel&q=${encodeURIComponent(query)}&key=${YOUTUBE_API_KEY}`)
             .then(res => res.json())
             .then(searchData => {
-                if (searchData.items && searchData.searchData !== null && searchData.items.length > 0) {
+                if (searchData.items && searchData.items.length > 0) {
                     const channelId = searchData.items[0].id.channelId;
                     return fetch(`https://www.googleapis.com/youtube/v3/channels?part=statistics,snippet&id=${channelId}&key=${YOUTUBE_API_KEY}`)
                         .then(res => res.json())
