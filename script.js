@@ -170,7 +170,6 @@ function renderHistoryListItems() {
         textWrapper.innerText = session.title;
         textWrapper.style = "flex: 1; font-size: 0.82rem; color: #ddd; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-weight: 500; margin-right: 8px;";
         
-        // Enter past chat session on item selection click loop
         textWrapper.addEventListener('click', () => {
             currentSessionId = session.id;
             chatHistory = session.history;
@@ -222,6 +221,13 @@ function renderFullChatLogBubble() {
     }
     
     dialogueItems.forEach(msg => {
+        if (msg.isHtml) {
+            const container = document.createElement('div');
+            container.innerHTML = msg.htmlContent;
+            output.appendChild(container);
+            return;
+        }
+
         const isUserTurn = (msg.role === 'user');
         const bubble = document.createElement('div');
         bubble.style = isUserTurn 
@@ -236,6 +242,31 @@ function renderFullChatLogBubble() {
         `;
         output.appendChild(bubble);
     });
+
+    // Re-initialize any dynamic Google Maps within the history stream to prevent grey freeze canvas defects
+    document.querySelectorAll('.vaii-merged-map-canvas').forEach(canvas => {
+        if (canvas && !canvas.classList.contains('map-initialized') && typeof google !== 'undefined' && google.maps) {
+            canvas.classList.add('map-initialized');
+            const lat = parseFloat(canvas.getAttribute('data-lat'));
+            const lon = parseFloat(canvas.getAttribute('data-lon'));
+            const title = canvas.getAttribute('data-title');
+            if (!isNaN(lat) && !isNaN(lon)) {
+                const mapCoordinates = { lat: lat, lng: lon };
+                const loadedMapInstance = new google.maps.Map(canvas, {
+                    center: mapCoordinates,
+                    zoom: 12,
+                    disableDefaultUI: false,
+                    styles: [
+                        { elementType: "geometry", stylers: [{ color: "#242f3e" }] },
+                        { elementType: "labels.text.stroke", stylers: [{ color: "#242f3e" }] },
+                        { elementType: "labels.text.fill", stylers: [{ color: "#746855" }] }
+                    ]
+                });
+                new google.maps.Marker({ position: mapCoordinates, map: loadedMapInstance, title: title });
+            }
+        }
+    });
+
     output.scrollTop = output.scrollHeight;
 }
 
@@ -455,9 +486,47 @@ async function executeGeminiDirectChat(userInput) {
     }
 }
 
+// Dynamic Output Routing intercept layer checking active engine status
 function handleVaiiDataOutput(rawTextContent, defaultHtmlOutput, runMapCallback = null) {
-    output.innerHTML = defaultHtmlOutput;
-    if (runMapCallback) runMapCallback();
+    const selectedMode = document.querySelector('input[name="vaii-mode"]:checked').value;
+    
+    if (selectedMode === "gemini") {
+        chatHistory.push({
+            role: "model",
+            parts: [{ text: `[Executed Web Utility Tool: ${rawTextContent || "Card layout loaded"}]` }],
+            isHtml: true,
+            htmlContent: defaultHtmlOutput
+        });
+        renderFullChatLogBubble();
+        saveCurrentSessionState();
+    } else {
+        output.innerHTML = defaultHtmlOutput;
+        
+        // Native inline map compiler loop execution parameters
+        document.querySelectorAll('.vaii-merged-map-canvas').forEach(canvas => {
+            if (canvas && !canvas.classList.contains('map-initialized') && typeof google !== 'undefined' && google.maps) {
+                canvas.classList.add('map-initialized');
+                const lat = parseFloat(canvas.getAttribute('data-lat'));
+                const lon = parseFloat(canvas.getAttribute('data-lon'));
+                const title = canvas.getAttribute('data-title');
+                if (!isNaN(lat) && !isNaN(lon)) {
+                    const mapCoordinates = { lat: lat, lng: lon };
+                    const loadedMapInstance = new google.maps.Map(canvas, {
+                        center: mapCoordinates,
+                        zoom: 12,
+                        disableDefaultUI: false,
+                        styles: [
+                            { elementType: "geometry", stylers: [{ color: "#242f3e" }] },
+                            { elementType: "labels.text.stroke", stylers: [{ color: "#242f3e" }] },
+                            { elementType: "labels.text.fill", stylers: [{ color: "#746855" }] }
+                        ]
+                    });
+                    new google.maps.Marker({ position: mapCoordinates, map: loadedMapInstance, title: title });
+                }
+            }
+        });
+        if (runMapCallback) runMapCallback();
+    }
 }
 
 // ==========================================
@@ -592,9 +661,36 @@ if (executeActionBtn) {
             return;
         }
 
-        if (selectedMode === "gemini") {
+        // Feature Intent Classification Logic Layers
+        const cleanQuery = query.toLowerCase().trim();
+        const isWorkspace = cleanQuery.includes("calendar") || cleanQuery.includes("calender") || cleanQuery.includes("schedule") || cleanQuery === "agenda" || cleanQuery.includes("email") || cleanQuery.includes("gmail") || cleanQuery.includes("inbox") || cleanQuery.includes("drive") || cleanQuery.includes("files");
+        const isLocationIntent = cleanQuery.startsWith("map of ") || cleanQuery.startsWith("show map ") || cleanQuery.startsWith("time in ") || cleanQuery.startsWith("weather in ") || cleanQuery.startsWith("weather ") || cleanQuery.startsWith("clock ");
+        const isAppRouting = cleanQuery.startsWith("open ");
+        const isUrl = /\.[a-z]{2,6}/i.test(query) || query.startsWith('http://') || query.startsWith('https://');
+        const cryptoMap = { btc: "bitcoin", eth: "ethereum", sol: "solana", doge: "dogecoin", xrp: "ripple" };
+        const isMarket = cryptoMap[cleanQuery] || cleanQuery.startsWith("price of ");
+        const isMathOrConversion = /^[0-9+\-*/().\s]+$/.test(query) || cleanQuery.includes(" to ");
+        const isDraw = cleanQuery.startsWith("draw ");
+        
+        const options = Array.from(datalist.options);
+        const matchedOption = options.find(opt => opt.value.toLowerCase() === cleanQuery);
+        const isMatchedLocation = matchedOption && matchedOption.getAttribute('data-lat');
+
+        const isInteractiveWebFeature = isWorkspace || isLocationIntent || isAppRouting || isUrl || isMarket || isMathOrConversion || isDraw || isMatchedLocation;
+
+        // If in Gemini mode and it's NOT an explicit interactive layout utility, use the chat stream model directly
+        if (selectedMode === "gemini" && !isInteractiveWebFeature) {
             executeGeminiDirectChat(query);
             return;
+        }
+
+        // If it is an interactive web utility executed inside Gemini mode, push the user bubble to the screen layout first
+        if (selectedMode === "gemini" && isInteractiveWebFeature && !isDraw) {
+            if (chatHistory.length === 0) {
+                chatHistory.push({ role: "user", parts: [{ text: "You are Gemini 3.5, an advanced conversational core engine running inside the VAII interface assistant frame. Keep statements concise, clear, and direct." }] });
+                chatHistory.push({ role: "model", parts: [{ text: "System connection established. Conversation initialization parameters synced." }] });
+            }
+            chatHistory.push({ role: "user", parts: [{ text: query }] });
         }
 
         if (query.toLowerCase().startsWith("draw ")) {
@@ -648,26 +744,11 @@ function renderUnifiedLocationCard(lat, lon, zone, displayName, greetingHTML = "
                     </div>
                     
                     <span style="color: #888; font-size: 0.8rem; text-transform: uppercase; display: block; margin-bottom: 6px;">Interactive Mapping</span>
-                    <div id="vaii-merged-map-canvas" style="width:100%; height:250px; border-radius:8px; background:#252525; border: 1px solid #333;"></div>
+                    <div class="vaii-merged-map-canvas" data-lat="${lat}" data-lon="${lon}" data-title="${displayName}" style="width:100%; height:250px; border-radius:8px; background:#252525; border: 1px solid #333;"></div>
                 </div>
             `;
             
-            handleVaiiDataOutput("", htmlOutput, () => {
-                if (typeof google !== 'undefined' && google.maps) {
-                    const mapCoordinates = { lat: parseFloat(lat), lng: parseFloat(lon) };
-                    const loadedMapInstance = new google.maps.Map(document.getElementById('vaii-merged-map-canvas'), {
-                        center: mapCoordinates,
-                        zoom: 12,
-                        disableDefaultUI: false,
-                        styles: [
-                            { elementType: "geometry", stylers: [{ color: "#242f3e" }] },
-                            { elementType: "labels.text.stroke", stylers: [{ color: "#242f3e" }] },
-                            { elementType: "labels.text.fill", stylers: [{ color: "#746855" }] }
-                        ]
-                    });
-                    new google.maps.Marker({ position: mapCoordinates, map: loadedMapInstance, title: displayName });
-                }
-            });
+            handleVaiiDataOutput(`Location matrix data for ${displayName}`, htmlOutput);
         })
         .catch(err => {
             handleVaiiDataOutput("", "<div>Error pulling metrics for spatial location.</div>");
@@ -760,7 +841,7 @@ function runMarketExecution(ticker) {
                         ${change >= 0 ? "📈" : "📉"} 24h Change: ${change}%
                     </div>
                 `;
-                handleVaiiDataOutput("", htmlOutput);
+                handleVaiiDataOutput(`Ticker metrics update for token: ${ticker.toUpperCase()}`, htmlOutput);
             }).catch(() => { 
                 handleVaiiDataOutput("", "<div>Error pulling crypto ticker data.</div>"); 
             });
@@ -772,7 +853,7 @@ function runMarketExecution(ticker) {
                 <a href="https://finance.yahoo.com/quote/${ticker.toUpperCase()}" target="_blank">Open Yahoo Finance ↗</a>
             </div>
         `;
-        handleVaiiDataOutput("", htmlOutput);
+        handleVaiiDataOutput(`Stock data query for: ${ticker.toUpperCase()}`, htmlOutput);
     }
 }
 
@@ -787,19 +868,42 @@ function executeImageGeneration(imagePrompt) {
     `;
     const seed = Math.floor(Math.random() * 1000000);
     const imageUrl = `https://image.pollinations.ai/p/${encodeURIComponent(imagePrompt)}?width=1080&height=1080&nologo=true&seed=${seed}`;
-    const img = new Image();
-    img.src = imageUrl;
-    img.style.width = "100%";
-    img.style.borderRadius = "8px";
-    img.style.marginTop = "10px";
-    img.style.display = "none";
-    img.style.boxShadow = "0 4px 15px rgba(0,0,0,0.5)";
-    img.onload = function() {
-        const loader = document.getElementById("image-loader");
-        if (loader) loader.remove();
-        img.style.display = "block";
-    };
-    output.appendChild(img);
+    
+    const htmlOutput = `
+        <div style="color: #888; font-style: italic; margin-bottom: 12px; font-size: 0.9rem; line-height: 1.4;">🎨 Generated artwork for "${imagePrompt}":</div>
+        <img src="${imageUrl}" style="width: 100%; border-radius: 8px; margin-top: 10px; display: block; box-shadow: 0 4px 15px rgba(0,0,0,0.5);">
+    `;
+
+    const selectedMode = document.querySelector('input[name="vaii-mode"]:checked').value;
+    if (selectedMode === "gemini") {
+        if (chatHistory.length === 0) {
+            chatHistory.push({ role: "user", parts: [{ text: "You are Gemini 3.5, an advanced conversational core engine running inside the VAII interface assistant frame. Keep statements concise, clear, and direct." }] });
+            chatHistory.push({ role: "model", parts: [{ text: "System connection established. Conversation initialization parameters synced." }] });
+        }
+        chatHistory.push({ role: "user", parts: [{ text: hubInput.value.trim() }] });
+        chatHistory.push({
+            role: "model",
+            parts: [{ text: `[Generated Image Asset for prompt text string: ${imagePrompt}]` }],
+            isHtml: true,
+            htmlContent: htmlOutput
+        });
+        renderFullChatLogBubble();
+        saveCurrentSessionState();
+    } else {
+        const img = new Image();
+        img.src = imageUrl;
+        img.style.width = "100%";
+        img.style.borderRadius = "8px";
+        img.style.marginTop = "10px";
+        img.style.display = "none";
+        img.style.boxShadow = "0 4px 15px rgba(0,0,0,0.5)";
+        img.onload = function() {
+            const loader = document.getElementById("image-loader");
+            if (loader) loader.remove();
+            img.style.display = "block";
+        };
+        output.appendChild(img);
+    }
 }
 
 function launchTargetUrl(url) {
@@ -814,7 +918,7 @@ function launchTargetUrl(url) {
             <span>Open Site ↗</span>
         </a>
     `;
-    output.innerHTML = htmlOutput;
+    handleVaiiDataOutput(`Launched outer domain link redirect target: ${url}`, htmlOutput);
     window.open(url, '_blank');
 }
 
@@ -842,7 +946,7 @@ function runInfoExecution(query) {
                 <span style="color: #aaa; font-size: 0.9rem;">Private calendar and email protocols remain inactive to preserve a standard authorization route.</span>
             </div>
         `;
-        handleVaiiDataOutput("", htmlLayout);
+        handleVaiiDataOutput("Workspace parameters disabled", htmlLayout);
         return; 
     }
 
@@ -921,7 +1025,7 @@ function runInfoExecution(query) {
             if (!cleanQuery.includes(" to ")) {
                 const result = Function(`"use strict"; return (${query})`)();
                 const htmlOutput = `<div style="background: #1a1a1a; padding: 14px; border-radius: 8px; border-left: 3px solid #28a745; text-align: left;">🔢 <strong>Calculation:</strong><br><span style="font-size: 1.3rem; font-weight: bold;">${query} = ${result}</span></div>`;
-                handleVaiiDataOutput("", htmlOutput);
+                handleVaiiDataOutput(`Calculated math output for expression: ${query} = ${result}`, htmlOutput);
                 return;
             }
         } catch(e) {}
@@ -946,7 +1050,7 @@ function runInfoExecution(query) {
                 
                 if (conversionResult) {
                     const htmlOutput = `<div style="background: #1a1a1a; padding: 14px; border-radius: 8px; border-left: 3px solid #28a745; text-align: left;">🔄 <strong>Conversion:</strong><br>📤 Result: <strong style="color: #28a745; font-size: 1.3rem; display:block; margin-top:4px;">${conversionResult}</strong></div>`;
-                    handleVaiiDataOutput("", htmlOutput);
+                    handleVaiiDataOutput(`Conversion result of ${source} to ${targetLanguage} is ${conversionResult}`, htmlOutput);
                     return;
                 }
             }
@@ -955,7 +1059,7 @@ function runInfoExecution(query) {
                 .then(data => {
                     const transText = data.responseData.translatedText;
                     const htmlOutput = `<div style="background: #1a1a1a; padding: 14px; border-radius: 8px; border-left: 3px solid #28a745; text-align: left;">🗣️ <strong>Translation:</strong><br>📤 Result: <strong style="color: #4da3ff; font-size: 1.1rem; display:block; margin-top:4px;">"${transText}"</strong></div>`;
-                    handleVaiiDataOutput("", htmlOutput);
+                    handleVaiiDataOutput(`Translated statement string text: "${transText}"`, htmlOutput);
                 }).catch(() => {
                     handleVaiiDataOutput("", "<div>Translation engine network failure.</div>");
                 });
@@ -1079,5 +1183,5 @@ function compileFinalSourceIndexBox(query, wikiData) {
     }
 
     totalHTML += `</div></div>`;
-    handleVaiiDataOutput("", totalHTML);
+    handleVaiiDataOutput(`Scraped documentation snapshot data for: ${query}`, totalHTML);
 }
