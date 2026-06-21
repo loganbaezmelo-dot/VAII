@@ -221,19 +221,23 @@ if (hubInput) {
     hubInput.addEventListener('input', function() {
         const query = hubInput.value; 
         const trimmedQuery = query.trim();
+        const lowerQuery = trimmedQuery.toLowerCase();
         
-        if (query.toLowerCase().startsWith('open ')) {
+        if (lowerQuery.startsWith('open ')) {
             routingWarning.style.display = "block"; 
         } else {
             routingWarning.style.display = "none";
         }
 
-        if (trimmedQuery.length < 3) {
-            updateDatalist([], [], []);
-            return;
+        // CRITICAL PERFORMANCE FIX: Exit instantly if user is targeting external web space strings
+        if (lowerQuery.startsWith('open ') || trimmedQuery.startsWith('http://') || trimmedQuery.startsWith('https://') || /\.[a-z]{2,6}/i.test(trimmedQuery)) {
+            updateDatalist([], [], []); 
+            clearTimeout(debounceTimer); 
+            return; 
         }
 
-        if (trimmedQuery.startsWith('http://') || trimmedQuery.startsWith('https://') || /\.[a-z]{2,6}/i.test(trimmedQuery)) {
+        if (trimmedQuery.length < 3) {
+            updateDatalist([], [], []);
             return;
         }
 
