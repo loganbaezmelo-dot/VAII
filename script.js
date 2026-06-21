@@ -211,7 +211,6 @@ function renderFullChatLogBubble() {
     output.innerHTML = "";
     
     let dialogueItems = chatHistory.filter(msg => {
-        if (msg.isHtml) return true;
         let textStr = msg.parts[0].text;
         return !textStr.includes("advanced conversational core") && !textStr.includes("System connection established");
     });
@@ -222,13 +221,6 @@ function renderFullChatLogBubble() {
     }
     
     dialogueItems.forEach(msg => {
-        if (msg.isHtml) {
-            const container = document.createElement('div');
-            container.innerHTML = msg.htmlContent;
-            output.appendChild(container);
-            return;
-        }
-
         const isUserTurn = (msg.role === 'user');
         const bubble = document.createElement('div');
         bubble.style = isUserTurn 
@@ -242,30 +234,6 @@ function renderFullChatLogBubble() {
             <div style="color: #eee; font-size: 0.95rem; line-height: 1.5; white-space: pre-wrap;">${msg.parts[0].text}</div>
         `;
         output.appendChild(bubble);
-    });
-
-    // Map canvas re-render check block
-    document.querySelectorAll('.vaii-merged-map-canvas').forEach(canvas => {
-        if (canvas && !canvas.classList.contains('map-initialized') && typeof google !== 'undefined' && google.maps) {
-            canvas.classList.add('map-initialized');
-            const lat = parseFloat(canvas.getAttribute('data-lat'));
-            const lon = parseFloat(canvas.getAttribute('data-lon'));
-            const title = canvas.getAttribute('data-title');
-            if (!isNaN(lat) && !isNaN(lon)) {
-                const mapCoordinates = { lat: lat, lng: lon };
-                const loadedMapInstance = new google.maps.Map(canvas, {
-                    center: mapCoordinates,
-                    zoom: 12,
-                    disableDefaultUI: false,
-                    styles: [
-                        { elementType: "geometry", stylers: [{ color: "#242f3e" }] },
-                        { elementType: "labels.text.stroke", stylers: [{ color: "#242f3e" }] },
-                        { elementType: "labels.text.fill", stylers: [{ color: "#746855" }] }
-                    ]
-                });
-                new google.maps.Marker({ position: mapCoordinates, map: loadedMapInstance, title: title });
-            }
-        }
     });
 
     output.scrollTop = output.scrollHeight;
@@ -450,21 +418,13 @@ async function executeGeminiDirectChat(userInput) {
     output.appendChild(spinnerBubble);
     output.scrollTop = output.scrollHeight;
 
-    // CHANGED: Sanitize the history array right before stringifying to keep Google from parsing custom UI keys
-    const sanitizedHistory = chatHistory
-        .filter(msg => !msg.isHtml) // Strip out custom injected widget containers entirely from model context
-        .map(msg => ({
-            role: msg.role,
-            parts: msg.parts.map(p => ({ text: p.text }))
-        }));
-
     const visionUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-3.5-flash:generateContent?key=${GEMINI_VISION_KEY}`;
 
     try {
         const response = await fetch(visionUrl, {
             method: "POST",
             headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ contents: sanitizedHistory })
+            body: JSON.stringify({ contents: chatHistory })
         });
         const data = await response.json();
 
@@ -496,44 +456,8 @@ async function executeGeminiDirectChat(userInput) {
 }
 
 function handleVaiiDataOutput(rawTextContent, defaultHtmlOutput, runMapCallback = null) {
-    const selectedMode = document.querySelector('input[name="vaii-mode"]:checked').value;
-    
-    if (selectedMode === "gemini") {
-        chatHistory.push({
-            role: "model",
-            parts: [{ text: `[Executed Web Utility Tool: ${rawTextContent || "Card layout loaded"}]` }],
-            isHtml: true,
-            htmlContent: defaultHtmlOutput
-        });
-        renderFullChatLogBubble();
-        saveCurrentSessionState();
-    } else {
-        output.innerHTML = defaultHtmlOutput;
-        
-        document.querySelectorAll('.vaii-merged-map-canvas').forEach(canvas => {
-            if (canvas && !canvas.classList.contains('map-initialized') && typeof google !== 'undefined' && google.maps) {
-                canvas.classList.add('map-initialized');
-                const lat = parseFloat(canvas.getAttribute('data-lat'));
-                const lon = parseFloat(canvas.getAttribute('data-lon'));
-                const title = canvas.getAttribute('data-title');
-                if (!isNaN(lat) && !isNaN(lon)) {
-                    const mapCoordinates = { lat: lat, lng: lon };
-                    const loadedMapInstance = new google.maps.Map(canvas, {
-                        center: mapCoordinates,
-                        zoom: 12,
-                        disableDefaultUI: false,
-                        styles: [
-                            { elementType: "geometry", stylers: [{ color: "#242f3e" }] },
-                            { elementType: "labels.text.stroke", stylers: [{ color: "#242f3e" }] },
-                            { elementType: "labels.text.fill", stylers: [{ color: "#746855" }] }
-                        ]
-                    });
-                    new google.maps.Marker({ position: mapCoordinates, map: loadedMapInstance, title: title });
-                }
-            }
-        });
-        if (runMapCallback) runMapCallback();
-    }
+    output.innerHTML = defaultHtmlOutput;
+    if (runMapCallback) runMapCallback();
 }
 
 // ==========================================
@@ -668,35 +592,10 @@ if (executeActionBtn) {
             return;
         }
 
-        // Feature Intent Classification Logic Layers
-        const cleanQuery = query.toLowerCase().trim();
-        const isWorkspace = cleanQuery.includes("calendar") || cleanQuery.includes("calender") || cleanQuery.includes("schedule") || cleanQuery === "agenda" || cleanQuery.includes("email") || cleanQuery.includes("gmail") || cleanQuery.includes("inbox") || cleanQuery.includes("drive") || cleanQuery.includes("files");
-        const isLocationIntent = cleanQuery.startsWith("map of ") || cleanQuery.startsWith("show map ") || cleanQuery.startsWith("time in ") || cleanQuery.startsWith("weather in ") || cleanQuery.startsWith("weather ") || cleanQuery.startsWith("clock ");
-        const isAppRouting = cleanQuery.startsWith("open ");
-        const isUrl = /\.[a-z]{2,6}/i.test(query) || query.startsWith('http://') || query.startsWith('https://');
-        const cryptoMap = { btc: "bitcoin", eth: "ethereum", sol: "solana", doge: "dogecoin", xrp: "ripple" };
-        const isMarket = cryptoMap[cleanQuery] || cleanQuery.startsWith("price of ");
-        const isMarketSearch = isMarket;
-        const isMathOrConversion = /^[0-9+\-*/().\s]+$/.test(query) || cleanQuery.includes(" to ");
-        const isDraw = cleanQuery.startsWith("draw ");
-        
-        const options = Array.from(datalist.options);
-        const matchedOption = options.find(opt => opt.value.toLowerCase() === cleanQuery);
-        const isMatchedLocation = matchedOption && matchedOption.getAttribute('data-lat');
-
-        const isInteractiveWebFeature = isWorkspace || isLocationIntent || isAppRouting || isUrl || isMarketSearch || isMathOrConversion || isDraw || isMatchedLocation;
-
-        if (selectedMode === "gemini" && !isInteractiveWebFeature) {
+        // Clean operational path switch layout: route straight to pure chat state or native tools
+        if (selectedMode === "gemini") {
             executeGeminiDirectChat(query);
             return;
-        }
-
-        if (selectedMode === "gemini" && isInteractiveWebFeature && !isDraw) {
-            if (chatHistory.length === 0) {
-                chatHistory.push({ role: "user", parts: [{ text: "You are Gemini 3.5, an advanced conversational core engine running inside the VAII interface assistant frame. Keep statements concise, clear, and direct." }] });
-                chatHistory.push({ role: "model", parts: [{ text: "System connection established. Conversation initialization parameters synced." }] });
-            }
-            chatHistory.push({ role: "user", parts: [{ text: query }] });
         }
 
         if (query.toLowerCase().startsWith("draw ")) {
@@ -750,11 +649,26 @@ function renderUnifiedLocationCard(lat, lon, zone, displayName, greetingHTML = "
                     </div>
                     
                     <span style="color: #888; font-size: 0.8rem; text-transform: uppercase; display: block; margin-bottom: 6px;">Interactive Mapping</span>
-                    <div class="vaii-merged-map-canvas" data-lat="${lat}" data-lon="${lon}" data-title="${displayName}" style="width:100%; height:250px; border-radius:8px; background:#252525; border: 1px solid #333;"></div>
+                    <div id="vaii-merged-map-canvas" style="width:100%; height:250px; border-radius:8px; background:#252525; border: 1px solid #333;"></div>
                 </div>
             `;
             
-            handleVaiiDataOutput(`Location matrix data for ${displayName}`, htmlOutput);
+            handleVaiiDataOutput("", htmlOutput, () => {
+                if (typeof google !== 'undefined' && google.maps) {
+                    const mapCoordinates = { lat: parseFloat(lat), lng: parseFloat(lon) };
+                    const loadedMapInstance = new google.maps.Map(document.getElementById('vaii-merged-map-canvas'), {
+                        center: mapCoordinates,
+                        zoom: 12,
+                        disableDefaultUI: false,
+                        styles: [
+                            { elementType: "geometry", stylers: [{ color: "#242f3e" }] },
+                            { elementType: "labels.text.stroke", stylers: [{ color: "#242f3e" }] },
+                            { elementType: "labels.text.fill", stylers: [{ color: "#746855" }] }
+                        ]
+                    });
+                    new google.maps.Marker({ position: mapCoordinates, map: loadedMapInstance, title: displayName });
+                }
+            });
         })
         .catch(err => {
             handleVaiiDataOutput("", "<div>Error pulling metrics for spatial location.</div>");
@@ -847,7 +761,7 @@ function runMarketExecution(ticker) {
                         ${change >= 0 ? "📈" : "📉"} 24h Change: ${change}%
                     </div>
                 `;
-                handleVaiiDataOutput(`Ticker metrics update for token: ${ticker.toUpperCase()}`, htmlOutput);
+                handleVaiiDataOutput("", htmlOutput);
             }).catch(() => { 
                 handleVaiiDataOutput("", "<div>Error pulling crypto ticker data.</div>"); 
             });
@@ -859,7 +773,7 @@ function runMarketExecution(ticker) {
                 <a href="https://finance.yahoo.com/quote/${ticker.toUpperCase()}" target="_blank">Open Yahoo Finance ↗</a>
             </div>
         `;
-        handleVaiiDataOutput(`Stock data query for: ${ticker.toUpperCase()}`, htmlOutput);
+        handleVaiiDataOutput("", htmlOutput);
     }
 }
 
@@ -874,42 +788,19 @@ function executeImageGeneration(imagePrompt) {
     `;
     const seed = Math.floor(Math.random() * 1000000);
     const imageUrl = `https://image.pollinations.ai/p/${encodeURIComponent(imagePrompt)}?width=1080&height=1080&nologo=true&seed=${seed}`;
-    
-    const htmlOutput = `
-        <div style="color: #888; font-style: italic; margin-bottom: 12px; font-size: 0.9rem; line-height: 1.4;">🎨 Generated artwork for "${imagePrompt}":</div>
-        <img src="${imageUrl}" style="width: 100%; border-radius: 8px; margin-top: 10px; display: block; box-shadow: 0 4px 15px rgba(0,0,0,0.5);">
-    `;
-
-    const selectedMode = document.querySelector('input[name="vaii-mode"]:checked').value;
-    if (selectedMode === "gemini") {
-        if (chatHistory.length === 0) {
-            chatHistory.push({ role: "user", parts: [{ text: "You are Gemini 3.5, an advanced conversational core engine running inside the VAII interface assistant frame. Keep statements concise, clear, and direct." }] });
-            chatHistory.push({ role: "model", parts: [{ text: "System connection established. Conversation initialization parameters synced." }] });
-        }
-        chatHistory.push({ role: "user", parts: [{ text: hubInput.value.trim() }] });
-        chatHistory.push({
-            role: "model",
-            parts: [{ text: `[Generated Image Asset for prompt text string: ${imagePrompt}]` }],
-            isHtml: true,
-            htmlContent: htmlOutput
-        });
-        renderFullChatLogBubble();
-        saveCurrentSessionState();
-    } else {
-        const img = new Image();
-        img.src = imageUrl;
-        img.style.width = "100%";
-        img.style.borderRadius = "8px";
-        img.style.marginTop = "10px";
-        img.style.display = "none";
-        img.style.boxShadow = "0 4px 15px rgba(0,0,0,0.5)";
-        img.onload = function() {
-            const loader = document.getElementById("image-loader");
-            if (loader) loader.remove();
-            img.style.display = "block";
-        };
-        output.appendChild(img);
-    }
+    const img = new Image();
+    img.src = imageUrl;
+    img.style.width = "100%";
+    img.style.borderRadius = "8px";
+    img.style.marginTop = "10px";
+    img.style.display = "none";
+    img.style.boxShadow = "0 4px 15px rgba(0,0,0,0.5)";
+    img.onload = function() {
+        const loader = document.getElementById("image-loader");
+        if (loader) loader.remove();
+        img.style.display = "block";
+    };
+    output.appendChild(img);
 }
 
 function launchTargetUrl(url) {
@@ -924,7 +815,7 @@ function launchTargetUrl(url) {
             <span>Open Site ↗</span>
         </a>
     `;
-    handleVaiiDataOutput(`Launched outer domain link redirect target: ${url}`, htmlOutput);
+    output.innerHTML = htmlOutput;
     window.open(url, '_blank');
 }
 
@@ -933,9 +824,9 @@ function launchTargetUrl(url) {
 // ==========================================
 function runInfoExecution(query) {
     const cleanQuery = query.toLowerCase().trim();
-    const cryptoMap = { btc: "bitcoin", eth: "ethereum", sol: "solana", doge: "dogecoin", xrp: "ripple" };
+    const cryptoMap = { btc: "bitcoin", eth: "ethereum", solana: "solana" };
 
-    const greetingsList = ["hello", "hi", "hey", "sup", "yo", "greetings", "whats up", "what's up"];
+    const greetingsList = ["hello", "hi", "hey", "sup", "yo", "greetings"];
     let greetingHTML = "";
     if (greetingsList.includes(cleanQuery)) {
         greetingHTML = `
@@ -945,14 +836,14 @@ function runInfoExecution(query) {
         `;
     }
 
-    if (cleanQuery.includes("calendar") || cleanQuery.includes("calender") || cleanQuery.includes("schedule") || cleanQuery === "agenda" || cleanQuery.includes("email") || cleanQuery.includes("gmail") || cleanQuery.includes("inbox") || cleanQuery.includes("drive") || cleanQuery.includes("files")) {
+    if (cleanQuery.includes("calendar") || cleanQuery.includes("calender") || cleanQuery.includes("schedule") || cleanQuery === "agenda" || cleanQuery.includes("email") || cleanQuery.includes("gmail") || cleanQuery.includes("inbox")) {
         const htmlLayout = greetingHTML + `
             <div style="background: #1a1a1a; padding: 14px; border-radius: 8px; border-left: 3px solid #ffc107; text-align: left;">
                 ⚠️ <strong>Workspace Elements Disabled:</strong><br><br>
                 <span style="color: #aaa; font-size: 0.9rem;">Private calendar and email protocols remain inactive to preserve a standard authorization route.</span>
             </div>
         `;
-        handleVaiiDataOutput("Workspace parameters disabled", htmlLayout);
+        handleVaiiDataOutput("", htmlLayout);
         return; 
     }
 
@@ -1031,7 +922,7 @@ function runInfoExecution(query) {
             if (!cleanQuery.includes(" to ")) {
                 const result = Function(`"use strict"; return (${query})`)();
                 const htmlOutput = `<div style="background: #1a1a1a; padding: 14px; border-radius: 8px; border-left: 3px solid #28a745; text-align: left;">🔢 <strong>Calculation:</strong><br><span style="font-size: 1.3rem; font-weight: bold;">${query} = ${result}</span></div>`;
-                handleVaiiDataOutput(`Calculated math output for expression: ${query} = ${result}`, htmlOutput);
+                handleVaiiDataOutput("", htmlOutput);
                 return;
             }
         } catch(e) {}
@@ -1056,7 +947,7 @@ function runInfoExecution(query) {
                 
                 if (conversionResult) {
                     const htmlOutput = `<div style="background: #1a1a1a; padding: 14px; border-radius: 8px; border-left: 3px solid #28a745; text-align: left;">🔄 <strong>Conversion:</strong><br>📤 Result: <strong style="color: #28a745; font-size: 1.3rem; display:block; margin-top:4px;">${conversionResult}</strong></div>`;
-                    handleVaiiDataOutput(`Conversion result of ${source} to ${targetLanguage} is ${conversionResult}`, htmlOutput);
+                    handleVaiiDataOutput("", htmlOutput);
                     return;
                 }
             }
@@ -1065,7 +956,7 @@ function runInfoExecution(query) {
                 .then(data => {
                     const transText = data.responseData.translatedText;
                     const htmlOutput = `<div style="background: #1a1a1a; padding: 14px; border-radius: 8px; border-left: 3px solid #28a745; text-align: left;">🗣️ <strong>Translation:</strong><br>📤 Result: <strong style="color: #4da3ff; font-size: 1.1rem; display:block; margin-top:4px;">"${transText}"</strong></div>`;
-                    handleVaiiDataOutput(`Translated statement string text: "${transText}"`, htmlOutput);
+                    handleVaiiDataOutput("", htmlOutput);
                 }).catch(() => {
                     handleVaiiDataOutput("", "<div>Translation engine network failure.</div>");
                 });
@@ -1107,7 +998,7 @@ function runUnifiedWikiPipeline(query, wikiData) {
             .then(res => res.json())
             .then(searchData => {
                 if (searchData.items?.length > 0) {
-                    return fetch(`https://www.googleapis.com/youtube/v3/channels?part=statistics,snippet&id=${searchData.items[0].id.channelId}&key=${GOOGLE_API_KEY}`)
+                    return fetch(`https://www.googleapis.com/youtube/v3/channels?part=statistics,snippet&id=\"${searchData.items[0].id.channelId}\"&key=${GOOGLE_API_KEY}`)
                         .then(res => res.json())
                         .then(channelData => {
                             if (channelData.items?.length > 0) {
@@ -1189,5 +1080,5 @@ function compileFinalSourceIndexBox(query, wikiData) {
     }
 
     totalHTML += `</div></div>`;
-    handleVaiiDataOutput(`Scraped documentation snapshot data for: ${query}`, totalHTML);
+    handleVaiiDataOutput("", totalHTML);
 }
