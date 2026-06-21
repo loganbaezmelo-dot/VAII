@@ -179,7 +179,7 @@
             border-radius: 8px;
             font-size: 0.95rem;
             color: #eee;
-            max-height: 350px;
+            max-height: 450px;
             overflow-y: auto;
             line-height: 1.5;
         }
@@ -313,13 +313,15 @@
                     <div id="help-guide" class="help-drawer">
                         <strong>💡 VAII Unified Feature Architecture Guide:</strong>
                         <ul>
-                            <li><strong>🧠 Words & Explanations:</strong> Type dictionary words to check Wiktionary or general topics for Wikipedia. If querying an influencer, content creator, or media personality, VAII interfaces directly with the live YouTube Data API to extract direct channel metrics (subscriber counts, views, channel bios). Suggestions auto-populate via Wikitubia tracking.</li>
+                            <li><strong>🧠 Knowledge Base:</strong> Type standard words for Wiktionary definitions or general strings for Wikipedia. If querying a creator tracked inside Wikitubia, VAII launches structural loops inside your live YouTube Data API endpoint.</li>
+                            <li><strong>📅 Calendar Integration:</strong> Ask <code>my calendar</code> or <code>show schedule</code> to access event indexes processed cleanly over your primary Google Calendar arrays.</li>
+                            <li><strong>🗺️ Mapping Module:</strong> Ask <code>map of [location]</code> to load real-time spatial cards powered natively by your enabled Maps JavaScript API infrastructure.</li>
                             <li><strong>☀️ Weather & Global Time:</strong> Type any city name (e.g., <code>Paris</code>) or use keywords like <code>weather in Tokyo</code> to fetch climate readings and matching timezone clocks simultaneously.</li>
-                            <li><strong>🌐 Websites & External Apps:</strong> Type clear domains (e.g., <code>wikipedia.org</code>) or execution strings like <code>open youtube</code> or <code>open minecraft</code> to process automated link launching.</li>
+                            <li><strong>🌐 Websites & External Apps:</strong> Type clear domains (e.g., <code>wikipedia.org</code>) or execution strings like <code>open youtube</code> to process automated link launching.</li>
                             <li><strong>🔢 Computations & Conversions:</strong> Enter math equations directly (e.g., <code>(12 * 4) / 2</code>) or conversion strings like <code>193 lbs to kg</code> to calculate natively.</li>
                             <li><strong>🔄 Translator Core:</strong> Enter translation patterns (e.g., <code>Hello to Spanish</code>) to translate phrases instantly.</li>
                             <li><strong>📈 Market Trackers:</strong> Input stock symbols or crypto keys directly (e.g., <code>BTC</code> or <code>AAPL</code>) for immediate price updates.</li>
-                            <li><strong>🎨 AI Art Generator:</strong> Prefix any descriptive image concept with the word <code>draw </code> (e.g., <code>Draw a neon cyberpunk switch artwork</code>) to compile a canvas render.</li>
+                            <li><strong>🎨 AI Art Generator:</strong> Prefix any descriptive image concept with the word <code>draw </code> to compile a canvas render.</li>
                         </ul>
                     </div>
 
@@ -331,7 +333,7 @@
                     </div>
                     <datalist id="hub-suggestions"></datalist>
                     <div id="weather-output" class="output-box">
-                        Welcome back! Enter a search query, app routing command, calculation sequence, weather location, translation phrase, crypto ticker, live YouTube channel search, or art prompt to begin...
+                        Welcome back! Enter a search query, app routing command, calculation sequence, weather location, translation phrase, crypto ticker, calendar query, map request, or art prompt to begin...
                     </div>
                     
                     <div style="text-align: right;">
@@ -342,6 +344,8 @@
         </main>
     </div>
 
+    <!-- Google Maps JS SDK Platform Bootstrapper -->
+    <script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyAJKTkU0nd6ZB_zjIcNQCAQQsffHEp4WH8&callback=initVaiiMap" async defer></script>
     <script type="module" src="script.js"></script>
 </body>
 </html>
