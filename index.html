@@ -388,7 +388,11 @@
                 <section class="widget" id="search-widget">
                     <div class="widget-header">
                         <h3>🔍 Smart Assistant Hub</h3>
-                        <button id="help-toggle" class="help-btn">?</button>
+                        <div style="display: flex; gap: 8px;">
+                            <!-- Dual Button Configuration Header Section -->
+                            <button id="history-toggle" class="help-btn" style="border-color: #6f42c1; color: #6f42c1; background: #1f142e;" title="Gemini Chat History">📜</button>
+                            <button id="help-toggle" class="help-btn">?</button>
+                        </div>
                     </div>
 
                     <div id="help-guide" class="help-drawer">
@@ -404,6 +408,17 @@
                             <li><strong>📈 Market Trackers:</strong> Input stock symbols or crypto tickers directly (such as <code>BTC</code> or <code>AAPL</code>) for real-time market estimates.</li>
                             <li><strong>🎨 AI Art Generator:</strong> Type <code>draw </code> before any description to compile custom artwork on the screen.</li>
                         </ul>
+                    </div>
+
+                    <!-- Gemini Multi-Turn Persistent Session Registry List Drawer -->
+                    <div id="history-drawer" class="help-drawer">
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+                            <strong>📜 Saved Gemini Chats:</strong>
+                            <button id="new-chat-btn" style="background: #28a745; color: white; border: none; padding: 4px 10px; border-radius: 4px; font-size: 0.75rem; cursor: pointer; font-weight: bold;">➕ New Chat</button>
+                        </div>
+                        <div id="history-list" style="display: flex; flex-direction: column; gap: 6px; max-height: 160px; overflow-y: auto; margin-top: 5px; padding-right: 2px;">
+                            <!-- Active multi-turn chat threads dynamically populated here -->
+                        </div>
                     </div>
 
                     <div class="search-container">
