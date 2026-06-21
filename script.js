@@ -24,6 +24,10 @@ const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
 const googleProvider = new GoogleAuthProvider();
 
+// Adding the highly sensitive scopes for Gmail and Drive access
+googleProvider.addScope('https://www.googleapis.com/auth/gmail.readonly');
+googleProvider.addScope('https://www.googleapis.com/auth/drive.readonly');
+
 // ====================================================
 // OBFUSCATED CONFIGURATION: SPLIT CLOUD KEY CORE
 // ====================================================
@@ -58,7 +62,7 @@ const helpGuide = document.getElementById('help-guide');
 let debounceTimer;
 const wikitubiaCache = new Set();
 
-const welcomeMessageText = `Welcome back! Enter a search query, app routing command, calculation sequence, weather location, translation phrase, crypto key, or art prompt to begin...`;
+const welcomeMessageText = `Welcome back! Enter a search query, app routing command, calculation sequence, weather location, translation phrase, crypto ticker, map request, or art prompt to begin...`;
 
 const defaultAssistantSuggestions = [
     "Open Gemini", 
@@ -70,11 +74,13 @@ const defaultAssistantSuggestions = [
     "Open Minecraft", 
     "(12 * 4) / 2",
     "Map of Orlando",
+    "Show my emails",
+    "Show my drive files",
     "Draw a neon cyberpunk switch console artwork"
 ];
 
 window.initVaiiMap = function() {
-    console.log("Maps API successfully authorized and booted.");
+    console.log("Maps module ready.");
 };
 
 function updateDatalist(cities = [], wikiTitles = [], wikitubiaTitles = []) {
@@ -147,7 +153,7 @@ if (authToggle) {
         if (authError) authError.style.display = "none";
         if (isLoginMode) {
             authTitle.innerText = "✨ Create Account";
-            authSubmitBtn.innerText = "Register App User";
+            authSubmitBtn.innerText = "Register User";
             authToggle.innerText = "Already have an account? Sign In";
         } else {
             authTitle.innerText = "🔒 Account Sign In";
@@ -178,12 +184,21 @@ if (authSubmitBtn) {
 if (googleSigninBtn) {
     googleSigninBtn.addEventListener('click', () => {
         if (authError) authError.style.display = "none";
-        signInWithPopup(auth, googleProvider).catch(err => showAuthError(err.message));
+        signInWithPopup(auth, googleProvider)
+            .then((result) => {
+                const credential = GoogleAuthProvider.credentialFromResult(result);
+                const token = credential.accessToken;
+                if (token) {
+                    localStorage.setItem('google_access_token', token);
+                }
+            })
+            .catch(err => showAuthError(err.message));
     });
 }
 
 if (logoutActionBtn) {
     logoutActionBtn.addEventListener('click', () => {
+        localStorage.removeItem('google_access_token');
         signOut(auth).catch(err => console.error("Sign out fail:", err));
     });
 }
@@ -196,7 +211,7 @@ function showAuthError(message) {
 }
 
 // ==========================================
-// DATA ACQUISITION & COMMAND EXECUTIVE PIPELINES
+// MAIN HUB EXECUTIVE LOOPS
 // ==========================================
 if (helpToggle) {
     helpToggle.addEventListener('click', function() {
@@ -299,7 +314,7 @@ if (hubInput) {
 }
 
 function runUnifiedWeatherClock(lat, lon, zone, displayName) {
-    output.innerText = `Fetching synchronized metrics for ${displayName}...`;
+    output.innerText = `Fetching metrics for ${displayName}...`;
     
     fetch(`https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current_weather=true`)
         .then(res => res.json())
@@ -314,25 +329,22 @@ function runUnifiedWeatherClock(lat, lon, zone, displayName) {
             output.innerHTML = `
                 <div style="background: #1a1a1a; padding: 14px; border-radius: 8px; border-left: 3px solid #007bff; text-align: left; margin-bottom: 15px;">
                     <strong>📍 ${displayName}</strong><br><br>
-                    <span style="color: #888; font-style: italic; font-size: 0.9rem;">Here is the weather on that location:</span><br>
                     🌡️ Temperature: ${tempFahrenheit}°F (${tempCelsius}°C)<br>
                     💨 Wind Speed: ${windSpeed} km/h
                     <br><br>
-                    <span style="color: #888; font-style: italic; font-size: 0.9rem;">Here is the current time on that location:</span><br>
-                    🕒 <span style="font-size: 1.5rem; font-weight: bold; color: #fff;">${timeString}</span><br>
-                    📅 ${dateString}<br>
-                    🌐 Time Zone: <code>${zone}</code>
+                    🕒 Local Time: <span style="font-size: 1.3rem; font-weight: bold; color: #fff;">${timeString}</span><br>
+                    📅 Date: ${dateString}
                 </div>
             `;
         })
         .catch(err => {
-            output.innerText = "Error fetching live weather and time metrics.";
+            output.innerText = "Error loading weather and time data.";
             console.error(err);
         });
 }
 
 function runMarketExecution(ticker) {
-    output.innerText = `Fetching price index for "${ticker.toUpperCase()}"...`;
+    output.innerText = `Fetching price updates for "${ticker.toUpperCase()}"...`;
     const cleanTicker = ticker.trim().toLowerCase();
     const cryptoMap = { btc: "bitcoin", eth: "ethereum", sol: "solana", doge: "dogecoin", xrp: "ripple" };
 
@@ -355,9 +367,9 @@ function runMarketExecution(ticker) {
     } else {
         output.innerHTML = `
             <div style="background: #1a1a1a; padding: 14px; border-radius: 8px; border-left: 3px solid #6f42c1; text-align: left;">
-                <strong>📈 Stock Ticker Tracker: ${ticker.toUpperCase()}</strong><br>
-                <span style="color: #aaa; font-size: 0.9rem;">To view deep market assets without explicit tokens, launch structural metrics directly:</span>
-                <a href="https://finance.yahoo.com/quote/${ticker.toUpperCase()}" target="_blank">Open Yahoo Finance Chart ↗</a>
+                <strong>📈 Stock Ticker: ${ticker.toUpperCase()}</strong><br>
+                <span style="color: #aaa; font-size: 0.9rem;">To view deep market assets, open the link directly:</span>
+                <a href="https://finance.yahoo.com/quote/${ticker.toUpperCase()}" target="_blank">Open Yahoo Finance ↗</a>
             </div>
         `;
     }
@@ -367,7 +379,7 @@ function launchTargetUrl(url) {
     let contentHTML = `
         <div class="news-header-msg" style="color: #888; font-style: italic; margin-bottom: 4px; font-size: 0.9rem; line-height: 1.4;">Navigating to external web link...</div>
         <div style="background: #1a1a1a; padding: 14px; border-radius: 8px; border-left: 3px solid #007bff; text-align: left; margin-bottom: 15px;">
-            🔗 <strong>Resolved Address:</strong> <span style="color: #4da3ff; word-break: break-all;">${url}</span>
+            🔗 <strong>Address:</strong> <span style="color: #4da3ff; word-break: break-all;">${url}</span>
         </div>
         <a href="${url}" target="_blank" style="display: flex; align-items: center; justify-content: space-between; background: #007bff; border-radius: 6px; padding: 10px 14px; color: white; text-decoration: none; font-weight: bold; font-size: 0.95rem;">
             <span>Launch Link</span>
@@ -384,7 +396,7 @@ function executeImageGeneration(imagePrompt) {
         <div style="color: #888; font-style: italic; margin-bottom: 12px; font-size: 0.9rem; line-height: 1.4;">🎨 Generating artwork for "${imagePrompt}"...</div>
         <div class="generation-status" id="image-loader">
             <div class="loader-spinner"></div>
-            <span style="color: #eee; font-size: 0.9rem;">VAII AI engine is assembling pixels...</span>
+            <span style="color: #eee; font-size: 0.9rem;">Assembling pixels...</span>
         </div>
     `;
     const seed = Math.floor(Math.random() * 1000000);
@@ -407,21 +419,68 @@ function executeImageGeneration(imagePrompt) {
 function runInfoExecution(query) {
     const cleanQuery = query.toLowerCase().trim();
     const cryptoMap = { btc: "bitcoin", eth: "ethereum", sol: "solana", doge: "dogecoin", xrp: "ripple" };
+    const token = localStorage.getItem('google_access_token');
 
     const greetingsList = ["hello", "hi", "hey", "sup", "yo", "greetings", "whats up", "what's up"];
     let greetingHTML = "";
     if (greetingsList.includes(cleanQuery)) {
         greetingHTML = `
             <div style="background: #1a1a1a; padding: 14px; border-radius: 8px; border-left: 3px solid #17a2b8; text-align: left; margin-bottom: 15px;">
-                👋 <strong>VAII Assistant:</strong><br><span>Hello! How can I help you today? Baseline parameters initialized.</span>
+                👋 <strong>Assistant:</strong><br><span>Hello! How can I help you today? System initialized.</span>
             </div>
         `;
     }
 
-    // 1. NATIVE MAPS JAVASCRIPT SDK CANVAS CONSTRUCTOR
+    // GMAIL FEATURE INTEGRATION
+    if (cleanQuery.includes("email") || cleanQuery.includes("gmail") || cleanQuery.includes("inbox")) {
+        if (!token) {
+            output.innerHTML = greetingHTML + `<div style="background: #1a1a1a; padding: 14px; border-radius: 8px; border-left: 3px solid #ff0000;">✉️ Log out and use the <strong>Sign in with Google</strong> button to grant Gmail reading permissions.</div>`;
+            return;
+        }
+        output.innerText = "Checking your inbox...";
+        fetch(`https://gmail.googleapis.com/v1/users/me/messages?maxResults=5`, {
+            headers: { 'Authorization': `Bearer ${token}` }
+        })
+        .then(res => res.json())
+        .then(data => {
+            const msgs = data.messages || [];
+            if (msgs.length === 0) {
+                output.innerHTML = greetingHTML + `<div style="background: #1a1a1a; padding: 14px; border-radius: 8px; border-left: 3px solid #ff4444;">✉️ No recent emails found.</div>`;
+                return;
+            }
+            output.innerHTML = greetingHTML + `<div style="background: #1a1a1a; padding: 14px; border-radius: 8px; border-left: 3px solid #ff4444;">✉️ Found <strong>${msgs.length}</strong> recent email IDs in your inbox loop.</div>`;
+        })
+        .catch(() => { output.innerText = "Failed reading Gmail logs."; });
+        return;
+    }
+
+    // DRIVE FEATURE INTEGRATION
+    if (cleanQuery.includes("drive") || cleanQuery.includes("files") || cleanQuery.includes("docs")) {
+        if (!token) {
+            output.innerHTML = greetingHTML + `<div style="background: #1a1a1a; padding: 14px; border-radius: 8px; border-left: 3px solid #4da3ff;">📁 Log out and use the <strong>Sign in with Google</strong> button to grant Google Drive file tracking permissions.</div>`;
+            return;
+        }
+        output.innerText = "Scanning your Drive database...";
+        fetch(`https://www.googleapis.com/drive/v3/files?pageSize=5`, {
+            headers: { 'Authorization': `Bearer ${token}` }
+        })
+        .then(res => res.json())
+        .then(data => {
+            const files = data.files || [];
+            if (files.length === 0) {
+                output.innerHTML = greetingHTML + `<div style="background: #1a1a1a; padding: 14px; border-radius: 8px; border-left: 3px solid #4da3ff;">📁 No Drive documents found.</div>`;
+                return;
+            }
+            let filesHTML = files.map(f => `<li>📄 ${f.name}</li>`).join('');
+            output.innerHTML = greetingHTML + `<div style="background: #1a1a1a; padding: 14px; border-radius: 8px; border-left: 3px solid #4da3ff;">📁 <strong>Recent Documents:</strong><ul style="margin:8px 0 0 0; padding-left:16px;">${filesHTML}</ul></div>`;
+        })
+        .catch(() => { output.innerText = "Failed pulling cloud storage summaries."; });
+        return;
+    }
+
     if (cleanQuery.startsWith("map of ") || cleanQuery.startsWith("show map ")) {
         const targetLocation = query.replace(/map of /i, "").replace(/show map /i, "").trim();
-        output.innerHTML = greetingHTML + `<div style="color:#888; font-style:italic;">Resolving coordinates...</div>`;
+        output.innerHTML = greetingHTML + `<div style="color:#888; font-style:italic;">Loading layout...</div>`;
         
         fetch(`https://geocoding-api.open-meteo.com/v1/search?name=${encodeURIComponent(targetLocation)}&count=1&language=en&format=json`)
             .then(res => res.json())
@@ -445,7 +504,7 @@ function runInfoExecution(query) {
                 } else {
                     output.innerText = `Could not track coordinates for "${targetLocation}".`;
                 }
-            }).catch(() => { output.innerText = "Failed parsing spatial lookups."; });
+            }).catch(() => { output.innerText = "Failed parsing map lookups."; });
         return;
     }
 
@@ -475,7 +534,7 @@ function runInfoExecution(query) {
         routingWarning.style.display = "block"; 
         let appName = query.substring(5).trim().toLowerCase().replace(/['"]+/g, '');
         if (!appName) { output.innerText = "Please specify what you want to open."; return; }
-        output.innerText = `Resolving routing for "${appName}"...`;
+        output.innerText = `Resolving address for "${appName}"...`;
         const randomizedRoutes = {
             "gemini": ["https://gemini.google.com"],
             "google gemini": ["https://gemini.google.com"],
@@ -506,7 +565,7 @@ function runInfoExecution(query) {
         try {
             if (!cleanQuery.includes(" to ")) {
                 const result = Function(`"use strict"; return (${query})`)();
-                output.innerHTML = `<div style="background: #1a1a1a; padding: 14px; border-radius: 8px; border-left: 3px solid #28a745; text-align: left;">🔢 <strong>Calculation Result:</strong><br><span style="font-size: 1.3rem; font-weight: bold;">${query} = ${result}</span></div>`;
+                output.innerHTML = `<div style="background: #1a1a1a; padding: 14px; border-radius: 8px; border-left: 3px solid #28a745; text-align: left;">🔢 <strong>Calculation:</strong><br><span style="font-size: 1.3rem; font-weight: bold;">${query} = ${result}</span></div>`;
                 return;
             }
         } catch(e) {}
@@ -525,14 +584,14 @@ function runInfoExecution(query) {
                 if (fromUnit === "kg" && toUnit === "lbs") conversionResult = `${(num / 0.45359237).toFixed(2)} lbs`;
                 if (fromUnit === "miles" && toUnit === "km") conversionResult = `${(num * 1.60934).toFixed(2)} km`;
                 if (conversionResult) {
-                    output.innerHTML = `<div style="background: #1a1a1a; padding: 14px; border-radius: 8px; border-left: 3px solid #28a745; text-align: left;">🔄 <strong>Unit Conversion Core:</strong><br>📤 Calculation Result: <strong style="color: #28a745; font-size: 1.3rem; display:block; margin-top:4px;">${conversionResult}</strong></div>`;
+                    output.innerHTML = `<div style="background: #1a1a1a; padding: 14px; border-radius: 8px; border-left: 3px solid #28a745; text-align: left;">🔄 <strong>Conversion:</strong><br>📤 Result: <strong style="color: #28a745; font-size: 1.3rem; display:block; margin-top:4px;">${conversionResult}</strong></div>`;
                     return;
                 }
             }
             fetch(`https://api.mymemory.translated.net/get?q=${encodeURIComponent(source)}&langpair=en|${encodeURIComponent(targetLanguage.substring(0,2))}`)
                 .then(res => res.json())
                 .then(data => {
-                    output.innerHTML = `<div style="background: #1a1a1a; padding: 14px; border-radius: 8px; border-left: 3px solid #28a745; text-align: left;">🗣️ <strong>Translation Asset Core:</strong><br>📤 Translated: <strong style="color: #4da3ff; font-size: 1.1rem; display:block; margin-top:4px;">"${data.responseData.translatedText}"</strong></div>`;
+                    output.innerHTML = `<div style="background: #1a1a1a; padding: 14px; border-radius: 8px; border-left: 3px solid #28a745; text-align: left;">🗣️ <strong>Translation:</strong><br>📤 Result: <strong style="color: #4da3ff; font-size: 1.1rem; display:block; margin-top:4px;">"${data.responseData.translatedText}"</strong></div>`;
                 }).catch(() => {});
             return;
         }
@@ -608,9 +667,9 @@ function compileFinalSourceIndexBox(query, wikiData) {
 
     let totalHTML = wikiData.greeting || "";
     if (blocksHtml.length === 0) {
-        output.innerHTML = totalHTML + `<div>No references compiled for "${query}".</div>`;
+        output.innerHTML = totalHTML + `<div>No matches found for "${query}".</div>`;
         return;
     }
-    totalHTML += `<div style="color: #888; font-style: italic; margin-bottom: 12px; font-size: 0.9rem;">Relevant documentation indices for "${query}":</div>` + blocksHtml.join('<div style="margin: 10px 0;"></div>');
+    totalHTML += `<div style="color: #888; font-style: italic; margin-bottom: 12px; font-size: 0.9rem;">Information cards for "${query}":</div>` + blocksHtml.join('<div style="margin: 10px 0;"></div>');
     output.innerHTML = totalHTML;
 }
