@@ -566,7 +566,7 @@ function runInfoExecution(query) {
                     output.innerHTML = `
                         <div style="background: #1a1a1a; padding: 14px; border-radius: 8px; border-left: 3px solid #28a745; text-align: left;">
                             🔄 <strong>Conversion / External Routing Core</strong><br>
-                            Evaluating query string parameter link directly: <a href="https://www.google.com/search?q=${encodeURIComponent(query)}" target="_blank; color: #4da3ff;">Launch Conversion Card ↗</a>
+                            Evaluating query string parameter link directly: <a href="https://www.google.com/search?q=${encodeURIComponent(query)}" target="_blank;">Launch Conversion Card ↗</a>
                         </div>
                     `;
                 });
@@ -657,20 +657,38 @@ function runInfoExecution(query) {
     }
 }
 
-// Restricted DuckDuckGo Core Pipeline with strict influencer topic validation
+// Restricted DuckDuckGo Core Pipeline with strict influencer and long-list override filters
 function runUnifiedWikiPipeline(query, baselineHTML, hasWiktionary) {
     if (!baselineHTML) {
         baselineHTML = `<div class="news-header-msg" style="color: #888; font-style: italic; margin-bottom: 12px; font-size: 0.9rem; line-height: 1.4;">I have provided the most relevant text of each information source related to "${query}".</div>`;
     }
 
+    // Explicit long list override filter for high profile internet personalities
+    const famousYoutubersList = [
+        "jacksucksatlife", "mrbeast", "pewdiepie", "markiplier", "jacksepticeye", 
+        "caseoh", "jynxzi", "kai cenat", "ludwig", "xqc", "moistcr1tikal", "penguinz0", 
+        "sidemen", "ksi", "w2s", "wroetoshaw", "miniminter", "vikkstar", "vikkstar123", 
+        "mrwhosetheboss", "mkbhd", "marques brownlee", "linustechtips", "unbox therapy", 
+        "dantdm", "popularmmos", "stampy", "stampylonghead", "dream", "technoblade", 
+        "tommyinnit", "lazarbeam", "airrack", "ryan trahan", "smosh", "gmm", "rhett and link",
+        "jacksepticeye", "pokimane", "valkyrae", "ninja", "shroud", "disguised toast", "sykkuno",
+        "hasanabi", "asmongold", "ilyasiel", "safiya nygaard", "nigahiga", "davie504", "jolly"
+    ];
+
     fetchDuckDuckGoInstantAnswer(query)
         .then(ddgSearch => {
             const rawText = ddgSearch.AbstractText || ddgSearch.Abstract || "";
             const lowerText = rawText.toLowerCase();
-            const validKeywords = ["youtuber", "youtube", "influencer", "media personality"];
-            const isMediaPersonality = validKeywords.some(keyword => lowerText.includes(keyword));
+            const lowerQuery = query.toLowerCase().trim();
+            const lowerHeading = ddgSearch.Heading ? ddgSearch.Heading.toLowerCase() : "";
             
-            if (isMediaPersonality && rawText) {
+            const validKeywords = ["youtuber", "youtube", "influencer", "media personality"];
+            const isMediaPersonality = validKeywords.some(keyword => lowerText.includes(keyword) || lowerHeading.includes(keyword));
+            
+            // Check if the parameter configuration hits any entries inside our custom list
+            const matchesCustomList = famousYoutubersList.some(name => lowerQuery.includes(name) || lowerText.includes(name) || lowerHeading.includes(name));
+            
+            if ((isMediaPersonality || matchesCustomList) && rawText) {
                 const ddgTitle = ddgSearch.Heading || query;
                 let ddgExtract = rawText;
                 if (ddgExtract.length > 350) ddgExtract = ddgExtract.substring(0, 350) + "...";
