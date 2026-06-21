@@ -1,4 +1,5 @@
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
+import { getAnalytics } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-analytics.js";
 import { 
     getAuth, 
     GoogleAuthProvider, 
@@ -9,22 +10,28 @@ import {
     signOut 
 } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
 
+// Your brand new updated web app's Firebase configuration layout
 const firebaseConfig = {
-    apiKey: "AIzaSyA6RmZ6rquzUR1dct30s355PzLu-r1_fwE",
-    authDomain: "vaiinternet.firebaseapp.com",
-    projectId: "vaiinternet",
-    storageBucket: "vaiinternet.firebasestorage.app",
-    messagingSenderId: "367548633672",
-    appId: "1:367548633672:web:44da44d1761085424b3e7d",
-    measurementId: "G-0XBYP585WQ"
+  apiKey: "AIzaSyDiSUeuVzA1n9d1yyODgOvnv0erey4EipQ",
+  authDomain: "loganhajeheh-i.firebaseapp.com",
+  projectId: "loganhajeheh-i",
+  storageBucket: "loganhajeheh-i.firebasestorage.app",
+  messagingSenderId: "895508601514",
+  appId: "1:895508601514:web:d8f65f587e746d251f4ed3",
+  measurementId: "G-JZTHTP0M74"
 };
 
+// Initialize Firebase Entities
 const app = initializeApp(firebaseConfig);
+const analytics = getAnalytics(app);
 const auth = getAuth(app);
 const googleProvider = new GoogleAuthProvider();
 
+// Explicitly inject the scope required to view calendar events during user authentication
+googleProvider.addScope('https://www.googleapis.com/auth/calendar.readonly');
+
 // ====================================================
-// OBFUSCATED CONFIGURATION: SPLIT KEY CORE
+// OBFUSCATED CONFIGURATION: SPLIT CLOUD KEY CORE
 // ====================================================
 const _k1 = "AIzaSyAJ";
 const _k2 = "KTkU0nd6";
@@ -178,12 +185,21 @@ if (authSubmitBtn) {
 if (googleSigninBtn) {
     googleSigninBtn.addEventListener('click', () => {
         if (authError) authError.style.display = "none";
-        signInWithPopup(auth, googleProvider).catch(err => showAuthError(err.message));
+        signInWithPopup(auth, googleProvider)
+            .then((result) => {
+                const credential = GoogleAuthProvider.credentialFromResult(result);
+                const token = credential.accessToken;
+                if (token) {
+                    localStorage.setItem('google_oauth_token', token);
+                }
+            })
+            .catch(err => showAuthError(err.message));
     });
 }
 
 if (logoutActionBtn) {
     logoutActionBtn.addEventListener('click', () => {
+        localStorage.removeItem('google_oauth_token');
         signOut(auth).catch(err => console.error("Sign out fail:", err));
     });
 }
@@ -230,14 +246,21 @@ if (hubInput) {
             return;
         }
 
+        let searchUrlQuery = trimmedQuery;
+        if (searchUrlQuery.toLowerCase().startsWith("map of ")) {
+            searchUrlQuery = searchUrlQuery.substring(7).trim();
+        } else if (searchUrlQuery.toLowerCase().startsWith("show map ")) {
+            searchUrlQuery = searchUrlQuery.substring(9).trim();
+        }
+
         clearTimeout(debounceTimer);
         debounceTimer = setTimeout(() => {
-            const geoFetch = fetch(`https://geocoding-api.open-meteo.com/v1/search?name=${encodeURIComponent(trimmedQuery)}&count=3&language=en&format=json`)
+            const geoFetch = fetch(`https://geocoding-api.open-meteo.com/v1/search?name=${encodeURIComponent(searchUrlQuery)}&count=3&language=en&format=json`)
                 .then(res => res.json())
                 .then(data => data.results || [])
                 .catch(() => []);
 
-            const wikiFetch = fetch(`https://en.wikipedia.org/w/api.php?action=query&list=search&srsearch=${encodeURIComponent(trimmedQuery)}&utf8=&format=json&origin=*`)
+            const wikiFetch = fetch(`https://en.wikipedia.org/w/api.php?action=query&list=search&srsearch=${encodeURIComponent(searchUrlQuery)}&utf8=&format=json&origin=*`)
                 .then(res => res.json())
                 .then(data => {
                     if (data.query && data.query.search) {
@@ -247,7 +270,7 @@ if (hubInput) {
                 })
                 .catch(() => []);
 
-            const wikitubiaFetch = fetch(`https://youtube.fandom.com/api.php?action=query&list=search&srsearch=${encodeURIComponent(trimmedQuery)}&utf8=&format=json&origin=*`)
+            const wikitubiaFetch = fetch(`https://youtube.fandom.com/api.php?action=query&list=search&srsearch=${encodeURIComponent(searchUrlQuery)}&utf8=&format=json&origin=*`)
                 .then(res => res.json())
                 .then(data => {
                     if (data.query && data.query.search) {
@@ -421,18 +444,66 @@ function runInfoExecution(query) {
         `;
     }
 
-    // 1. DUAL-SPELLING INTENT GATE: Google Calendar Pipeline Check
+    // 1. LIVE GOOGLE CALENDAR ENGINE: Pulls real events using valid user credentials
     if (cleanQuery.includes("calendar") || cleanQuery.includes("calender") || cleanQuery.includes("schedule") || cleanQuery === "agenda") {
-        output.innerHTML = greetingHTML + `
-            <div style="background: #1a1a1a; padding: 14px; border-radius: 8px; border-left: 3px solid #ffc107; text-align: left; margin-bottom: 15px;">
-                📅 <strong>VAII Calendar Module:</strong><br><br>
-                <span style="color: #aaa; font-size: 0.9rem;">To scan personal calendar entries, complete your OAuth permission consent toggle inside the Firebase identity popup.</span>
-            </div>
-        `;
-        return; 
+        const token = localStorage.getItem('google_oauth_token');
+        if (!token) {
+            output.innerHTML = greetingHTML + `
+                <div style="background: #1a1a1a; padding: 14px; border-radius: 8px; border-left: 3px solid #ffc107; text-align: left; margin-bottom: 15px;">
+                    📅 <strong>VAII Calendar Module:</strong><br><br>
+                    <span style="color: #ff4d4d; font-size: 0.9rem;">Access Denied. You must log out and use the "Sign in with Google" button to authorize calendar access features.</span>
+                </div>
+            `;
+            return;
+        }
+
+        output.innerHTML = greetingHTML + `<div style="color:#888; font-style:italic;">Fetching your upcoming calendar events...</div>`;
+
+        fetch(`https://www.googleapis.com/calendar/v3/calendars/primary/events?maxResults=5&orderBy=startTime&singleEvents=true&access_token=${token}`)
+            .then(res => {
+                if (!res.ok) throw new Error("Unauthorized");
+                return res.json();
+            })
+            .then(data => {
+                const events = data.items || [];
+                if (events.length === 0) {
+                    output.innerHTML = greetingHTML + `
+                        <div style="background: #1a1a1a; padding: 14px; border-radius: 8px; border-left: 3px solid #ffc107; text-align: left;">
+                            📅 <strong>Upcoming Agenda:</strong><br><br>
+                            <span style="color: #aaa;">No upcoming events found in your calendar.</span>
+                        </div>
+                    `;
+                    return;
+                }
+
+                let eventsHTML = events.map(evt => {
+                    const start = evt.start.dateTime || evt.start.date;
+                    const formattedDate = new Date(start).toLocaleDateString("en-US", { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' });
+                    return `<div style="margin-bottom:8px; border-bottom:1px solid #333; padding-bottom:4px;">
+                        <strong style="color:#ffc107;">• ${evt.summary || 'Untitled Event'}</strong><br>
+                        <span style="font-size:0.82rem; color:#888;">⏰ ${formattedDate}</span>
+                    </div>`;
+                }).join('');
+
+                output.innerHTML = greetingHTML + `
+                    <div style="background: #1a1a1a; padding: 14px; border-radius: 8px; border-left: 3px solid #ffc107; text-align: left;">
+                        📅 <strong>Upcoming Agenda:</strong><br><br>
+                        ${eventsHTML}
+                    </div>
+                `;
+            })
+            .catch(() => {
+                output.innerHTML = greetingHTML + `
+                    <div style="background: #1a1a1a; padding: 14px; border-radius: 8px; border-left: 3px solid #ffc107; text-align: left;">
+                        📅 <strong>VAII Calendar Module:</strong><br><br>
+                        <span style="color: #ff4d4d; font-size: 0.9rem;">Token expired or API not enabled. Make sure the Google Calendar API is fully enabled in your Google Cloud dashboard layout.</span>
+                    </div>
+                `;
+            });
+        return;
     }
 
-    // 2. MIGRATED INTENT GATE: Native Maps JavaScript SDK Canvas Constructor
+    // 2. NATIVE MAPS JAVASCRIPT SDK CANVAS CONSTRUCTOR
     if (cleanQuery.startsWith("map of ") || cleanQuery.startsWith("show map ")) {
         const targetLocation = query.replace(/map of /i, "").replace(/show map /i, "").trim();
         output.innerHTML = greetingHTML + `<div style="color:#888; font-style:italic;">Resolving coordinates...</div>`;
@@ -450,7 +521,6 @@ function runInfoExecution(query) {
                         </div>
                     `;
                     
-                    // Runs instance generation safely using your enabled Maps JavaScript API
                     if (typeof google !== 'undefined' && google.maps) {
                         const mapCoordinates = { lat: loc.latitude, lng: loc.longitude };
                         const loadedMapInstance = new google.maps.Map(document.getElementById('vaii-js-map-canvas'), {
