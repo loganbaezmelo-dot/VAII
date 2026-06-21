@@ -500,6 +500,12 @@ async function executeGeminiDirectChat(userInput) {
     let successfulModelLabel = "";
     let structuralErrorDetected = null;
 
+    // FIXED: Thorough payload sanitation mapping step to explicitly filter structural keys out before network dispatch
+    const sanitizedContents = chatHistory.map(msg => ({
+        role: msg.role,
+        parts: msg.parts.map(p => ({ text: p.text }))
+    }));
+
     for (let i = 0; i < dynamicModelChain.length; i++) {
         const modelObj = dynamicModelChain[i];
         const visionUrl = `https://generativelanguage.googleapis.com/v1beta/models/${modelObj.id}:generateContent?key=${GEMINI_VISION_KEY}`;
@@ -508,12 +514,11 @@ async function executeGeminiDirectChat(userInput) {
             const response = await fetch(visionUrl, {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ contents: chatHistory })
+                body: JSON.stringify({ contents: sanitizedContents }) // Dispatching clean, sanitized contents arrays
             });
             const data = await response.json();
 
             if (data.error) {
-                // CHANGED: Intercept explicit payload sequence/validation schema rejections immediately
                 if (response.status === 400 || data.error.status === "INVALID_ARGUMENT") {
                     structuralErrorDetected = data.error.message;
                     break; 
@@ -538,7 +543,6 @@ async function executeGeminiDirectChat(userInput) {
     const indicatorNode = document.getElementById("gemini-active-typing-indicator");
     if (indicatorNode) indicatorNode.remove();
 
-    // CHANGED: Draw clear diagnostics alert instead of faking total cluster limits outage
     if (structuralErrorDetected) {
         const errorDiv = document.createElement('div');
         errorDiv.style = "background: #1a1a1a; padding: 14px; border-radius: 8px; border-left: 3px solid #ff4d4d; text-align: left; margin-bottom: 10px;";
@@ -615,9 +619,9 @@ function handleVaiiDataOutput(rawTextContent, defaultHtmlOutput, runMapCallback 
     if (runMapCallback) runMapCallback();
 }
 
-// =========================================================
+// ==========================================
 // 9. INPUT CONTROL REGISTER ACTIONS & RUNTIME SYSTEM BINDINGS
-// =========================================================
+// ==========================================
 document.querySelectorAll('input[name="vaii-mode"]').forEach(radio => {
     radio.addEventListener('change', (e) => {
         if (e.target.value === 'gemini') {
@@ -967,6 +971,7 @@ function executeImageGeneration(imagePrompt) {
     output.appendChild(img);
 }
 
+// URL Redirection
 function launchTargetUrl(url) {
     routingWarning.style.display = "block"; 
     const htmlOutput = `
