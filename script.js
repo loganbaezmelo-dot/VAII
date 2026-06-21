@@ -74,7 +74,6 @@ const defaultAssistantSuggestions = [
     "Draw a neon cyberpunk switch console artwork"
 ];
 
-// Global dynamic map initializer assignment
 window.initVaiiMap = function() {
     console.log("Maps API successfully authorized and booted.");
 };
@@ -320,16 +319,6 @@ function runUnifiedWeatherClock(lat, lon, zone, displayName) {
                     📅 ${dateString}<br>
                     🌐 Time Zone: <code>${zone}</code>
                 </div>
-                
-                <div class="source-box" style="border-top: 1px solid #333; padding-top: 12px; margin-top: 10px; text-align: left;">
-                    <span style="display: block; font-size: 0.75rem; color: #777; font-weight: bold; text-transform: uppercase; margin-bottom: 8px; letter-spacing: 0.5px;">Sources Index</span>
-                    <div class="source-list" style="display: flex; flex-direction: column; gap: 6px;">
-                        <a href="https://open-meteo.com" target="_blank" style="display: flex; align-items: center; justify-content: space-between; background: #2a2a2a; border: 1px solid #3d3d3d; border-radius: 6px; padding: 6px 10px; color: #4da3ff; text-decoration: none; font-size: 0.82rem; font-weight: bold;">
-                            <span style="color: #aaa; font-weight: normal;">☀️ Open-Meteo Weather API</span>
-                            <span>Open Source →</span>
-                        </a>
-                    </div>
-                </div>
             `;
         })
         .catch(err => {
@@ -356,16 +345,6 @@ function runMarketExecution(ticker) {
                         <strong>🪙 ${cryptoMap[cleanTicker].toUpperCase()} (${ticker.toUpperCase()})</strong><br>
                         💰 Price: $${price.toLocaleString()} USD<br>
                         ${indicator} 24h Change: ${change}%
-                    </div>
-                    
-                    <div class="source-box" style="border-top: 1px solid #333; padding-top: 12px; margin-top: 15px;">
-                        <span style="display: block; font-size: 0.75rem; color: #777; font-weight: bold; text-transform: uppercase; margin-bottom: 8px; letter-spacing: 0.5px;">Sources Index</span>
-                        <div class="source-list" style="display: flex; flex-direction: column;">
-                            <a href="https://www.coingecko.com" target="_blank" style="display: flex; align-items: center; justify-content: space-between; background: #2a2a2a; border: 1px solid #3d3d3d; border-radius: 6px; padding: 6px 10px; color: #4da3ff; text-decoration: none; font-size: 0.82rem; font-weight: bold;">
-                                <span style="color: #aaa; font-weight: normal;">🪙 CoinGecko Network</span>
-                                <span>Open Source →</span>
-                            </a>
-                        </div>
                     </div>
                 `;
             }).catch(() => { output.innerText = "Error pulling crypto ticker data."; });
@@ -442,8 +421,8 @@ function runInfoExecution(query) {
         `;
     }
 
-    // 1. ISOLATED INTENT GATE: Google Calendar Pipeline Check
-    if (cleanQuery.includes("calendar") || cleanQuery.includes("schedule") || cleanQuery === "agenda") {
+    // 1. DUAL-SPELLING INTENT GATE: Google Calendar Pipeline Check
+    if (cleanQuery.includes("calendar") || cleanQuery.includes("calender") || cleanQuery.includes("schedule") || cleanQuery === "agenda") {
         output.innerHTML = greetingHTML + `
             <div style="background: #1a1a1a; padding: 14px; border-radius: 8px; border-left: 3px solid #ffc107; text-align: left; margin-bottom: 15px;">
                 📅 <strong>VAII Calendar Module:</strong><br><br>
@@ -453,7 +432,7 @@ function runInfoExecution(query) {
         return; 
     }
 
-    // 2. ISOLATED INTENT GATE: Live Interactive Maps SDK Core
+    // 2. FIXED ENDPOINT INTENT GATE: Official Live Maps SDK Core
     if (cleanQuery.startsWith("map of ") || cleanQuery.startsWith("show map ")) {
         const targetLocation = query.replace(/map of /i, "").replace(/show map /i, "").trim();
         output.innerHTML = greetingHTML + `
