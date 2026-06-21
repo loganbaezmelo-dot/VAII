@@ -23,6 +23,11 @@ const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
 const googleProvider = new GoogleAuthProvider();
 
+// ====================================================
+// CONFIGURATION: DROP YOUR YOUTUBE DATA API KEY HERE
+// ====================================================
+const YOUTUBE_API_KEY = "YOUR_API_KEY_HERE";
+
 // DOM CONTROL NODES
 const authContainer = document.getElementById('auth-container');
 const mainApp = document.getElementById('main-app');
@@ -49,7 +54,6 @@ const wikitubiaCache = new Set();
 
 const welcomeMessageText = `Welcome back! Enter a search query, app routing command, calculation sequence, weather location, translation phrase, crypto key, or art prompt to begin...`;
 
-// Integrated universal system suggestion bar
 const defaultAssistantSuggestions = [
     "Open Gemini", 
     "193 lbs to kg", 
@@ -63,35 +67,31 @@ const defaultAssistantSuggestions = [
     "Draw a retro arcade machine sitting in an empty vaporwave room"
 ];
 
-// Unified suggestion box compiler supporting concurrent Wiki sources
 function updateDatalist(cities = [], wikiTitles = [], wikitubiaTitles = []) {
     if (!datalist) return;
     datalist.innerHTML = "";
     
-    // 1. Inject core structural guides first
     defaultAssistantSuggestions.forEach(item => {
         const option = document.createElement('option');
         option.value = item;
         datalist.appendChild(option);
     });
     
-    // 2. Inject live extracted Wikipedia search entry references
     wikiTitles.forEach(title => {
         const option = document.createElement('option');
         option.value = title;
         datalist.appendChild(option);
     });
 
-    // 3. Inject live extracted Wikitubia search entry references
     wikitubiaTitles.forEach(title => {
         const option = document.createElement('option');
         option.value = title;
         datalist.appendChild(option);
     });
     
-    // 4. Inject live calculated geocoding location parameters
     cities.forEach(location => {
         const option = document.createElement('option');
+        option.value = location;
         const city = location.name;
         const state = location.admin1;
         const country = location.country;
@@ -109,7 +109,6 @@ function updateDatalist(cities = [], wikiTitles = [], wikitubiaTitles = []) {
     });
 }
 
-// Custom Script Injection Helper to completely bypass domain CORS blocks natively
 function fetchDuckDuckGoInstantAnswer(searchQuery) {
     return new Promise((resolve, reject) => {
         const callbackId = 'ddg_api_' + Math.floor(Math.random() * 1000000);
@@ -208,7 +207,6 @@ helpToggle.addEventListener('click', function() {
     }
 });
 
-// Tri-Engine suggestion parser firing lookups concurrently
 hubInput.addEventListener('input', function() {
     const query = hubInput.value; 
     const trimmedQuery = query.trim();
@@ -477,7 +475,6 @@ function runInfoExecution(query) {
     const cleanQuery = query.toLowerCase().trim();
     const cryptoMap = { btc: "bitcoin", eth: "ethereum", sol: "solana", doge: "dogecoin", xrp: "ripple" };
 
-    // Greeting Core Filter Interceptor
     const greetingsList = ["hello", "hi", "hey", "sup", "yo", "greetings", "whats up", "what's up"];
     let greetingHTML = "";
     if (greetingsList.includes(cleanQuery)) {
@@ -489,7 +486,6 @@ function runInfoExecution(query) {
         `;
     }
 
-    // 1. Unified Location / Time Interceptor
     if (cleanQuery.startsWith("time in ") || cleanQuery.startsWith("weather in ") || cleanQuery.startsWith("weather ") || cleanQuery.startsWith("clock ")) {
         let parsedLocation = query.replace(/time in /i, "").replace(/weather in /i, "").replace(/weather /i, "").replace(/clock /i, "").trim();
         fetch(`https://geocoding-api.open-meteo.com/v1/search?name=${encodeURIComponent(parsedLocation)}&count=1&language=en&format=json`)
@@ -507,7 +503,6 @@ function runInfoExecution(query) {
         return;
     }
 
-    // 2. Datalist Option Interceptor (Weather / Clock click match)
     const options = Array.from(datalist.options);
     const matchedOption = options.find(opt => opt.value.toLowerCase() === cleanQuery);
     if (matchedOption && matchedOption.getAttribute('data-lat')) {
@@ -518,7 +513,6 @@ function runInfoExecution(query) {
         return;
     }
 
-    // 3. Open Command Interceptor (Top-level priority routing)
     if (query.toLowerCase().startsWith("open ")) {
         routingWarning.style.display = "block"; 
         let appName = query.substring(5).trim().toLowerCase().replace(/['"]+/g, '');
@@ -552,7 +546,6 @@ function runInfoExecution(query) {
         return;
     }
 
-    // 4. URL Pattern Interceptor (Top-level priority routing)
     const isUrlPattern = /\.[a-z]{2,6}/i.test(query);
     const hasProtocol = query.startsWith('http://') || query.startsWith('https://');
 
@@ -566,14 +559,12 @@ function runInfoExecution(query) {
         return;
     }
 
-    // 5. Crypto / Market Interceptor
     if (cryptoMap[cleanQuery] || cleanQuery.startsWith("price of ")) {
         let parsedTicker = cleanQuery.startsWith("price of ") ? cleanQuery.substring(9).trim() : cleanQuery;
         runMarketExecution(parsedTicker);
         return;
     }
 
-    // 6. Math / Unit Conversion / Translation Loop (Scoped and protected against string hijacking)
     if (/^[0-9+\-*/().\s]+$/.test(query) || cleanQuery.includes(" to ")) {
         try {
             if (!cleanQuery.includes(" to ")) {
@@ -673,7 +664,6 @@ function runInfoExecution(query) {
         }
     }
 
-    // 7. General Knowledge / Dictionary Pipeline
     routingWarning.style.display = "none";
     const isSingleWord = !query.includes(" ");
 
@@ -715,7 +705,6 @@ function runInfoExecution(query) {
     }
 }
 
-// Restricted DuckDuckGo Core Pipeline with strict influencer, long-list, and dynamic suggestion whitelist gates
 function runUnifiedWikiPipeline(query, wikiData, hasWiktionary) {
     const famousYoutubersList = [
         "jacksucksatlife", "mrbeast", "pewdiepie", "markiplier", "jacksepticeye", 
@@ -747,9 +736,8 @@ function runUnifiedWikiPipeline(query, wikiData, hasWiktionary) {
                 if (ddgExtract.length > 350) ddgExtract = ddgExtract.substring(0, 350) + "...";
                 
                 wikiData.ddg = { title: ddgTitle, text: ddgExtract };
-                appendSecondaryWikipediaLayer(query, wikiData, hasWiktionary);
+                appendSecondaryLayers(query, wikiData, hasWiktionary);
             } else if (matchesWikitubiaCache || famousYoutubersList.some(name => lowerQuery.includes(name))) {
-                // Fallback Engine: If DDG has zero abstract records for a Wikitubia creator, parse Fandom description logs directly
                 fetch(`https://youtube.fandom.com/api.php?action=query&list=search&srsearch=${encodeURIComponent(query)}&utf8=&format=json&origin=*`)
                     .then(res => res.json())
                     .then(fandomData => {
@@ -759,10 +747,10 @@ function runUnifiedWikiPipeline(query, wikiData, hasWiktionary) {
                             if (!fandomExtract.endsWith('.')) fandomExtract += "...";
                             wikiData.ddg = { title: topResult.title, text: fandomExtract, isFandomFallback: true };
                         }
-                        appendSecondaryWikipediaLayer(query, wikiData, hasWiktionary);
-                    }).catch(() => appendSecondaryWikipediaLayer(query, wikiData, hasWiktionary));
+                        appendSecondaryLayers(query, wikiData, hasWiktionary);
+                    }).catch(() => appendSecondaryLayers(query, wikiData, hasWiktionary));
             } else {
-                appendSecondaryWikipediaLayer(query, wikiData, hasWiktionary);
+                appendSecondaryLayers(query, wikiData, hasWiktionary);
             }
         }).catch(() => {
             if (wikitubiaCache.has(lowerQuery) || famousYoutubersList.some(name => lowerQuery.includes(name))) {
@@ -775,16 +763,55 @@ function runUnifiedWikiPipeline(query, wikiData, hasWiktionary) {
                             if (!fandomExtract.endsWith('.')) fandomExtract += "...";
                             wikiData.ddg = { title: topResult.title, text: fandomExtract, isFandomFallback: true };
                         }
-                        appendSecondaryWikipediaLayer(query, wikiData, hasWiktionary);
-                    }).catch(() => appendSecondaryWikipediaLayer(query, wikiData, hasWiktionary));
+                        appendSecondaryLayers(query, wikiData, hasWiktionary);
+                    }).catch(() => appendSecondaryLayers(query, wikiData, hasWiktionary));
             } else {
-                appendSecondaryWikipediaLayer(query, wikiData, hasWiktionary);
+                appendSecondaryLayers(query, wikiData, hasWiktionary);
             }
         });
 }
 
-function appendSecondaryWikipediaLayer(query, wikiData, hasWiktionary) {
-    fetch(`https://en.wikipedia.org/w/api.php?action=query&list=search&srsearch=${encodeURIComponent(query)}&utf8=&format=json&origin=*`)
+function appendSecondaryLayers(query, wikiData, hasWiktionary) {
+    const lowerQuery = query.toLowerCase().trim();
+    const famousYoutubersList = [
+        "jacksucksatlife", "mrbeast", "pewdiepie", "markiplier", "jacksepticeye", 
+        "caseoh", "jynxzi", "kai cenat", "ludwig", "xqc", "moistcr1tikal", "penguinz0", 
+        "sidemen", "ksi", "w2s", "wroetoshaw", "miniminter", "vikkstar", "vikkstar123", 
+        "mrwhosetheboss", "mkbhd", "marques brownlee", "linustechtips", "unbox therapy", 
+        "dantdm", "popularmmos", "stampy", "stampylonghead", "dream", "technoblade", 
+        "tommyinnit", "lazarbeam", "airrack", "ryan trahan", "smosh", "gmm", "rhett and link",
+        "jacksepticeye", "pokimane", "valkyrae", "ninja", "shroud", "disguised toast", "sykkuno",
+        "hasanabi", "asmongold", "ilyasiel", "safiya nygaard", "nigahiga", "davie504", "jolly"
+    ];
+
+    const isInfluencer = wikitubiaCache.has(lowerQuery) || famousYoutubersList.some(name => lowerQuery.includes(name)) || !!wikiData.ddg;
+
+    // Optional Sub-Pipeline layer running live YouTube Data API channel queries concurrently
+    const youtubeFetch = (isInfluencer && YOUTUBE_API_KEY && YOUTUBE_API_KEY !== "YOUR_API_KEY_HERE")
+        ? fetch(`https://www.googleapis.com/youtube/v3/search?part=snippet&type=channel&q=${encodeURIComponent(query)}&key=${YOUTUBE_API_KEY}`)
+            .then(res => res.json())
+            .then(searchData => {
+                if (searchData.items && searchData.searchData !== null && searchData.items.length > 0) {
+                    const channelId = searchData.items[0].id.channelId;
+                    return fetch(`https://www.googleapis.com/youtube/v3/channels?part=statistics,snippet&id=${channelId}&key=${YOUTUBE_API_KEY}`)
+                        .then(res => res.json())
+                        .then(channelData => {
+                            if (channelData.items && channelData.items.length > 0) {
+                                const item = channelData.items[0];
+                                wikiData.youtube = {
+                                    title: item.snippet.title,
+                                    text: item.snippet.description || "No profile bio text compiled.",
+                                    subs: parseInt(item.statistics.subscriberCount).toLocaleString(),
+                                    views: parseInt(item.statistics.viewCount).toLocaleString(),
+                                    customUrl: item.snippet.customUrl || ""
+                                };
+                            }
+                        });
+                }
+            }).catch(() => null)
+        : Promise.resolve();
+
+    const wikipediaFetch = fetch(`https://en.wikipedia.org/w/api.php?action=query&list=search&srsearch=${encodeURIComponent(query)}&utf8=&format=json&origin=*`)
         .then(res => res.json())
         .then(wikiSearch => {
             if (wikiSearch.query?.search && wikiSearch.query.search.length > 0) {
@@ -793,7 +820,7 @@ function appendSecondaryWikipediaLayer(query, wikiData, hasWiktionary) {
                     wikipediaTitle = wikiSearch.query.search[1].title;
                 }
                 
-                fetch(`https://en.wikipedia.org/api/rest_v1/page/summary/${encodeURIComponent(wikipediaTitle.replace(/ /g, '_'))}`)
+                return fetch(`https://en.wikipedia.org/api/rest_v1/page/summary/${encodeURIComponent(wikipediaTitle.replace(/ /g, '_'))}`)
                     .then(res => res.json())
                     .then(summaryData => {
                         let wikiExtract = summaryData.extract || "";
@@ -804,18 +831,20 @@ function appendSecondaryWikipediaLayer(query, wikiData, hasWiktionary) {
                         if (wikiExtract) {
                             wikiData.wikipedia = { title: wikipediaTitle, text: wikiExtract };
                         }
-                        compileFinalSourceIndexBox(query, wikiData, hasWiktionary);
-                    }).catch(() => compileFinalSourceIndexBox(query, wikiData, hasWiktionary));
-            } else {
-                compileFinalSourceIndexBox(query, wikiData, hasWiktionary);
+                    });
             }
-        }).catch(() => compileFinalSourceIndexBox(query, wikiData, hasWiktionary));
+        }).catch(() => null);
+
+    Promise.all([youtubeFetch, wikipediaFetch]).then(() => {
+        compileFinalSourceIndexBox(query, wikiData, hasWiktionary);
+    });
 }
 
 function compileFinalSourceIndexBox(query, wikiData, hasWiktionary) {
     let showWiktionary = !!wikiData.wiktionary;
     let showDdg = !!wikiData.ddg;
     let showWikipedia = !!wikiData.wikipedia;
+    let showYoutube = !!wikiData.youtube;
 
     const wikiText = wikiData.wikipedia?.text?.trim();
     const ddgText = wikiData.ddg?.text?.trim();
@@ -836,9 +865,8 @@ function compileFinalSourceIndexBox(query, wikiData, hasWiktionary) {
                 (ddgTextClean.substring(0, 40) && wikiTextClean.includes(ddgTextClean.substring(0, 40)))) {
                 
                 const lowerQuery = query.toLowerCase().trim();
-                const isInfluencerTopic = wikitubiaCache.has(lowerQuery) || wikiData.ddg.isFandomFallback;
+                const isInfluencerTopic = wikitubiaCache.has(lowerQuery) || wikiData.ddg.isFandomFallback || showYoutube;
                 
-                // Priority Matrix Refactor: Forces DuckDuckGo to retain focus over influencer/creator paths
                 if (isInfluencerTopic) {
                     showWikipedia = false;
                 } else {
@@ -856,7 +884,7 @@ function compileFinalSourceIndexBox(query, wikiData, hasWiktionary) {
         }
     }
 
-    if (!showWikipedia && !showDdg && !showWiktionary) {
+    if (!showWikipedia && !showDdg && !showWiktionary && !showYoutube) {
         let totalHTML = "";
         if (wikiData.greeting) {
             totalHTML += wikiData.greeting;
@@ -873,6 +901,15 @@ function compileFinalSourceIndexBox(query, wikiData, hasWiktionary) {
         blocksHtml.push(`
             <div class="aggregated-text" style="font-size: 0.95rem; color: #e0e0e0; line-height: 1.6; background: #1a1a1a; padding: 14px; border-radius: 8px; border-left: 3px solid #28a745; text-align: left;">
                 <strong>${wikiData.wiktionary.title.charAt(0).toUpperCase() + wikiData.wiktionary.title.slice(1)}</strong> (${wikiData.wiktionary.pos.toLowerCase()}): ${wikiData.wiktionary.text}
+            </div>
+        `);
+    }
+    if (showYoutube) {
+        blocksHtml.push(`
+            <div class="aggregated-text" style="font-size: 0.95rem; color: #e0e0e0; line-height: 1.6; background: #1a1a1a; padding: 14px; border-radius: 8px; border-left: 3px solid #ff0000; text-align: left;">
+                <strong>📺 ${wikiData.youtube.title} (YouTube)</strong><br>
+                <span style="font-size: 0.85rem; color: #aaa;">🔴 Subscribers: ${wikiData.youtube.subs} | 👁️ Total Views: ${wikiData.youtube.views}</span><br><br>
+                <em>${wikiData.youtube.text}</em>
             </div>
         `);
     }
@@ -910,6 +947,16 @@ function compileFinalSourceIndexBox(query, wikiData, hasWiktionary) {
             <a href="https://en.wiktionary.org/wiki/${encodeURIComponent(query)}" target="_blank" style="display: flex; align-items: center; justify-content: space-between; background: #2a2a2a; border: 1px solid #3d3d3d; border-radius: 6px; padding: 6px 10px; color: #4da3ff; text-decoration: none; font-size: 0.82rem; font-weight: bold;">
                 <span style="color: #aaa; font-weight: normal;">📰 Wiktionary</span>
                 <span>Open Source →</span>
+            </a>
+        `;
+    }
+
+    if (wikiData.youtube) {
+        const channelPath = wikiData.youtube.customUrl ? wikiData.youtube.customUrl : `@channel`;
+        totalHTML += `
+            <a href="https://www.youtube.com/${channelPath}" target="_blank" style="display: flex; align-items: center; justify-content: space-between; background: #2a2a2a; border: 1px solid #3d3d3d; border-radius: 6px; padding: 6px 10px; color: #ff4444; text-decoration: none; font-size: 0.82rem; font-weight: bold;">
+                <span style="color: #aaa; font-weight: normal;">🔴 YouTube Channel</span>
+                <span>Live Metrics →</span>
             </a>
         `;
     }
