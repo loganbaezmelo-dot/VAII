@@ -60,6 +60,7 @@ const helpToggle = document.getElementById('help-toggle');
 const helpGuide = document.getElementById('help-guide');
 
 let debounceTimer;
+let searchAbortController = null; // Global reference tracker to kill ghost fetches
 const wikitubiaCache = new Set();
 
 const welcomeMessageText = `Welcome back! Enter a search query, app routing command, calculation sequence, weather location, translation phrase, crypto ticker, map request, or art prompt to begin...`;
@@ -229,8 +230,13 @@ if (hubInput) {
             routingWarning.style.display = "none";
         }
 
-        // CRITICAL PERFORMANCE FIX: Exit instantly if user is targeting external web space strings
-        if (lowerQuery.startsWith('open ') || trimmedQuery.startsWith('http://') || trimmedQuery.startsWith('https://') || /\.[a-z]{2,6}/i.test(trimmedQuery)) {
+        // Kill any outstanding network connections instantly before they can backlog the thread
+        if (searchAbortController) {
+            searchAbortController.abort();
+        }
+
+        // Exit out immediately if the user is explicitly heading to an external link or command string
+        if (lowerQuery.startsWith('open ') || "open".startsWith(lowerQuery) || trimmedQuery.startsWith('http://') || trimmedQuery.startsWith('https://') || /\.[a-z]{2,6}/i.test(trimmedQuery)) {
             updateDatalist([], [], []); 
             clearTimeout(debounceTimer); 
             return; 
@@ -254,12 +260,16 @@ if (hubInput) {
 
         clearTimeout(debounceTimer);
         debounceTimer = setTimeout(() => {
-            const geoFetch = fetch(`https://geocoding-api.open-meteo.com/v1/search?name=${encodeURIComponent(searchUrlQuery)}&count=3&language=en&format=json`)
+            // Generate a fresh abort signal for this specific keystroke execution path
+            searchAbortController = new AbortController();
+            const signal = searchAbortController.signal;
+
+            const geoFetch = fetch(`https://geocoding-api.open-meteo.com/v1/search?name=${encodeURIComponent(searchUrlQuery)}&count=3&language=en&format=json`, { signal })
                 .then(res => res.json())
                 .then(data => data.results || [])
                 .catch(() => []);
 
-            const wikiFetch = fetch(`https://en.wikipedia.org/w/api.php?action=query&list=search&srsearch=${encodeURIComponent(searchUrlQuery)}&utf8=&format=json&origin=*`)
+            const wikiFetch = fetch(`https://en.wikipedia.org/w/api.php?action=query&list=search&srsearch=${encodeURIComponent(searchUrlQuery)}&utf8=&format=json&origin=*`, { signal })
                 .then(res => res.json())
                 .then(data => {
                     if (data.query && data.query.search) {
@@ -269,7 +279,7 @@ if (hubInput) {
                 })
                 .catch(() => []);
 
-            const wikitubiaFetch = fetch(`https://youtube.fandom.com/api.php?action=query&list=search&srsearch=${encodeURIComponent(searchUrlQuery)}&utf8=&format=json&origin=*`)
+            const wikitubiaFetch = fetch(`https://youtube.fandom.com/api.php?action=query&list=search&srsearch=${encodeURIComponent(searchUrlQuery)}&utf8=&format=json&origin=*`, { signal })
                 .then(res => res.json())
                 .then(data => {
                     if (data.query && data.query.search) {
@@ -283,7 +293,7 @@ if (hubInput) {
 
             Promise.all([geoFetch, wikiFetch, wikitubiaFetch]).then(([cities, wikiTitles, wikitubiaTitles]) => {
                 updateDatalist(cities, wikiTitles, wikitubiaTitles);
-            });
+            }).catch(() => {});
         }, 300);
     });
 }
