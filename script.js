@@ -45,6 +45,7 @@ const helpGuide = document.getElementById('help-guide');
 
 let isLoginMode = true;
 let debounceTimer;
+const wikitubiaCache = new Set();
 
 const welcomeMessageText = `Welcome back! Enter a search query, app routing command, calculation sequence, weather location, translation phrase, crypto key, or art prompt to begin...`;
 
@@ -249,7 +250,10 @@ hubInput.addEventListener('input', function() {
             .then(res => res.json())
             .then(data => {
                 if (data.query && data.query.search) {
-                    return data.query.search.map(item => item.title);
+                    const titles = data.query.search.map(item => item.title);
+                    // Cache any pulled suggestions to whitelist them later for DuckDuckGo routing
+                    titles.forEach(title => wikitubiaCache.add(title.toLowerCase().trim()));
+                    return titles;
                 }
                 return [];
             })
@@ -713,7 +717,7 @@ function runInfoExecution(query) {
     }
 }
 
-// Restricted DuckDuckGo Core Pipeline with strict influencer and long-list override filters
+// Restricted DuckDuckGo Core Pipeline with strict influencer, long-list, and dynamic suggestion whitelist gates
 function runUnifiedWikiPipeline(query, wikiData, hasWiktionary) {
     const famousYoutubersList = [
         "jacksucksatlife", "mrbeast", "pewdiepie", "markiplier", "jacksepticeye", 
@@ -737,7 +741,10 @@ function runUnifiedWikiPipeline(query, wikiData, hasWiktionary) {
             const isMediaPersonality = validKeywords.some(keyword => lowerText.includes(keyword) || lowerHeading.includes(keyword));
             const matchesCustomList = famousYoutubersList.some(name => lowerQuery.includes(name) || lowerText.includes(name) || lowerHeading.includes(name));
             
-            if ((isMediaPersonality || matchesCustomList) && rawText) {
+            // Evaluates direct string containment matches against dynamically suggested parameters
+            const matchesWikitubiaCache = wikitubiaCache.has(lowerQuery) || wikitubiaCache.has(lowerHeading);
+            
+            if ((isMediaPersonality || matchesCustomList || matchesWikitubiaCache) && rawText) {
                 const ddgTitle = ddgSearch.Heading || query;
                 let ddgExtract = rawText;
                 if (ddgExtract.length > 350) ddgExtract = ddgExtract.substring(0, 350) + "...";
