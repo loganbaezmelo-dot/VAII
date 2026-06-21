@@ -395,7 +395,7 @@
                     </div>
 
                     <div id="help-guide" class="help-drawer">
-                        <strong>💡 VAII Assistant Feature Guide:</strong>
+                        <strong>💡 VAII Assistant Feature Guide (Note: Web services are exclusively supported on VAII Native mode):</strong>
                         <ul>
                             <li><strong>🧠 Knowledge Base:</strong> Type standard words for dictionary definitions or terms for general information summaries. If searching for creators, VAII looks up channel data.</li>
                             <li><strong>👁️ Gemini Vision Engine:</strong> Tap the camera icon to select or capture an image file. Enter your question inside the input block to analyze data properties.</li>
@@ -420,13 +420,21 @@
 
                     <div class="search-container">
                         <div style="text-align: center; font-size: 0.75rem; color: #888; margin-bottom: 4px; font-weight: bold; text-transform: uppercase; letter-spacing: 0.5px;">Assistant Engine Mode</div>
-                        <div style="display: flex; gap: 20px; justify-content: center; margin-bottom: 6px; font-size: 0.9rem; color: #ccc;">
-                            <label style="display: flex; align-items: center; gap: 6px; cursor: pointer; user-select: none;">
-                                <input type="radio" name="vaii-mode" value="native" checked style="width: auto !important; height: auto !important; margin: 0; padding: 0;"> VAII Native
-                            </label>
-                            <label style="display: flex; align-items: center; gap: 6px; cursor: pointer; user-select: none;">
-                                <input type="radio" name="vaii-mode" value="gemini" style="width: auto !important; height: auto !important; margin: 0; padding: 0;"> Gemini 3.5
-                            </label>
+                        
+                        <div style="display: flex; gap: 12px; justify-content: center; margin-bottom: 6px;">
+                            <div style="flex: 1; max-width: 170px; background: #252525; padding: 10px; border-radius: 8px; border: 1px solid #333; text-align: left;">
+                                <label style="display: flex; align-items: center; gap: 6px; cursor: pointer; user-select: none; font-size: 0.88rem; color: #ccc; font-weight: bold;">
+                                    <input type="radio" name="vaii-mode" value="native" checked style="width: auto !important; height: auto !important; margin: 0; padding: 0;"> VAII Native
+                                </label>
+                                <div style="font-size: 0.7rem; color: #777; margin-top: 4px; line-height: 1.25;">Runs interactive widget layers: maps, weather, arithmetic, translations, tickers, and art creation models.</div>
+                            </div>
+                            
+                            <div style="flex: 1; max-width: 170px; background: #252525; padding: 10px; border-radius: 8px; border: 1px solid #333; text-align: left;">
+                                <label style="display: flex; align-items: center; gap: 6px; cursor: pointer; user-select: none; font-size: 0.88rem; color: #ccc; font-weight: bold;">
+                                    <input type="radio" name="vaii-mode" value="gemini" style="width: auto !important; height: auto !important; margin: 0; padding: 0;"> Gemini 3.5
+                                </label>
+                                <div style="font-size: 0.7rem; color: #777; margin-top: 4px; line-height: 1.25;">Provides a clean conversational thread with persistent historical session memory tracking.</div>
+                            </div>
                         </div>
 
                         <div class="input-row">
