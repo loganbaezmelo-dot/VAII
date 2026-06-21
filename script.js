@@ -50,7 +50,6 @@ const GEMINI_VISION_KEY = _v1 + _v2 + _v3 + _v4 + _v5;
 // Global model array stack populated dynamically via the Google directory API
 let dynamicModelChain = [];
 
-// Your preferred fallback routing configuration order hierarchy
 const BASELINE_FALLBACK_TREE = [
     { name: "Gemini 3.5", id: "gemini-3.5-flash" },
     { name: "Gemini 3.1", id: "gemini-3.1-flash" },
@@ -107,20 +106,8 @@ const wikitubiaCache = new Set();
 let chatHistory = [];
 let currentSessionId = null;
 
-const welcomeMessageText = `Welcome back! Enter a search query, app routing command, calculation sequence, weather location, translation phrase, crypto ticker, map request, or art prompt to begin...`;
-
-const defaultAssistantSuggestions = [
-    "Open Gemini", 
-    "193 lbs to kg", 
-    "Open YouTube", 
-    "BTC", 
-    "Time in Tokyo", 
-    "Hello to Spanish", 
-    "Open Minecraft", 
-    "(12 * 4) / 2",
-    "Map of Orlando",
-    "Draw a neon cyberpunk switch console artwork"
-];
+const welcomeVaiiText = `Welcome to VAII Native! Enter a search query, app routing command, calculation sequence, weather location, translation phrase, crypto ticker, map request, or art prompt to begin...`;
+const welcomeGeminiText = `Welcome to the Gemini Ecosystem! This is a persistent conversational space. Start typing below to begin a continuous chat thread...`;
 
 window.initVaiiMap = function() {
     console.log("Maps system ready.");
@@ -135,7 +122,7 @@ function renderMarkdownTextToHtml(rawMarkdownText) {
     let safeHtml = rawMarkdownText
         .replace(/&/g, "&amp;")
         .replace(/</g, "&lt;")
-        .replace(/>/g, "&gt;");
+        .replace(/>/g, "&gt;"); 
     
     safeHtml = safeHtml.replace(/\*\*(.*?)\*\*/g, "<strong>$1</strong>");
     safeHtml = safeHtml.replace(/\*(.*?)\*/g, "<em>$1</em>");
@@ -156,15 +143,12 @@ async function discoverActiveModelChain() {
         const data = await response.json();
         
         if (data && data.models) {
-            // Filter out models that explicitly support core generation methods
             const liveIds = data.models
                 .filter(m => m.supportedGenerationMethods && m.supportedGenerationMethods.includes("generateContent"))
                 .map(m => m.name.replace("models/", ""));
                 
-            // Match against preferred configuration stack hierarchy order
             dynamicModelChain = BASELINE_FALLBACK_TREE.filter(model => liveIds.includes(model.id));
             
-            // Auto-append any newly deployed models that weren't explicit in baseline settings
             data.models.forEach(m => {
                 const cleanId = m.name.replace("models/", "");
                 if (!dynamicModelChain.some(model => model.id === cleanId) && (cleanId.includes("gemini") || cleanId.includes("gemma"))) {
@@ -173,12 +157,21 @@ async function discoverActiveModelChain() {
             });
         }
     } catch (e) {
-        console.warn("Dynamic discovery tracking failed. Restoring hardcoded recovery layout array branch.", e);
+        console.warn("Dynamic discovery tracking failed.", e);
     }
     
-    // Safety check fallback layer configuration validation gate
     if (dynamicModelChain.length === 0) {
         dynamicModelChain = [...BASELINE_FALLBACK_TREE];
+    }
+}
+
+function updateWelcomeMessageText() {
+    if (!output) return;
+    const selectedMode = document.querySelector('input[name="vaii-mode"]:checked').value;
+    if (selectedMode === "gemini") {
+        output.innerHTML = welcomeGeminiText;
+    } else {
+        output.innerHTML = welcomeVaiiText;
     }
 }
 
@@ -274,7 +267,7 @@ function renderHistoryListItems() {
 function initializeFreshChatSession() {
     currentSessionId = null;
     chatHistory = [];
-    if (output) output.innerHTML = welcomeMessageText;
+    updateWelcomeMessageText(); 
 }
 
 function renderFullChatLogBubble() {
@@ -287,7 +280,7 @@ function renderFullChatLogBubble() {
     });
     
     if (dialogueItems.length === 0) {
-        output.innerHTML = welcomeMessageText;
+        output.innerHTML = welcomeGeminiText;
         return;
     }
     
@@ -371,7 +364,7 @@ onAuthStateChanged(auth, (user) => {
         initializeFreshChatSession();
         clearActiveImage();
         renderHistoryListItems();
-        discoverActiveModelChain(); // Run directory mapping verification checks at system boot boundaries
+        discoverActiveModelChain(); 
         updateDatalist([], [], []);
     } else {
         if (authContainer) authContainer.style.display = "block";
@@ -495,19 +488,18 @@ async function executeGeminiDirectChat(userInput) {
     const spinnerBubble = document.createElement('div');
     spinnerBubble.id = "gemini-active-typing-indicator";
     spinnerBubble.style = "text-align: left; padding: 10px; color: #aaa; font-style: italic; display: flex; align-items: center;";
-    spinnerBubble.innerHTML = `<div class="loader-spinner"></div> Processing cascading multi-model fallback sequences...`;
+    spinnerBubble.innerHTML = `<div class="loader-spinner"></div> Syncing conversational context vectors...`;
     output.appendChild(spinnerBubble);
     output.scrollTop = output.scrollHeight;
 
-    // Safety initialization gate check loop
     if (dynamicModelChain.length === 0) {
         await discoverActiveModelChain();
     }
 
     let successfulResponseText = null;
     let successfulModelLabel = "";
+    let structuralErrorDetected = null;
 
-    // Intercept engine loop: pass full history arrays cleanly down active endpoints stack
     for (let i = 0; i < dynamicModelChain.length; i++) {
         const modelObj = dynamicModelChain[i];
         const visionUrl = `https://generativelanguage.googleapis.com/v1beta/models/${modelObj.id}:generateContent?key=${GEMINI_VISION_KEY}`;
@@ -520,9 +512,18 @@ async function executeGeminiDirectChat(userInput) {
             });
             const data = await response.json();
 
-            if (data.error || !data.candidates || !data.candidates[0].content.parts[0].text) {
-                console.warn(`Model variant [${modelObj.name}] exhausted or rejected. Cascading down fallback engine matrix...`);
+            if (data.error) {
+                // CHANGED: Intercept explicit payload sequence/validation schema rejections immediately
+                if (response.status === 400 || data.error.status === "INVALID_ARGUMENT") {
+                    structuralErrorDetected = data.error.message;
+                    break; 
+                }
+                console.warn(`Model variant [${modelObj.name}] exhausted or rate-limited.`);
                 continue; 
+            }
+
+            if (!data.candidates || !data.candidates[0].content.parts[0].text) {
+                continue;
             }
 
             successfulResponseText = data.candidates[0].content.parts[0].text;
@@ -537,6 +538,22 @@ async function executeGeminiDirectChat(userInput) {
     const indicatorNode = document.getElementById("gemini-active-typing-indicator");
     if (indicatorNode) indicatorNode.remove();
 
+    // CHANGED: Draw clear diagnostics alert instead of faking total cluster limits outage
+    if (structuralErrorDetected) {
+        const errorDiv = document.createElement('div');
+        errorDiv.style = "background: #1a1a1a; padding: 14px; border-radius: 8px; border-left: 3px solid #ff4d4d; text-align: left; margin-bottom: 10px;";
+        errorDiv.innerHTML = `
+            <div style="font-size: 0.75rem; color: #ff4d4d; text-transform: uppercase; font-weight: bold; margin-bottom: 8px;">⚠️ History Thread Structure Fault</div>
+            <div style="color: #eee; font-size: 0.95rem; line-height: 1.5;">
+                ${structuralErrorDetected}<br><br>
+                <span style="color: #aaa; font-size: 0.85rem;">VAII automatically dropped your last submission entry to keep this specific session from breaking permanently. Clear out this session history thread or adjust parameter inputs.</span>
+            </div>
+        `;
+        output.appendChild(errorDiv);
+        chatHistory.pop(); 
+        return;
+    }
+
     if (successfulResponseText !== null) {
         chatHistory.push({ 
             role: "model", 
@@ -547,12 +564,10 @@ async function executeGeminiDirectChat(userInput) {
         renderFullChatLogBubble();
         saveCurrentSessionState();
 
-        // Title Generation Hook: Trigger dynamic compiler automatically on message turn 2
         if (chatHistory.length === 4) {
             triggerBackgroundTitleGeneration(chatHistory[2].parts[0].text, successfulResponseText, successfulModelLabel);
         }
     } else {
-        // High-density descriptive outage layout explanation
         const errorDiv = document.createElement('div');
         errorDiv.style = "background: #1a1a1a; padding: 14px; border-radius: 8px; border-left: 3px solid #ff4d4d; text-align: left; margin-bottom: 10px;";
         errorDiv.innerHTML = `
@@ -566,7 +581,6 @@ async function executeGeminiDirectChat(userInput) {
     }
 }
 
-// Background Title Generator Loop Function
 async function triggerBackgroundTitleGeneration(userMsg, modelResponse, runningModelId) {
     const titlePrompt = `Generate a short, highly descriptive 3 to 5 word summary title for this chat based on these two statements. Respond with ONLY the clean summary text directly, no intro text, no markdown styling markers, and no outer quotation characters.\n\nUser text: "${userMsg}"\nModel text: "${modelResponse}"`;
     
@@ -586,13 +600,13 @@ async function triggerBackgroundTitleGeneration(userMsg, modelResponse, runningM
         const data = await response.json();
         
         let cleanedTitle = data.candidates[0].content.parts[0].text.trim();
-        cleanedTitle = cleanedTitle.replace(/['"]+/g, ''); // Clear quote remnants safely
+        cleanedTitle = cleanedTitle.replace(/['"]+/g, ''); 
         
         if (cleanedTitle && cleanedTitle.length > 2) {
             saveCurrentSessionState(cleanedTitle);
         }
     } catch (e) {
-        console.error("Dynamic title layout thread broke parameter limits:", e);
+        console.error("Dynamic title layout thread broke parameters safely:", e);
     }
 }
 
@@ -601,16 +615,25 @@ function handleVaiiDataOutput(rawTextContent, defaultHtmlOutput, runMapCallback 
     if (runMapCallback) runMapCallback();
 }
 
-// ==========================================
-// 9. INPUT CONTROL REGISTER ACTIONS
-// ==========================================
+// =========================================================
+// 9. INPUT CONTROL REGISTER ACTIONS & RUNTIME SYSTEM BINDINGS
+// =========================================================
+document.querySelectorAll('input[name="vaii-mode"]').forEach(radio => {
+    radio.addEventListener('change', (e) => {
+        if (e.target.value === 'gemini') {
+            renderFullChatLogBubble();
+        } else {
+            output.innerHTML = welcomeVaiiText;
+        }
+    });
+});
+
 if (helpToggle) {
     helpToggle.addEventListener('click', function() {
         if (helpGuide.style.display === "block") {
             helpGuide.style.display = "none";
             helpToggle.innerText = "?";
         } else {
-            helpGuide.style.display = "block";
             helpGuide.style.display = "block";
             helpToggle.innerText = "✕";
             if (historyDrawer) historyDrawer.style.display = "none";
