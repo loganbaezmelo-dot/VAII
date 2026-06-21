@@ -1,0 +1,93 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>VAII - Privacy Policy</title>
+    <style>
+        body {
+            background-color: #121212;
+            color: #ccc;
+            font-family: system-ui, -apple-system, sans-serif;
+            display: flex;
+            justify-content: center;
+            padding: 40px 20px;
+            margin: 0;
+        }
+        .container {
+            width: 100%;
+            max-width: 600px;
+            background-color: #1e1e1e;
+            padding: 30px;
+            border-radius: 15px;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.3);
+            border: 1px solid #333;
+            line-height: 1.6;
+        }
+        h1 {
+            color: #fff;
+            font-size: 2rem;
+            margin-bottom: 5px;
+        }
+        h2 {
+            color: #fff;
+            font-size: 1.25rem;
+            margin-top: 25px;
+            border-bottom: 1px solid #333;
+            padding-bottom: 5px;
+        }
+        strong {
+            color: #fff;
+        }
+        a {
+            color: #4da3ff;
+            text-decoration: none;
+        }
+        a:hover {
+            text-decoration: underline;
+        }
+        ul {
+            padding-left: 20px;
+        }
+        li {
+            margin-bottom: 8px;
+        }
+        .back-link {
+            display: inline-block;
+            margin-bottom: 20px;
+            font-weight: bold;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <a href="/" class="back-link">➔ Back to VAII</a>
+        <h1>🔒 Privacy Policy</h1>
+        <p>VAII ("we", "our", or "the App") is a personal virtual assistant application designed to provide internet integrations, search capabilities, and productivity tools. This Privacy Policy explains how data is handled within the App.</p>
+
+        <h2>1. Data Collection and Usage</h2>
+        <p>VAII is built as a client-side application. Most processing occurs directly within your browser session.</p>
+        <ul>
+            <li><strong>Authentication Data:</strong> Sign-in credentials (email, password, and Google account tokens) are processed securely via Firebase Authentication to verify your identity and manage app access.</li>
+            <li><strong>Google User Data:</strong> If you choose to link your Google account to utilize advanced assistant features, the App requests specific read-only access scopes (such as Google Calendar access). This token is stored locally on your device (<code>localStorage</code>) and is used solely to fetch your upcoming schedule metrics directly from Google servers. We do not store, copy, or collect your personal calendar events, emails, or files on any external database.</li>
+            <li><strong>Location and Search Queries:</strong> Location queries processed for weather, time, or interactive map modules are sent directly to open-source geocoding networks (Open-Meteo) and the Google Maps JavaScript API to render visual cards.</li>
+        </ul>
+
+        <h2>2. Third-Party Services</h2>
+        <p>The App interacts with the following third-party APIs to fulfill user commands:</p>
+        <ul>
+            <li><strong>Firebase (Google):</strong> For managing user login sessions and app routing authentication lifecycles.</li>
+            <li><strong>Google Cloud Platform:</strong> For rendering interactive location components (Maps JavaScript API) and tracking requested media metrics (YouTube Data API).</li>
+            <li><strong>Open-Meteo:</strong> For retrieving real-time weather forecasts and localized timezone data based on text parameters.</li>
+            <li><strong>Wikipedia / Wiktionary / MyMemory:</strong> For processing definition strings, summary text requests, and translation strings.</li>
+            <li><strong>Pollinations.ai:</strong> For rendering generative canvas imagery when explicit art prompts are parsed.</li>
+        </ul>
+
+        <h2>3. Data Retention and Security</h2>
+        <p>Your personal OAuth tokens and API access variables remain cached inside your local browser memory space. Logging out of the application completely wipes these tokens from your device storage. We do not maintain server-side logs tracking your query entries or personal data payloads.</p>
+
+        <h2>4. Changes to This Policy</h2>
+        <p>We may update this Privacy Policy from time to time to reflect structural architectural updates.</p>
+    </div>
+</body>
+</html>
