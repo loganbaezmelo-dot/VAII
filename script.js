@@ -273,38 +273,21 @@ function clearActiveImage() {
 }
 
 // ==========================================
-// 7. UNIFIED ROUTER: INTERCEPTING NATIVE DATA VS GEMINI
+// 7. DIRECT CHAT CONNECTOR: PURE GEMINI 3.5 PIPELINE
 // ==========================================
-function handleVaiiDataOutput(rawTextContent, defaultHtmlOutput, runMapCallback = null) {
-    const selectedMode = document.querySelector('input[name="vaii-mode"]:checked').value;
-
-    if (selectedMode === "gemini") {
-        // Intercept: VAII has completed its sweep, pass metrics payload directly to Gemini 3.5 pipeline
-        executeGemini35ChatPipeline(rawTextContent);
-    } else {
-        // Output standard native visual elements immediately
-        output.innerHTML = defaultHtmlOutput;
-        if (runMapCallback) runMapCallback();
-    }
-}
-
-async function executeGemini35ChatPipeline(vaiiEngineContext) {
-    const originalUserPrompt = hubInput.value.trim();
-
-    // Seed continuous system tracking parameters if chat history list is clean
+async function executeGeminiDirectChat(userInput) {
+    // Seed system instruction matrices if history sequence frame is fresh
     if (chatHistory.length === 0) {
-        chatHistory.push({ role: "user", parts: [{ text: "You are the advanced Gemini 3.5 core engine running inside the VAII assistant interface. You will be provided with live background context scraped by VAII's native routines. Use this metrics payload to answer accurately. Keep statements clear and direct." }] });
-        chatHistory.push({ role: "model", parts: [{ text: "System initialized. Send user metrics payload." }] });
+        chatHistory.push({ role: "user", parts: [{ text: "You are Gemini 3.5, an advanced conversational core engine running inside the VAII interface assistant frame. Keep statements concise, clear, and direct." }] });
+        chatHistory.push({ role: "model", parts: [{ text: "System connection established. Conversation initialization parameters synced." }] });
     }
 
-    // Wrap query boundaries with raw tool payload context
-    const hybridQueryStructure = `User Prompt Request: "${originalUserPrompt}"\n\n[VAII Scraped Native System Context]:\n${vaiiEngineContext}`;
-    chatHistory.push({ role: "user", parts: [{ text: hybridQueryStructure }] });
+    chatHistory.push({ role: "user", parts: [{ text: userInput }] });
 
     output.innerHTML = `
         <div class="generation-status">
             <div class="loader-spinner"></div>
-            <span style="color: #eee; font-size: 0.9rem;">Gemini 3.5 is synthesizing native context payload...</span>
+            <span style="color: #eee; font-size: 0.9rem;">Gemini 3.5 is compiling response parameters...</span>
         </div>
     `;
 
@@ -338,8 +321,13 @@ async function executeGemini35ChatPipeline(vaiiEngineContext) {
                 <div style="color: #eee; font-size: 0.95rem; line-height: 1.5;">${err.message}</div>
             </div>
         `;
-        chatHistory.pop(); // Clear out un-fulfilled prompt item block
+        chatHistory.pop(); // Remove the last user submission because processing failed
     }
+}
+
+function handleVaiiDataOutput(rawTextContent, defaultHtmlOutput, runMapCallback = null) {
+    output.innerHTML = defaultHtmlOutput;
+    if (runMapCallback) runMapCallback();
 }
 
 // ==========================================
@@ -437,6 +425,7 @@ if (hubInput) {
 if (executeActionBtn) {
     executeActionBtn.addEventListener('click', function() {
         const query = hubInput.value.trim();
+        const selectedMode = document.querySelector('input[name="vaii-mode"]:checked').value;
         
         if (activeImageBase64) {
             executeVisionAnalysis(query || "Describe this image content in clear detail.");
@@ -445,6 +434,12 @@ if (executeActionBtn) {
 
         if (!query) {
             output.innerText = "Please input a term or prompt value first.";
+            return;
+        }
+
+        // Mode switch isolation: Route directly to Gemini 3.5 text flow or native parser
+        if (selectedMode === "gemini") {
+            executeGeminiDirectChat(query);
             return;
         }
 
@@ -481,8 +476,6 @@ function renderUnifiedLocationCard(lat, lon, zone, displayName, greetingHTML = "
             const timeString = new Date().toLocaleTimeString("en-US", { timeZone: zone, hour: '2-digit', minute: '2-digit' });
             const dateString = new Date().toLocaleDateString("en-US", { timeZone: zone, weekday: 'long', month: 'short', day: 'numeric' });
             
-            const collectedContextText = `Location structural profile: ${displayName}\nCoordinates: Lat ${lat}, Lon ${lon}\nCurrent Temperature: ${tempFahrenheit}°F (${tempCelsius}°C)\nWind Velocity conditions: ${windSpeed} km/h\nLocal clock timeframe: ${timeString}\nDate registry context: ${dateString}`;
-
             const htmlOutput = greetingHTML + `
                 <div style="background: #1a1a1a; padding: 16px; border-radius: 12px; border-left: 4px solid #4da3ff; text-align: left; margin-bottom: 15px;">
                     <div style="font-size: 1.2rem; font-weight: bold; color: #fff; margin-bottom: 12px;">📍 ${displayName}</div>
@@ -505,7 +498,7 @@ function renderUnifiedLocationCard(lat, lon, zone, displayName, greetingHTML = "
                 </div>
             `;
             
-            handleVaiiDataOutput(collectedContextText, htmlOutput, () => {
+            handleVaiiDataOutput("", htmlOutput, () => {
                 if (typeof google !== 'undefined' && google.maps) {
                     const mapCoordinates = { lat: parseFloat(lat), lng: parseFloat(lon) };
                     const loadedMapInstance = new google.maps.Map(document.getElementById('vaii-merged-map-canvas'), {
@@ -523,7 +516,7 @@ function renderUnifiedLocationCard(lat, lon, zone, displayName, greetingHTML = "
             });
         })
         .catch(err => {
-            handleVaiiDataOutput(`Error pulling metrics for location: ${displayName}`, "<div>Error pulling metrics for spatial location.</div>");
+            handleVaiiDataOutput("", "<div>Error pulling metrics for spatial location.</div>");
             console.error(err);
         });
 }
@@ -606,7 +599,6 @@ function runMarketExecution(ticker) {
                 const price = coinData.usd;
                 const change = coinData.usd_24h_change.toFixed(2);
                 
-                const rawContext = `Crypto Market Asset metrics for ${ticker.toUpperCase()}: Price is currently $${price.toLocaleString()} USD. The 24-hour ticker scale delta change is ${change}%.`;
                 const htmlOutput = `
                     <div style="background: #1a1a1a; padding: 14px; border-radius: 8px; border-left: 3px solid #6f42c1; text-align: left;">
                         <strong>🪙 ${cryptoMap[cleanTicker].toUpperCase()} (${ticker.toUpperCase()})</strong><br>
@@ -614,12 +606,11 @@ function runMarketExecution(ticker) {
                         ${change >= 0 ? "📈" : "📉"} 24h Change: ${change}%
                     </div>
                 `;
-                handleVaiiDataOutput(rawContext, htmlOutput);
+                handleVaiiDataOutput("", htmlOutput);
             }).catch(() => { 
-                handleVaiiDataOutput(`Error fetching crypto exchange updates for asset token: ${ticker}`, "<div>Error pulling crypto ticker data.</div>"); 
+                handleVaiiDataOutput("", "<div>Error pulling crypto ticker data.</div>"); 
             });
     } else {
-        const rawContext = `Stock ticker profile lookup requested for reference index: ${ticker.toUpperCase()}. Routing profile directly towards Yahoo Finance assets links framework parameters.`;
         const htmlOutput = `
             <div style="background: #1a1a1a; padding: 14px; border-radius: 8px; border-left: 3px solid #6f42c1; text-align: left;">
                 <strong>📈 Stock Ticker: ${ticker.toUpperCase()}</strong><br>
@@ -627,7 +618,7 @@ function runMarketExecution(ticker) {
                 <a href="https://finance.yahoo.com/quote/${ticker.toUpperCase()}" target="_blank">Open Yahoo Finance ↗</a>
             </div>
         `;
-        handleVaiiDataOutput(rawContext, htmlOutput);
+        handleVaiiDataOutput("", htmlOutput);
     }
 }
 
@@ -659,7 +650,6 @@ function executeImageGeneration(imagePrompt) {
 
 function launchTargetUrl(url) {
     routingWarning.style.display = "block"; 
-    const rawContextText = `Navigating user outward connection parameters toward external URL matrix interface target link link address: ${url}`;
     const htmlOutput = `
         <div class="news-header-msg" style="color: #888; font-style: italic; margin-bottom: 4px; font-size: 0.9rem; line-height: 1.4;">Navigating to external web link...</div>
         <div style="background: #1a1a1a; padding: 14px; border-radius: 8px; border-left: 3px solid #007bff; text-align: left; margin-bottom: 15px;">
@@ -670,15 +660,8 @@ function launchTargetUrl(url) {
             <span>Open Site ↗</span>
         </a>
     `;
-
-    const activeMode = document.querySelector('input[name="vaii-mode"]:checked').value;
-    if (activeMode === "gemini") {
-        window.open(url, '_blank');
-        handleVaiiDataOutput(rawContextText, htmlOutput);
-    } else {
-        output.innerHTML = htmlOutput;
-        window.open(url, '_blank');
-    }
+    output.innerHTML = htmlOutput;
+    window.open(url, '_blank');
 }
 
 // ==========================================
@@ -699,14 +682,13 @@ function runInfoExecution(query) {
     }
 
     if (cleanQuery.includes("calendar") || cleanQuery.includes("calender") || cleanQuery.includes("schedule") || cleanQuery === "agenda" || cleanQuery.includes("email") || cleanQuery.includes("gmail") || cleanQuery.includes("inbox") || cleanQuery.includes("drive") || cleanQuery.includes("files")) {
-        const rawString = "⚠️ Workspace elements are currently disabled. Private calendar or email verification logs remain inactive.";
         const htmlLayout = greetingHTML + `
             <div style="background: #1a1a1a; padding: 14px; border-radius: 8px; border-left: 3px solid #ffc107; text-align: left;">
                 ⚠️ <strong>Workspace Elements Disabled:</strong><br><br>
                 <span style="color: #aaa; font-size: 0.9rem;">Private calendar and email protocols remain inactive to preserve a standard authorization route.</span>
             </div>
         `;
-        handleVaiiDataOutput(rawString, htmlLayout);
+        handleVaiiDataOutput("", htmlLayout);
         return; 
     }
 
@@ -735,9 +717,9 @@ function runInfoExecution(query) {
                     const fullDisplayName = `${loc.name}, ${loc.admin1 || ''} (${loc.country})`;
                     renderUnifiedLocationCard(loc.latitude, loc.longitude, loc.timezone, fullDisplayName, greetingHTML);
                 } else {
-                    handleVaiiDataOutput(`Could not extract metrics for "${parsedLocation}".`, `<div>Could not extract metrics for "${parsedLocation}".</div>`);
+                    handleVaiiDataOutput("", `<div>Could not extract metrics for "${parsedLocation}".</div>`);
                 }
-            }).catch(() => { handleVaiiDataOutput("Location engine connection error.", "<div>Location processing engine connection failure.</div>"); });
+            }).catch(() => { handleVaiiDataOutput("", "<div>Location processing engine connection failure.</div>"); });
         return;
     }
 
@@ -784,9 +766,8 @@ function runInfoExecution(query) {
         try {
             if (!cleanQuery.includes(" to ")) {
                 const result = Function(`"use strict"; return (${query})`)();
-                const rawText = `Mathematical math compute execution sequence: Expression (${query}) resolves calculated value to: ${result}`;
                 const htmlOutput = `<div style="background: #1a1a1a; padding: 14px; border-radius: 8px; border-left: 3px solid #28a745; text-align: left;">🔢 <strong>Calculation:</strong><br><span style="font-size: 1.3rem; font-weight: bold;">${query} = ${result}</span></div>`;
-                handleVaiiDataOutput(rawText, htmlOutput);
+                handleVaiiDataOutput("", htmlOutput);
                 return;
             }
         } catch(e) {}
@@ -810,9 +791,8 @@ function runInfoExecution(query) {
                 if (fromUnit === "c" && toUnit === "f") conversionResult = `${((num * 9 / 5) + 32).toFixed(1)}°F`;
                 
                 if (conversionResult) {
-                    const rawText = `Physical metrics unit conversion asset: Value translation of (${source}) conversion towards output factor (${targetLanguage}) calculates to: ${conversionResult}`;
                     const htmlOutput = `<div style="background: #1a1a1a; padding: 14px; border-radius: 8px; border-left: 3px solid #28a745; text-align: left;">🔄 <strong>Conversion:</strong><br>📤 Result: <strong style="color: #28a745; font-size: 1.3rem; display:block; margin-top:4px;">${conversionResult}</strong></div>`;
-                    handleVaiiDataOutput(rawText, htmlOutput);
+                    handleVaiiDataOutput("", htmlOutput);
                     return;
                 }
             }
@@ -820,11 +800,10 @@ function runInfoExecution(query) {
                 .then(res => res.json())
                 .then(data => {
                     const transText = data.responseData.translatedText;
-                    const rawText = `Language locale translation service response payload context. Output matches text statement string string value: "${transText}"`;
                     const htmlOutput = `<div style="background: #1a1a1a; padding: 14px; border-radius: 8px; border-left: 3px solid #28a745; text-align: left;">🗣️ <strong>Translation:</strong><br>📤 Result: <strong style="color: #4da3ff; font-size: 1.1rem; display:block; margin-top:4px;">"${transText}"</strong></div>`;
-                    handleVaiiDataOutput(rawText, htmlOutput);
+                    handleVaiiDataOutput("", htmlOutput);
                 }).catch(() => {
-                    handleVaiiDataOutput(`Translation failure for input query: ${source}`, "<div>Translation engine network failure.</div>");
+                    handleVaiiDataOutput("", "<div>Translation engine network failure.</div>");
                 });
             return;
         }
@@ -891,24 +870,20 @@ function runUnifiedWikiPipeline(query, wikiData) {
 
 function compileFinalSourceIndexBox(query, wikiData) {
     let blocksHtml = [];
-    let textContextSummaryArray = [];
 
     if (wikiData.wiktionary) {
-        textContextSummaryArray.push(`Wiktionary Dictionary definition entry for term [${wikiData.wiktionary.title}] (${wikiData.wiktionary.pos}): ${wikiData.wiktionary.text}`);
         blocksHtml.push(`<div style="background: #1a1a1a; padding: 14px; border-radius: 8px; border-left: 3px solid #28a745; text-align: left;"><strong>${wikiData.wiktionary.title}</strong> (${wikiData.wiktionary.pos}): ${wikiData.wiktionary.text}</div>`);
     }
     if (wikiData.youtube) {
-        textContextSummaryArray.push(`YouTube Creator Account Data metrics profile for channel [${wikiData.youtube.title}]: Current subscriber counts register at: ${wikiData.youtube.subs} users. Lifetime metrics view counts sit at: ${wikiData.youtube.views} views. Creator biography text description states: ${wikiData.youtube.text}`);
         blocksHtml.push(`<div style="background: #1a1a1a; padding: 14px; border-radius: 8px; border-left: 3px solid #ff0000; text-align: left;"><strong>📺 ${wikiData.youtube.title}</strong><br><span style="font-size: 0.85rem; color: #aaa;">🔴 Subs: ${wikiData.youtube.subs} | Views: ${wikiData.youtube.views}</span><br><br><em>${wikiData.youtube.text}</em></div>`);
     }
     if (wikiData.wikipedia) {
-        textContextSummaryArray.push(`Wikipedia page excerpt info entry for article asset [${wikiData.wikipedia.title}]: ${wikiData.wikipedia.text}`);
         blocksHtml.push(`<div style="background: #1a1a1a; padding: 14px; border-radius: 8px; border-left: 3px solid #007bff; text-align: left;"><strong>${wikiData.wikipedia.title}:</strong> ${wikiData.wikipedia.text}</div>`);
     }
 
     let totalHTML = wikiData.greeting || "";
     if (blocksHtml.length === 0) {
-        handleVaiiDataOutput(`No active background wiki documentation parameters or definition dictionary assets were found for search string: "${query}".`, totalHTML + `<div>No matches found for "${query}".</div>`);
+        handleVaiiDataOutput("", totalHTML + `<div>No matches found for "${query}".</div>`);
         return;
     }
     
@@ -950,7 +925,5 @@ function compileFinalSourceIndexBox(query, wikiData) {
     }
 
     totalHTML += `</div></div>`;
-    
-    // Package context summary payload array and pass along to core router function
-    handleVaiiDataOutput(textContextSummaryArray.join("\n\n"), totalHTML);
+    handleVaiiDataOutput("", totalHTML);
 }
