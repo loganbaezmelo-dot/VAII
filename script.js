@@ -69,6 +69,12 @@ const routingWarning = document.getElementById('routing-warning');
 const helpToggle = document.getElementById('help-toggle');
 const helpGuide = document.getElementById('help-guide');
 
+// Persistent Chat Session Thread UI Hooks
+const historyToggle = document.getElementById('history-toggle');
+const historyDrawer = document.getElementById('history-drawer');
+const historyList = document.getElementById('history-list');
+const newChatBtn = document.getElementById('new-chat-btn');
+
 // Vision Engine UI Bindings
 const cameraTriggerBtn = document.getElementById('camera-trigger-btn');
 const imageFileInput = document.getElementById('image-file-input');
@@ -83,8 +89,9 @@ let activeImageBase64 = null;
 let activeImageMimeType = null;
 const wikitubiaCache = new Set();
 
-// Multi-Turn Chat History Array for Gemini 3.5 Session Mode
+// Session Tracking Variables for Gemini Multi-Turn States
 let chatHistory = [];
+let currentSessionId = null;
 
 const welcomeMessageText = `Welcome back! Enter a search query, app routing command, calculation sequence, weather location, translation phrase, crypto ticker, map request, or art prompt to begin...`;
 
@@ -106,7 +113,134 @@ window.initVaiiMap = function() {
 };
 
 // ==========================================
-// 4. AUTOSUGGEST DATA POPULATION LOOPS
+// 4. CHAT HISTORY MATRIX STATE PERSISTENCE
+// ==========================================
+function getSavedSessions() {
+    try {
+        return JSON.parse(localStorage.getItem('vaii_chat_sessions')) || [];
+    } catch (e) {
+        return [];
+    }
+}
+
+function saveSessionsToDisk(sessions) {
+    localStorage.setItem('vaii_chat_sessions', JSON.stringify(sessions));
+}
+
+function saveCurrentSessionState() {
+    if (chatHistory.length <= 2) return; 
+    let sessions = getSavedSessions();
+    
+    let firstUserMsg = chatHistory.find(m => m.role === 'user' && !m.parts[0].text.includes("advanced conversational core"));
+    let rawTitle = firstUserMsg ? firstUserMsg.parts[0].text.trim() : "Gemini Chat";
+    let formattedTitle = rawTitle.length > 28 ? rawTitle.substring(0, 25) + "..." : rawTitle;
+    
+    if (!currentSessionId) {
+        currentSessionId = 'session_' + Date.now();
+        sessions.unshift({ id: currentSessionId, title: formattedTitle, history: chatHistory });
+    } else {
+        let existingSession = sessions.find(s => s.id === currentSessionId);
+        if (existingSession) {
+            existingSession.history = chatHistory;
+        } else {
+            sessions.unshift({ id: currentSessionId, title: formattedTitle, history: chatHistory });
+        }
+    }
+    saveSessionsToDisk(sessions);
+    renderHistoryListItems();
+}
+
+function renderHistoryListItems() {
+    if (!historyList) return;
+    historyList.innerHTML = "";
+    let sessions = getSavedSessions();
+    
+    if (sessions.length === 0) {
+        historyList.innerHTML = `<div style="color: #666; font-size: 0.8rem; font-style: italic; text-align: center; padding: 8px 0;">No saved conversational tracks.</div>`;
+        return;
+    }
+    
+    sessions.forEach(session => {
+        const row = document.createElement('div');
+        row.style = "display: flex; justify-content: space-between; align-items: center; background: #1a1a1a; border: 1px solid #2d2d2d; padding: 8px 12px; border-radius: 6px; cursor: pointer; transition: background 0.15s ease; margin-bottom: 4px;";
+        row.onmouseenter = () => row.style.background = "#222";
+        row.onmouseleave = () => row.style.background = "#1a1a1a";
+        
+        const textWrapper = document.createElement('span');
+        textWrapper.innerText = session.title;
+        textWrapper.style = "flex: 1; font-size: 0.82rem; color: #ddd; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-weight: 500; margin-right: 8px;";
+        
+        // Enter past chat session on item selection click loop
+        textWrapper.addEventListener('click', () => {
+            currentSessionId = session.id;
+            chatHistory = session.history;
+            renderFullChatLogBubble();
+            
+            const modeToggleInput = document.querySelector('input[name="vaii-mode"][value="gemini"]');
+            if (modeToggleInput) modeToggleInput.checked = true;
+            if (historyDrawer) historyDrawer.style.display = "none";
+            if (historyToggle) historyToggle.innerText = "📜";
+        });
+        
+        const deleteButton = document.createElement('button');
+        deleteButton.innerText = "🗑️";
+        deleteButton.style = "background: none; border: none; color: #dc3545; cursor: pointer; padding: 2px 6px; font-size: 0.85rem; transition: opacity 0.15s;";
+        deleteButton.addEventListener('click', (e) => {
+            e.stopPropagation();
+            let updatedList = getSavedSessions().filter(s => s.id !== session.id);
+            saveSessionsToDisk(updatedList);
+            if (currentSessionId === session.id) {
+                initializeFreshChatSession();
+            }
+            renderHistoryListItems();
+        });
+        
+        row.appendChild(textWrapper);
+        row.appendChild(deleteButton);
+        historyList.appendChild(row);
+    });
+}
+
+function initializeFreshChatSession() {
+    currentSessionId = null;
+    chatHistory = [];
+    if (output) output.innerHTML = welcomeMessageText;
+}
+
+function renderFullChatLogBubble() {
+    if (!output) return;
+    output.innerHTML = "";
+    
+    let dialogueItems = chatHistory.filter(msg => {
+        let textStr = msg.parts[0].text;
+        return !textStr.includes("advanced conversational core") && !textStr.includes("System connection established");
+    });
+    
+    if (dialogueItems.length === 0) {
+        output.innerHTML = welcomeMessageText;
+        return;
+    }
+    
+    dialogueItems.forEach(msg => {
+        const isUserTurn = (msg.role === 'user');
+        const bubble = document.createElement('div');
+        bubble.style = isUserTurn 
+            ? "background: #2a2a2a; padding: 10px 14px; border-radius: 8px; border-left: 3px solid #28a745; text-align: left; margin-bottom: 10px;"
+            : "background: #1a1a1a; padding: 14px; border-radius: 8px; border-left: 3px solid #6f42c1; text-align: left; margin-bottom: 10px;";
+            
+        bubble.innerHTML = `
+            <div style="font-size: 0.72rem; color: #888; text-transform: uppercase; font-weight: bold; margin-bottom: 4px;">
+                ${isUserTurn ? '👤 You' : '✨ Gemini 3.5'}
+            </div>
+            <div style="color: #eee; font-size: 0.95rem; line-height: 1.5; white-space: pre-wrap;">${msg.parts[0].text}</div>
+        `;
+        output.appendChild(bubble);
+    });
+    output.scrollTop = output.scrollHeight;
+}
+
+// ==========================================
+// 5. AUTOSUGGEST DATA POPULATION LOOPS
 // ==========================================
 function updateDatalist(cities = [], wikiTitles = [], wikitubiaTitles = []) {
     if (!datalist) return;
@@ -151,22 +285,15 @@ function updateDatalist(cities = [], wikiTitles = [], wikitubiaTitles = []) {
 }
 
 // ==========================================
-// 5. SECURE ACCOUNT ACCESS CONTROLLERS
+// 6. SECURE ACCOUNT ACCESS CONTROLLERS
 // ==========================================
 onAuthStateChanged(auth, (user) => {
     if (user) {
         if (authContainer) authContainer.style.display = "none";
         if (mainApp) mainApp.style.display = "block";
-        if (output) output.innerText = welcomeMessageText;
-        if (authEmail) authEmail.value = "";
-        if (authPassword) authPassword.value = "";
-        if (authError) authError.style.display = "none";
-        if (hubInput) {
-            hubInput.value = "";
-            hubInput.placeholder = "Type a command...";
-        }
+        initializeFreshChatSession();
         clearActiveImage();
-        chatHistory = []; // Reset chat logs on user session boundaries
+        renderHistoryListItems();
         updateDatalist([], [], []);
     } else {
         if (authContainer) authContainer.style.display = "block";
@@ -229,7 +356,7 @@ function showAuthError(message) {
 }
 
 // ==========================================
-// 6. HARDWARE INTEGRATION: VISION ATTACHMENT LABS
+// 7. HARDWARE INTEGRATION: VISION ATTACHMENT LABS
 // ==========================================
 if (cameraTriggerBtn && imageFileInput) {
     cameraTriggerBtn.addEventListener('click', () => {
@@ -273,23 +400,23 @@ function clearActiveImage() {
 }
 
 // ==========================================
-// 7. DIRECT CHAT CONNECTOR: PURE GEMINI 3.5 PIPELINE
+// 8. DIRECT CHAT CONNECTOR: PURE GEMINI 3.5 PIPELINE
 // ==========================================
 async function executeGeminiDirectChat(userInput) {
-    // Seed system instruction matrices if history sequence frame is fresh
     if (chatHistory.length === 0) {
         chatHistory.push({ role: "user", parts: [{ text: "You are Gemini 3.5, an advanced conversational core engine running inside the VAII interface assistant frame. Keep statements concise, clear, and direct." }] });
         chatHistory.push({ role: "model", parts: [{ text: "System connection established. Conversation initialization parameters synced." }] });
     }
 
     chatHistory.push({ role: "user", parts: [{ text: userInput }] });
+    renderFullChatLogBubble();
 
-    output.innerHTML = `
-        <div class="generation-status">
-            <div class="loader-spinner"></div>
-            <span style="color: #eee; font-size: 0.9rem;">Gemini 3.5 is compiling response parameters...</span>
-        </div>
-    `;
+    const spinnerBubble = document.createElement('div');
+    spinnerBubble.id = "gemini-active-typing-indicator";
+    spinnerBubble.style = "text-align: left; padding: 10px; color: #aaa; font-style: italic; display: flex; align-items: center;";
+    spinnerBubble.innerHTML = `<div class="loader-spinner"></div> Gemini 3.5 is typing...`;
+    output.appendChild(spinnerBubble);
+    output.scrollTop = output.scrollHeight;
 
     const visionUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-3.5-flash:generateContent?key=${GEMINI_VISION_KEY}`;
 
@@ -301,6 +428,9 @@ async function executeGeminiDirectChat(userInput) {
         });
         const data = await response.json();
 
+        const indicatorNode = document.getElementById("gemini-active-typing-indicator");
+        if (indicatorNode) indicatorNode.remove();
+
         if (data.error) {
             throw new Error(data.error.message);
         }
@@ -308,20 +438,20 @@ async function executeGeminiDirectChat(userInput) {
         const modelResponseText = data.candidates[0].content.parts[0].text;
         chatHistory.push({ role: "model", parts: [{ text: modelResponseText }] });
 
-        output.innerHTML = `
-            <div style="background: #1a1a1a; padding: 14px; border-radius: 8px; border-left: 3px solid #6f42c1; text-align: left;">
-                <div style="font-size: 0.75rem; color: #888; text-transform: uppercase; font-weight: bold; margin-bottom: 8px; letter-spacing: 0.5px;">✨ Gemini 3.5 Output</div>
-                <div style="color: #eee; font-size: 0.95rem; line-height: 1.5; white-space: pre-wrap;">${modelResponseText}</div>
-            </div>
-        `;
+        renderFullChatLogBubble();
+        saveCurrentSessionState();
     } catch (err) {
-        output.innerHTML = `
-            <div style="background: #1a1a1a; padding: 14px; border-radius: 8px; border-left: 3px solid #ff4d4d; text-align: left;">
-                <div style="font-size: 0.75rem; color: #ff4d4d; text-transform: uppercase; font-weight: bold; margin-bottom: 8px;">⚠️ Gemini API Error</div>
-                <div style="color: #eee; font-size: 0.95rem; line-height: 1.5;">${err.message}</div>
-            </div>
+        const indicatorNode = document.getElementById("gemini-active-typing-indicator");
+        if (indicatorNode) indicatorNode.remove();
+
+        const errorDiv = document.createElement('div');
+        errorDiv.style = "background: #1a1a1a; padding: 14px; border-radius: 8px; border-left: 3px solid #ff4d4d; text-align: left; margin-bottom: 10px;";
+        errorDiv.innerHTML = `
+            <div style="font-size: 0.75rem; color: #ff4d4d; text-transform: uppercase; font-weight: bold; margin-bottom: 8px;">⚠️ Gemini API Error</div>
+            <div style="color: #eee; font-size: 0.95rem; line-height: 1.5;">${err.message}</div>
         `;
-        chatHistory.pop(); // Remove the last user submission because processing failed
+        output.appendChild(errorDiv);
+        chatHistory.pop(); 
     }
 }
 
@@ -331,7 +461,7 @@ function handleVaiiDataOutput(rawTextContent, defaultHtmlOutput, runMapCallback 
 }
 
 // ==========================================
-// 8. INPUT CONTROL REGISTER ACTIONS
+// 9. INPUT CONTROL REGISTER ACTIONS
 // ==========================================
 if (helpToggle) {
     helpToggle.addEventListener('click', function() {
@@ -341,7 +471,32 @@ if (helpToggle) {
         } else {
             helpGuide.style.display = "block";
             helpToggle.innerText = "✕";
+            if (historyDrawer) historyDrawer.style.display = "none";
+            if (historyToggle) historyToggle.innerText = "📜";
         }
+    });
+}
+
+if (historyToggle) {
+    historyToggle.addEventListener('click', function() {
+        if (historyDrawer.style.display === "block") {
+            historyDrawer.style.display = "none";
+            historyToggle.innerText = "📜";
+        } else {
+            historyDrawer.style.display = "block";
+            historyToggle.innerText = "✕";
+            if (helpGuide) helpGuide.style.display = "none";
+            if (helpToggle) helpToggle.innerText = "?";
+            renderHistoryListItems();
+        }
+    });
+}
+
+if (newChatBtn) {
+    newChatBtn.addEventListener('click', function() {
+        initializeFreshChatSession();
+        if (historyDrawer) historyDrawer.style.display = "none";
+        if (historyToggle) historyToggle.innerText = "📜";
     });
 }
 
@@ -437,7 +592,6 @@ if (executeActionBtn) {
             return;
         }
 
-        // Mode switch isolation: Route directly to Gemini 3.5 text flow or native parser
         if (selectedMode === "gemini") {
             executeGeminiDirectChat(query);
             return;
@@ -461,7 +615,7 @@ if (hubInput) {
 }
 
 // ====================================================
-// 9. UNIFIED LOCATION ENGINE: MERGING WEATHER, CLOCK, MAPS
+// 10. UNIFIED LOCATION ENGINE: MERGING WEATHER, CLOCK, MAPS
 // ====================================================
 function renderUnifiedLocationCard(lat, lon, zone, displayName, greetingHTML = "") {
     output.innerHTML = greetingHTML + `<div style="color:#888; font-style:italic;">Assembling location data card...</div>`;
@@ -522,7 +676,7 @@ function renderUnifiedLocationCard(lat, lon, zone, displayName, greetingHTML = "
 }
 
 // ==========================================
-// 10. COGNITIVE PIPELINES: MULTIMODAL VISION ENGINE
+// 11. COGNITIVE PIPELINES: MULTIMODAL VISION ENGINE
 // ==========================================
 function executeVisionAnalysis(promptText) {
     output.innerHTML = `
@@ -665,7 +819,7 @@ function launchTargetUrl(url) {
 }
 
 // ==========================================
-// 11. STRING ROUTING EXECUTIONS
+// 12. STRING ROUTING EXECUTIONS
 // ==========================================
 function runInfoExecution(query) {
     const cleanQuery = query.toLowerCase().trim();
@@ -832,7 +986,7 @@ function runInfoExecution(query) {
 }
 
 // ==========================================
-// 12. EXTERNAL DOCUMENTATION CRAWL ENGINES
+// 13. EXTERNAL DOCUMENTATION CRAWL ENGINES
 // ==========================================
 function runUnifiedWikiPipeline(query, wikiData) {
     const famousYoutubersList = ["jacksucksatlife", "mrbeast", "pewdiepie", "markiplier", "caseoh", "jynxzi"];
