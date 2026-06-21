@@ -156,6 +156,62 @@
             transform: scale(0.95);
         }
         
+        .camera-btn {
+            background: #2a2a2a;
+            color: #888;
+            border: 2px solid #444;
+            width: 46px;
+            height: 46px;
+            border-radius: 8px;
+            font-size: 1.1rem;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.2s ease;
+        }
+        .camera-btn.active {
+            border-color: #007bff;
+            color: #007bff;
+            background: #112233;
+        }
+        
+        .preview-box {
+            display: none;
+            align-items: center;
+            gap: 10px;
+            background: #1a1a1a;
+            padding: 8px 12px;
+            border-radius: 6px;
+            margin-top: -4px;
+            border: 1px dashed #444;
+            position: relative;
+        }
+        .preview-box img {
+            width: 40px;
+            height: 40px;
+            object-fit: cover;
+            border-radius: 4px;
+            border: 1px solid #333;
+        }
+        .preview-box span {
+            font-size: 0.8rem;
+            color: #aaa;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            max-width: 240px;
+        }
+        .clear-preview {
+            background: none;
+            border: none;
+            color: #dc3545;
+            font-weight: bold;
+            cursor: pointer;
+            font-size: 0.9rem;
+            margin-left: auto;
+        }
+        
         .auth-btn {
             width: 100%;
             padding: 12px;
@@ -233,7 +289,7 @@
             height: 18px;
             border: 3px solid rgba(255, 255, 255, 0.15);
             border-radius: 50%;
-            border-top-color: #e0a800;
+            border-top-color: #007bff;
             animation: spin 0.8s linear infinite;
             margin-right: 12px;
             vertical-align: middle;
@@ -247,7 +303,7 @@
             background: #1a1a1a;
             padding: 12px;
             border-radius: 6px;
-            border-left: 3px solid #e0a800;
+            border-left: 3px solid #007bff;
             margin-top: 10px;
             text-align: left;
         }
@@ -339,6 +395,7 @@
                         <strong>💡 VAII Assistant Feature Guide:</strong>
                         <ul>
                             <li><strong>🧠 Knowledge Base:</strong> Type standard words for dictionary definitions or terms for general information summaries. If searching for creators, VAII looks up channel data.</li>
+                            <li><strong>👁️ Gemini Vision Engine:</strong> Tap the camera icon to select or capture an image file. Enter your question inside the input block to analyze data properties.</li>
                             <li><strong>🗺️ Interactive Maps:</strong> Type <code>map of [location]</code> or <code>show map [location]</code> to load a live visual layout of that area.</li>
                             <li><strong>☀️ Weather & Local Time:</strong> Type any city name or phrases like <code>weather in Tokyo</code> to check conditions and matching clocks instantly.</li>
                             <li><strong>🌐 Web Link Routing:</strong> Input domains like <code>wikipedia.org</code> or clear commands like <code>open youtube</code> to launch them.</li>
@@ -351,8 +408,15 @@
 
                     <div class="search-container">
                         <div class="input-row">
+                            <button id="camera-trigger-btn" class="camera-btn">📷</button>
+                            <input type="file" id="image-file-input" accept="image/*" style="display: none;">
                             <input type="text" id="hub-input" placeholder="Type a command..." list="hub-suggestions" autocomplete="off">
                             <button id="execute-action-btn" class="enter-btn">➔</button>
+                        </div>
+                        <div id="image-preview-container" class="preview-box">
+                            <img id="image-preview-thumbnail" src="" alt="upload">
+                            <span id="image-preview-filename">image.jpg</span>
+                            <button id="image-clear-btn" class="clear-preview">✕</button>
                         </div>
                     </div>
                     <datalist id="hub-suggestions"></datalist>
@@ -377,10 +441,11 @@
                     <strong>1. Data Handling</strong><br>
                     VAII operates as a client-side application. Processing occurs directly within your browser session.<br>
                     • <em>Authentication:</em> Credentials and login profiles are handled securely via Firebase Authentication to manage access.<br>
+                    • <em>Image Evaluation:</em> Attached image assets are translated into transient memory buffers inside your browser frame to build context metrics over securely processed pipelines. No server logs store visual parameters.<br>
                     • <em>Queries and Maps:</em> Search parameters for weather, time, or map tracking are processed via public informational endpoints and mapping tools to render your local visual cards.<br><br>
                     
                     <strong>2. Integrated Services</strong><br>
-                    The App communicates with standard informational tools to fulfill commands: Firebase, Google Cloud Platform (Maps, YouTube), Open-Meteo, Wikipedia, Wiktionary, MyMemory, and Pollinations.ai.<br><br>
+                    The App communicates with standard informational tools to fulfill commands: Firebase, Google Cloud Platform (Maps, YouTube, Gemini Vision), Open-Meteo, Wikipedia, Wiktionary, MyMemory, and Pollinations.ai.<br><br>
                     
                     <strong>3. Storage Security</strong><br>
                     Your session settings remain stored safely inside local browser memory. Signing out removes these variables permanently from your hardware. No continuous tracking systems run on background database servers.<br><br>
