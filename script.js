@@ -47,9 +47,7 @@ const _v5 = "HU4b4Xmg_CYURTOmgJQ";
 
 const GEMINI_VISION_KEY = _v1 + _v2 + _v3 + _v4 + _v5;
 
-// Global model array stack populated dynamically via the Google directory API
-let dynamicModelChain = [];
-
+// Strict Chronological Fallback Tree Order
 const BASELINE_FALLBACK_TREE = [
     { name: "Gemini 3.5", id: "gemini-3.5-flash" },
     { name: "Gemini 3.1", id: "gemini-3.1-flash" },
@@ -130,39 +128,6 @@ function renderMarkdownTextToHtml(rawMarkdownText) {
     safeHtml = safeHtml.replace(/\n/g, "<br>");
     
     return safeHtml;
-}
-
-// ==========================================================
-// 3.8 FUTURE-PROOF INTELLIGENT MODEL DISCOVERY DIRECTORY
-// ==========================================================
-async function discoverActiveModelChain() {
-    const listUrl = `https://generativelanguage.googleapis.com/v1beta/models?key=${GEMINI_VISION_KEY}`;
-    
-    try {
-        const response = await fetch(listUrl);
-        const data = await response.json();
-        
-        if (data && data.models) {
-            const liveIds = data.models
-                .filter(m => m.supportedGenerationMethods && m.supportedGenerationMethods.includes("generateContent"))
-                .map(m => m.name.replace("models/", ""));
-                
-            dynamicModelChain = BASELINE_FALLBACK_TREE.filter(model => liveIds.includes(model.id));
-            
-            data.models.forEach(m => {
-                const cleanId = m.name.replace("models/", "");
-                if (!dynamicModelChain.some(model => model.id === cleanId) && (cleanId.includes("gemini") || cleanId.includes("gemma"))) {
-                    dynamicModelChain.push({ name: cleanId.toUpperCase(), id: cleanId });
-                }
-            });
-        }
-    } catch (e) {
-        console.warn("Dynamic discovery tracking failed.", e);
-    }
-    
-    if (dynamicModelChain.length === 0) {
-        dynamicModelChain = [...BASELINE_FALLBACK_TREE];
-    }
 }
 
 function updateWelcomeMessageText() {
@@ -364,7 +329,6 @@ onAuthStateChanged(auth, (user) => {
         initializeFreshChatSession();
         clearActiveImage();
         renderHistoryListItems();
-        discoverActiveModelChain(); 
         updateDatalist([], [], []);
     } else {
         if (authContainer) authContainer.style.display = "block";
@@ -471,7 +435,7 @@ function clearActiveImage() {
 }
 
 // =========================================================
-// 8. COGNITIVE CHAT CONNECTORS & DYNAMIC FALLBACK LOOPS
+// 8. COGNITIVE CHAT CONNECTORS & HARD-ALIGNED FALLBACK LOOPS
 // =========================================================
 async function executeGeminiDirectChat(userInput) {
     if (chatHistory.length === 0) {
@@ -492,29 +456,26 @@ async function executeGeminiDirectChat(userInput) {
     output.appendChild(spinnerBubble);
     output.scrollTop = output.scrollHeight;
 
-    if (dynamicModelChain.length === 0) {
-        await discoverActiveModelChain();
-    }
-
     let successfulResponseText = null;
     let successfulModelLabel = "";
     let structuralErrorDetected = null;
 
-    // FIXED: Thorough payload sanitation mapping step to explicitly filter structural keys out before network dispatch
+    // Sanitation map step to remove variable layout configurations from object models completely
     const sanitizedContents = chatHistory.map(msg => ({
         role: msg.role,
         parts: msg.parts.map(p => ({ text: p.text }))
     }));
 
-    for (let i = 0; i < dynamicModelChain.length; i++) {
-        const modelObj = dynamicModelChain[i];
+    // FIXED: Loop steps through BASELINE_FALLBACK_TREE exactly from top to bottom
+    for (let i = 0; i < BASELINE_FALLBACK_TREE.length; i++) {
+        const modelObj = BASELINE_FALLBACK_TREE[i];
         const visionUrl = `https://generativelanguage.googleapis.com/v1beta/models/${modelObj.id}:generateContent?key=${GEMINI_VISION_KEY}`;
         
         try {
             const response = await fetch(visionUrl, {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ contents: sanitizedContents }) // Dispatching clean, sanitized contents arrays
+                body: JSON.stringify({ contents: sanitizedContents })
             });
             const data = await response.json();
 
@@ -523,7 +484,7 @@ async function executeGeminiDirectChat(userInput) {
                     structuralErrorDetected = data.error.message;
                     break; 
                 }
-                console.warn(`Model variant [${modelObj.name}] exhausted or rate-limited.`);
+                console.warn(`Model generation tier [${modelObj.name}] quota full. Cascading downstream...`);
                 continue; 
             }
 
@@ -535,7 +496,7 @@ async function executeGeminiDirectChat(userInput) {
             successfulModelLabel = modelObj.name;
             break; 
         } catch (err) {
-            console.error(`Network pipeline exception on model block [${modelObj.name}]:`, err);
+            console.error(`Network exception on model asset [${modelObj.name}]:`, err);
             continue;
         }
     }
@@ -610,7 +571,7 @@ async function triggerBackgroundTitleGeneration(userMsg, modelResponse, runningM
             saveCurrentSessionState(cleanedTitle);
         }
     } catch (e) {
-        console.error("Dynamic title layout thread broke parameters safely:", e);
+        console.error("Dynamic title loop exception layout failed:", e);
     }
 }
 
@@ -619,9 +580,9 @@ function handleVaiiDataOutput(rawTextContent, defaultHtmlOutput, runMapCallback 
     if (runMapCallback) runMapCallback();
 }
 
-// ==========================================
+// =========================================================
 // 9. INPUT CONTROL REGISTER ACTIONS & RUNTIME SYSTEM BINDINGS
-// ==========================================
+// =========================================================
 document.querySelectorAll('input[name="vaii-mode"]').forEach(radio => {
     radio.addEventListener('change', (e) => {
         if (e.target.value === 'gemini') {
@@ -1124,7 +1085,7 @@ function runInfoExecution(query) {
                 .then(res => res.json())
                 .then(data => {
                     const transText = data.responseData.translatedText;
-                    const htmlOutput = `<div style="background: #1a1a1a; padding: 14px; border-radius: 8px; border-left: 3px solid #28a745; text-align: left;">🗣️ <strong>Translation:</strong><br>📤 Result: <strong style="color: #4da3ff; font-size: 1.1rem; display:block; margin-top:4px;">"${transText}"</strong></div>`;
+                    const htmlOutput = `<div style="background: #1a1a1a; padding: 14px; border-radius: 8px; border-left: 3px solid #4da3ff; text-align: left;">🗣️ <strong>Translation:</strong><br>📤 Result: <strong style="color: #4da3ff; font-size: 1.1rem; display:block; margin-top:4px;">"${transText}"</strong></div>`;
                     handleVaiiDataOutput("", htmlOutput);
                 }).catch(() => {
                     handleVaiiDataOutput("", "<div>Translation engine network failure.</div>");
