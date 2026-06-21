@@ -38,7 +38,7 @@ const YOUTUBE_API_KEY = _k1 + _k2 + _k3 + _k4 + _k5;
 const authContainer = document.getElementById('auth-container');
 const mainApp = document.getElementById('main-app');
 const authTitle = document.getElementById('auth-title');
-const authEmail = document.getElementById('auth-field');
+const authEmail = document.getElementById('auth-email');
 const authPassword = document.getElementById('auth-password');
 const authSubmitBtn = document.getElementById('auth-submit-btn');
 const googleSigninBtn = document.getElementById('google-signin-btn');
@@ -112,26 +112,6 @@ function updateDatalist(cities = [], wikiTitles = [], wikitubiaTitles = []) {
         option.setAttribute('data-lon', location.longitude);
         option.setAttribute('data-tz', location.timezone);
         datalist.appendChild(option);
-    });
-}
-
-function fetchDuckDuckGoInstantAnswer(searchQuery) {
-    return new Promise((resolve, reject) => {
-        const callbackId = 'ddg_api_' + Math.floor(Math.random() * 1000000);
-        window[callbackId] = function(payloadData) {
-            resolve(payloadData);
-            delete window[callbackId];
-            document.getElementById(callbackId)?.remove();
-        };
-        const scriptElement = document.createElement('script');
-        scriptElement.id = callbackId;
-        scriptElement.src = `https://api.duckduckgo.com/?q=${encodeURIComponent(searchQuery)}&format=json&callback=${callbackId}`;
-        scriptElement.onerror = () => {
-            reject();
-            delete window[callbackId];
-            scriptElement.remove();
-        };
-        document.body.appendChild(scriptElement);
     });
 }
 
@@ -408,91 +388,6 @@ function runMarketExecution(ticker) {
     }
 }
 
-function launchTargetUrl(url) {
-    const isDiceRoll = output.innerHTML.includes("🎲");
-    let contentHTML = `
-        <div class="news-header-msg" style="color: #888; font-style: italic; margin-bottom: 4px; font-size: 0.9rem; line-height: 1.4;">Navigating to external web link...</div>
-        <div style="background: #1a1a1a; padding: 14px; border-radius: 8px; border-left: 3px solid #007bff; text-align: left; margin-bottom: 15px;">
-            🔗 <strong>Resolved Address:</strong> <span style="color: #4da3ff; word-break: break-all;">${url}</span>
-        </div>
-        <a href="${url}" target="_blank" style="display: flex; align-items: center; justify-content: space-between; background: #007bff; border-radius: 6px; padding: 10px 14px; color: white; text-decoration: none; font-weight: bold; font-size: 0.95rem;">
-            <span>Launch Link</span>
-            <span>Open Site ↗</span>
-        </a>
-    `;
-    
-    if (isDiceRoll) {
-        output.innerHTML = `<div style="font-size:0.8rem; color:#888; margin-bottom:5px;">🎲 Random selection active</div>` + contentHTML;
-    } else {
-        output.innerHTML = contentHTML;
-    }
-    
-    output.innerHTML += `
-        <div class="source-box" style="border-top: 1px solid #333; padding-top: 12px; margin-top: 15px; text-align: left;">
-            <span style="display: block; font-size: 0.75rem; color: #777; font-weight: bold; text-transform: uppercase; margin-bottom: 8px; letter-spacing: 0.5px;">Sources Index</span>
-            <div class="source-list" style="display: flex; flex-direction: column;">
-                <div style="display: flex; align-items: center; justify-content: space-between; background: #2a2a2a; border: 1px solid #3d3d3d; border-radius: 6px; padding: 6px 10px; color: #eee; font-size: 0.82rem;">
-                    <span style="color: #aaa;">🌐 VAII Multi-Domain Routing Module</span>
-                    <span style="color: #777; font-size:0.75rem;">Local Redirect</span>
-                </div>
-            </div>
-        </div>
-    `;
-    window.open(url, '_blank');
-}
-
-function executeImageGeneration(imagePrompt) {
-    routingWarning.style.display = "none"; 
-
-    output.innerHTML = `
-        <div style="color: #888; font-style: italic; margin-bottom: 12px; font-size: 0.9rem; line-height: 1.4;">
-            🎨 Generating artwork for "${imagePrompt}"...
-        </div>
-        <div class="generation-status" id="image-loader">
-            <div class="loader-spinner"></div>
-            <span style="color: #eee; font-size: 0.9rem;">VAII AI engine is assembling pixels...</span>
-        </div>
-    `;
-
-    const seed = Math.floor(Math.random() * 1000000);
-    const imageUrl = `https://image.pollinations.ai/p/${encodeURIComponent(imagePrompt)}?width=1080&height=1080&nologo=true&seed=${seed}`;
-
-    const img = new Image();
-    img.src = imageUrl;
-    img.style.width = "100%";
-    img.style.borderRadius = "8px";
-    img.style.marginTop = "10px";
-    img.style.display = "none";
-    img.style.boxShadow = "0 4px 15px rgba(0,0,0,0.5)";
-
-    img.onload = function() {
-        const loader = document.getElementById("image-loader");
-        if (loader) loader.remove();
-        img.style.display = "block";
-        
-        const sourceDiv = document.createElement("div");
-        sourceDiv.className = "source-box";
-        sourceDiv.style.cssText = "border-top: 1px solid #333; padding-top: 12px; margin-top: 15px; text-align: left;";
-        sourceDiv.innerHTML = `
-            <span style="display: block; font-size: 0.75rem; color: #777; font-weight: bold; text-transform: uppercase; margin-bottom: 8px; letter-spacing: 0.5px;">Sources Index</span>
-            <div class="source-list" style="display: flex; flex-direction: column;">
-                <a href="https://pollinations.ai" target="_blank" style="display: flex; align-items: center; justify-content: space-between; background: #2a2a2a; border: 1px solid #3d3d3d; border-radius: 6px; padding: 6px 10px; color: #4da3ff; text-decoration: none; font-size: 0.82rem; font-weight: bold;">
-                    <span style="color: #aaa; font-weight: normal;">🎨 Pollinations AI Network</span>
-                    <span>Open Source →</span>
-                </a>
-            </div>
-        `;
-        output.appendChild(sourceDiv);
-        if (hubInput) {
-            hubInput.value = "";
-            hubInput.placeholder = "Type a command...";
-        }
-        updateDatalist([], [], []);
-    };
-
-    output.appendChild(img);
-}
-
 function runInfoExecution(query) {
     const cleanQuery = query.toLowerCase().trim();
     const cryptoMap = { btc: "bitcoin", eth: "ethereum", sol: "solana", doge: "dogecoin", xrp: "ripple" };
@@ -740,73 +635,7 @@ function runUnifiedWikiPipeline(query, wikiData, hasWiktionary) {
     ];
 
     const lowerQuery = query.toLowerCase().trim();
-
-    fetchDuckDuckGoInstantAnswer(query)
-        .then(ddgSearch => {
-            const rawText = ddgSearch.AbstractText || ddgSearch.Abstract || "";
-            const lowerText = rawText.toLowerCase();
-            const lowerHeading = ddgSearch.Heading ? ddgSearch.Heading.toLowerCase() : "";
-            
-            const validKeywords = ["youtuber", "youtube", "influencer", "media personality"];
-            const isMediaPersonality = validKeywords.some(keyword => lowerText.includes(keyword) || lowerHeading.includes(keyword));
-            const matchesCustomList = famousYoutubersList.some(name => lowerQuery.includes(name) || lowerText.includes(name) || lowerHeading.includes(name));
-            const matchesWikitubiaCache = wikitubiaCache.has(lowerQuery) || wikitubiaCache.has(lowerHeading);
-            
-            if ((isMediaPersonality || matchesCustomList || matchesWikitubiaCache) && rawText) {
-                const ddgTitle = ddgSearch.Heading || query;
-                let ddgExtract = rawText;
-                if (ddgExtract.length > 350) ddgExtract = ddgExtract.substring(0, 350) + "...";
-                
-                wikiData.ddg = { title: ddgTitle, text: ddgExtract };
-                appendSecondaryLayers(query, wikiData, hasWiktionary);
-            } else if (matchesWikitubiaCache || famousYoutubersList.some(name => lowerQuery.includes(name))) {
-                fetch(`https://youtube.fandom.com/api.php?action=query&list=search&srsearch=${encodeURIComponent(query)}&utf8=&format=json&origin=*`)
-                    .then(res => res.json())
-                    .then(fandomData => {
-                        if (fandomData.query?.search && fandomData.query.search.length > 0) {
-                            const topResult = fandomData.query.search[0];
-                            let fandomExtract = topResult.snippet.replace(/<[^>]*>/g, '').replace(/&quot;/g, '"').trim();
-                            if (!fandomExtract.endsWith('.')) fandomExtract += "...";
-                            wikiData.ddg = { title: topResult.title, text: fandomExtract, isFandomFallback: true };
-                        }
-                        appendSecondaryLayers(query, wikiData, hasWiktionary);
-                    }).catch(() => appendSecondaryLayers(query, wikiData, hasWiktionary));
-            } else {
-                appendSecondaryLayers(query, wikiData, hasWiktionary);
-            }
-        }).catch(() => {
-            if (wikitubiaCache.has(lowerQuery) || famousYoutubersList.some(name => lowerQuery.includes(name))) {
-                fetch(`https://youtube.fandom.com/api.php?action=query&list=search&srsearch=${encodeURIComponent(query)}&utf8=&format=json&origin=*`)
-                    .then(res => res.json())
-                    .then(fandomData => {
-                        if (fandomData.query?.search && fandomData.query.search.length > 0) {
-                            const topResult = fandomData.query.search[0];
-                            let fandomExtract = topResult.snippet.replace(/<[^>]*>/g, '').replace(/&quot;/g, '"').trim();
-                            if (!fandomExtract.endsWith('.')) fandomExtract += "...";
-                            wikiData.ddg = { title: topResult.title, text: fandomExtract, isFandomFallback: true };
-                        }
-                        appendSecondaryLayers(query, wikiData, hasWiktionary);
-                    }).catch(() => appendSecondaryLayers(query, wikiData, hasWiktionary));
-            } else {
-                appendSecondaryLayers(query, wikiData, hasWiktionary);
-            }
-        });
-}
-
-function appendSecondaryLayers(query, wikiData, hasWiktionary) {
-    const lowerQuery = query.toLowerCase().trim();
-    const famousYoutubersList = [
-        "jacksucksatlife", "mrbeast", "pewdiepie", "markiplier", "jacksepticeye", 
-        "caseoh", "jynxzi", "kai cenat", "ludwig", "xqc", "moistcr1tikal", "penguinz0", 
-        "sidemen", "ksi", "w2s", "wroetoshaw", "miniminter", "vikkstar", "vikkstar123", 
-        "mrwhosetheboss", "mkbhd", "marques brownlee", "linustechtips", "unbox therapy", 
-        "dantdm", "popularmmos", "stampy", "stampylonghead", "dream", "technoblade", 
-        "tommyinnit", "lazarbeam", "airrack", "ryan trahan", "smosh", "gmm", "rhett and link",
-        "jacksepticeye", "pokimane", "valkyrae", "ninja", "shroud", "disguised toast", "sykkuno",
-        "hasanabi", "asmongold", "ilyasiel", "safiya nygaard", "nigahiga", "davie504", "jolly"
-    ];
-
-    const isInfluencer = wikitubiaCache.has(lowerQuery) || famousYoutubersList.some(name => lowerQuery.includes(name)) || !!wikiData.ddg;
+    const isInfluencer = wikitubiaCache.has(lowerQuery) || famousYoutubersList.some(name => lowerQuery.includes(name));
 
     const youtubeFetch = (isInfluencer && YOUTUBE_API_KEY && YOUTUBE_API_KEY !== "YOUR_API_KEY_HERE")
         ? fetch(`https://www.googleapis.com/youtube/v3/search?part=snippet&type=channel&q=${encodeURIComponent(query)}&key=${YOUTUBE_API_KEY}`)
@@ -863,38 +692,16 @@ function appendSecondaryLayers(query, wikiData, hasWiktionary) {
 
 function compileFinalSourceIndexBox(query, wikiData, hasWiktionary) {
     let showWiktionary = !!wikiData.wiktionary;
-    let showDdg = !!wikiData.ddg;
     let showWikipedia = !!wikiData.wikipedia;
     let showYoutube = !!wikiData.youtube;
 
     const wikiText = wikiData.wikipedia?.text?.trim();
-    const ddgText = wikiData.ddg?.text?.trim();
-    const wiktionaryText = wikiData.wiktionary?.text?.trim();
+    const wikitionaryText = wikiData.wiktionary?.text?.trim();
 
     if (showWikipedia) {
         const wikiTitleClean = wikiData.wikipedia.title.toLowerCase().trim();
         const wikiTextClean = wikiText.toLowerCase().replace(/[^a-z0-9]/g, '');
 
-        if (showDdg) {
-            const ddgTitleClean = wikiData.ddg.title.toLowerCase().trim();
-            const ddgTextClean = ddgText.toLowerCase().replace(/[^a-z0-9]/g, '').replace('...', '');
-            
-            if (wikiTitleClean === ddgTitleClean || 
-                wikiTextClean.includes(ddgTextClean) || 
-                ddgTextClean.includes(wikiTextClean) ||
-                (wikiTextClean.substring(0, 40) && ddgTextClean.includes(wikiTextClean.substring(0, 40))) ||
-                (ddgTextClean.substring(0, 40) && wikiTextClean.includes(ddgTextClean.substring(0, 40)))) {
-                
-                const lowerQuery = query.toLowerCase().trim();
-                const isInfluencerTopic = wikitubiaCache.has(lowerQuery) || wikiData.ddg.isFandomFallback || showYoutube;
-                
-                if (isInfluencerTopic) {
-                    showWikipedia = false;
-                } else {
-                    showDdg = false;
-                }
-            }
-        }
         if (showWiktionary) {
             const wiktTitleClean = wikiData.wiktionary.title.toLowerCase().trim();
             const wiktTextClean = wiktionaryText.toLowerCase().replace(/[^a-z0-9]/g, '');
@@ -905,7 +712,7 @@ function compileFinalSourceIndexBox(query, wikiData, hasWiktionary) {
         }
     }
 
-    if (!showWikipedia && !showDdg && !showWiktionary && !showYoutube) {
+    if (!showWikipedia && !showWiktionary && !showYoutube) {
         let totalHTML = "";
         if (wikiData.greeting) {
             totalHTML += wikiData.greeting;
@@ -931,13 +738,6 @@ function compileFinalSourceIndexBox(query, wikiData, hasWiktionary) {
                 <strong>📺 ${wikiData.youtube.title} (YouTube)</strong><br>
                 <span style="font-size: 0.85rem; color: #aaa;">🔴 Subscribers: ${wikiData.youtube.subs} | 👁️ Total Views: ${wikiData.youtube.views}</span><br><br>
                 <em>${wikiData.youtube.text}</em>
-            </div>
-        `);
-    }
-    if (showDdg) {
-        blocksHtml.push(`
-            <div class="aggregated-text" style="font-size: 0.95rem; color: #e0e0e0; line-height: 1.6; background: #1a1a1a; padding: 14px; border-radius: 8px; border-left: 3px solid #de5833; text-align: left;">
-                <strong>${wikiData.ddg.title} (DuckDuckGo):</strong> ${wikiData.ddg.text}
             </div>
         `);
     }
@@ -978,16 +778,6 @@ function compileFinalSourceIndexBox(query, wikiData, hasWiktionary) {
             <a href="https://www.youtube.com/${channelPath}" target="_blank" style="display: flex; align-items: center; justify-content: space-between; background: #2a2a2a; border: 1px solid #3d3d3d; border-radius: 6px; padding: 6px 10px; color: #ff4444; text-decoration: none; font-size: 0.82rem; font-weight: bold;">
                 <span style="color: #aaa; font-weight: normal;">🔴 YouTube Channel</span>
                 <span>Live Metrics →</span>
-            </a>
-        `;
-    }
-
-    if (wikiData.ddg) {
-        const linkLabel = wikiData.ddg.isFandomFallback ? "Search Results →" : "Instant Answer →";
-        totalHTML += `
-            <a href="https://duckduckgo.com/?q=${encodeURIComponent(wikiData.ddg.title)}" target="_blank" style="display: flex; align-items: center; justify-content: space-between; background: #2a2a2a; border: 1px solid #3d3d3d; border-radius: 6px; padding: 6px 10px; color: #4da3ff; text-decoration: none; font-size: 0.82rem; font-weight: bold;">
-                <span style="color: #aaa; font-weight: normal;">🦆 DuckDuckGo</span>
-                <span>${linkLabel}</span>
             </a>
         `;
     }
