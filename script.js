@@ -59,7 +59,7 @@ const routingWarning = document.getElementById('routing-warning');
 const helpToggle = document.getElementById('help-toggle');
 const helpGuide = document.getElementById('help-guide');
 
-// New Vision DOM Bindings
+// Vision DOM Bindings
 const cameraTriggerBtn = document.getElementById('camera-trigger-btn');
 const imageFileInput = document.getElementById('image-file-input');
 const imagePreviewContainer = document.getElementById('image-preview-container');
@@ -69,7 +69,7 @@ const imageClearBtn = document.getElementById('image-clear-btn');
 
 let debounceTimer;
 let searchAbortController = null;
-let activeImageBase64 = null; // Stores image payload context
+let activeImageBase64 = null; 
 let activeImageMimeType = null;
 const wikitubiaCache = new Set();
 
@@ -237,8 +237,6 @@ if (imageFileInput) {
             imagePreviewThumbnail.src = fullDataUrl;
             imagePreviewContainer.style.display = "flex";
             cameraTriggerBtn.classList.add('active');
-            
-            // Extract pure base64 chunk string out of the stream URL template
             activeImageBase64 = fullDataUrl.split(',')[1];
         };
         reader.readAsDataURL(file);
@@ -356,7 +354,6 @@ if (executeActionBtn) {
     executeActionBtn.addEventListener('click', function() {
         const query = hubInput.value.trim();
         
-        // Handle explicit image attachment queries via the Gemini Multimodal engine layout
         if (activeImageBase64) {
             executeVisionAnalysis(query || "Describe this image content in clear detail.");
             return;
@@ -465,7 +462,6 @@ function executeVisionAnalysis(promptText) {
         </div>
     `;
 
-    // Target the ultra-fast native multi-modal vision framework via our constructed key
     const visionUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${GOOGLE_API_KEY}`;
 
     const payload = {
@@ -489,6 +485,16 @@ function executeVisionAnalysis(promptText) {
     })
     .then(res => res.json())
     .then(data => {
+        if (data.error) {
+            output.innerHTML = `
+                <div style="background: #1a1a1a; padding: 14px; border-radius: 8px; border-left: 3px solid #ff4d4d; text-align: left;">
+                    <div style="font-size: 0.75rem; color: #ff4d4d; text-transform: uppercase; font-weight: bold; margin-bottom: 8px;">⚠️ Google API Error</div>
+                    <div style="color: #eee; font-size: 0.95rem; line-height: 1.5;">${data.error.message}</div>
+                </div>
+            `;
+            return;
+        }
+
         try {
             const descriptionResult = data.candidates[0].content.parts[0].text;
             
@@ -498,10 +504,9 @@ function executeVisionAnalysis(promptText) {
                     <div style="color: #eee; font-size: 0.95rem; line-height: 1.5; white-space: pre-wrap;">${descriptionResult}</div>
                 </div>
             `;
-            // Clear file state configuration to prevent sticky re-execution bugs
             clearActiveImage();
         } catch (e) {
-            output.innerText = "Error decoding structural parameters from the analysis endpoint payload.";
+            output.innerText = "Error parsing response candidates structure.";
             console.error("Payload parse break:", data);
         }
     })
