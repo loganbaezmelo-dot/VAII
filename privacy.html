@@ -63,30 +63,31 @@
     <div class="container">
         <a href="/" class="back-link">➔ Back to VAII</a>
         <h1>🔒 Privacy Policy</h1>
-        <p>VAII ("we", "our", or "the App") is a personal virtual assistant application designed to provide internet integrations, search capabilities, and productivity tools. This Privacy Policy explains how data is handled within the App.</p>
+        <p>VAII ("the App") is a personal virtual assistant application designed to provide search capabilities and productivity tools. This policy details data management rules inside the interface.</p>
 
-        <h2>1. Data Collection and Usage</h2>
-        <p>VAII is built as a client-side application. Most processing occurs directly within your browser session.</p>
+        <h2>1. Data Usage</h2>
+        <p>VAII processes inputs locally within your browser session.</p>
         <ul>
-            <li><strong>Authentication Data:</strong> Sign-in credentials (email, password, and Google account tokens) are processed securely via Firebase Authentication to verify your identity and manage app access.</li>
-            <li><strong>Location and Search Queries:</strong> Location queries processed for weather, time, or interactive map modules are sent directly to open-source geocoding networks (Open-Meteo) and the Google Maps JavaScript API to render visual cards.</li>
+            <li><strong>Authentication Profiles:</strong> Sign-in records are checked via Firebase Authentication to handle application logs safely.</li>
+            <li><strong>Google Workspace Content:</strong> When you connect your Google authorization, the App securely transfers your read-only profile access directly between your device memory and the official endpoints for Gmail and Google Drive. Your text logs, inbox content, and files are never stored on any third-party backup platform.</li>
+            <li><strong>Informational Queries:</strong> Parameters regarding weather metrics, search terms, or maps coordinates communicate with standard open channels to print visual updates directly to your screen.</li>
         </ul>
 
-        <h2>2. Third-Party Services</h2>
-        <p>The App interacts with the following third-party APIs to fulfill user commands:</p>
+        <h2>2. Integrated Tools</h2>
+        <p>The interface requests standard metrics from the following services to answer queries:</p>
         <ul>
-            <li><strong>Firebase (Google):</strong> For managing user login sessions and app routing authentication lifecycles.</li>
-            <li><strong>Google Cloud Platform:</strong> For rendering interactive location components (Maps JavaScript API) and tracking requested media metrics (YouTube Data API).</li>
-            <li><strong>Open-Meteo:</strong> For retrieving real-time weather forecasts and localized timezone data based on text parameters.</li>
-            <li><strong>Wikipedia / Wiktionary / MyMemory:</strong> For processing definition strings, summary text requests, and translation strings.</li>
-            <li><strong>Pollinations.ai:</strong> For rendering generative canvas imagery when explicit art prompts are parsed.</li>
+            <li><strong>Firebase:</strong> For managing user login layouts.</li>
+            <li><strong>Google Cloud Platform:</strong> For map views, YouTube data summaries, Gmail listing metrics, and Google Drive index parameters.</li>
+            <li><strong>Open-Meteo:</strong> For live timezone and weather readings.</li>
+            <li><strong>Wikipedia / Wiktionary / MyMemory:</strong> For information layouts, dictionary checks, and translation strings.</li>
+            <li><strong>Pollinations.ai:</strong> For rendering canvas imagery.</li>
         </ul>
 
-        <h2>3. Data Retention and Security</h2>
-        <p>Your personal API access variables remain cached inside your local browser memory space. Logging out of the application completely wipes tokens from your device storage. We do not maintain server-side logs tracking your query entries or personal data payloads.</p>
+        <h2>3. Local Device Security</h2>
+        <p>Session data remains cached exclusively inside your browser's local memory. Signing out removes these records permanently from your hardware. No continuous tracking systems run on background database servers.</p>
 
-        <h2>4. Changes to This Policy</h2>
-        <p>We may update this Privacy Policy from time to time to reflect structural architectural updates.</p>
+        <h2>4. Updates</h2>
+        <p>This policy outlines current protocols and adapts alongside functional interface expansions.</p>
     </div>
 </body>
 </html>
