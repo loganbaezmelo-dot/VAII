@@ -269,105 +269,21 @@ function clearActiveImage() {
     if (cameraTriggerBtn) cameraTriggerBtn.classList.remove('active');
 }
 
+        if (activeImageBase64) {// ==========================================
+
 // ==========================================
 // 7. MAIN PROCESSING INTAKE SYSTEMS
 // ==========================================
-if (helpToggle) {
-    helpToggle.addEventListener('click', function() {
-        if (helpGuide.style.display === "block") {
-            helpGuide.style.display = "none";
-            helpToggle.innerText = "?";
-        } else {
-            helpGuide.style.display = "block";
-            helpToggle.innerText = "✕";
-        }
-    });
-}
 
-if (hubInput) {
-    hubInput.addEventListener('input', function() {
-        const query = hubInput.value; 
-        const trimmedQuery = query.trim();
-        const lowerQuery = trimmedQuery.toLowerCase();
-        
-        if (lowerQuery.startsWith('open ')) {
-            routingWarning.style.display = "block"; 
-        } else {
-            routingWarning.style.display = "none";
-        }
-
-        // Network lag patch: Kill older fetch requests instantly before they backlog the socket thread
-        if (searchAbortController) {
-            searchAbortController.abort();
-        }
-
-        // Instantly exit the suggestion loops if user types a redirection query or domain name string
-        if (lowerQuery.startsWith('open ') || "open".startsWith(lowerQuery) || trimmedQuery.startsWith('http://') || trimmedQuery.startsWith('https://') || /\.[a-z]{2,6}/i.test(trimmedQuery)) {
-            updateDatalist([], [], []); 
-            clearTimeout(debounceTimer); 
-            return; 
-        }
-
-        if (trimmedQuery.length < 3) {
-            updateDatalist([], [], []);
-            return;
-        }
-
-        let searchUrlQuery = trimmedQuery;
-        if (searchUrlQuery.toLowerCase().startsWith("map of ")) {
-            searchUrlQuery = searchUrlQuery.substring(7).trim();
-        } else if (searchUrlQuery.toLowerCase().startsWith("show map ")) {
-            searchUrlQuery = searchUrlQuery.substring(9).trim();
-        } else if (searchUrlQuery.toLowerCase().startsWith("weather in ")) {
-            searchUrlQuery = searchUrlQuery.substring(11).trim();
-        } else if (searchUrlQuery.toLowerCase().startsWith("time in ")) {
-            searchUrlQuery = searchUrlQuery.substring(8).trim();
-        }
-
-        clearTimeout(debounceTimer);
-        debounceTimer = setTimeout(() => {
-            searchAbortController = new AbortController();
-            const signal = searchAbortController.signal;
-
-            const geoFetch = fetch(`https://geocoding-api.open-meteo.com/v1/search?name=${encodeURIComponent(searchUrlQuery)}&count=3&language=en&format=json`, { signal })
-                .then(res => res.json())
-                .then(data => data.results || [])
-                .catch(() => []);
-
-            const wikiFetch = fetch(`https://en.wikipedia.org/w/api.php?action=query&list=search&srsearch=${encodeURIComponent(searchUrlQuery)}&utf8=&format=json&origin=*`, { signal })
-                .then(res => res.json())
-                .then(data => {
-                    if (data.query && data.query.search) {
-                        return data.query.search.map(item => item.title);
-                    }
-                    return [];
-                })
-                .catch(() => []);
-
-            const wikitubiaFetch = fetch(`https://youtube.fandom.com/api.php?action=query&list=search&srsearch=${encodeURIComponent(searchUrlQuery)}&utf8=&format=json&origin=*`, { signal })
-                .then(res => res.json())
-                .then(data => {
-                    if (data.query && data.query.search) {
-                        const titles = data.query.search.map(item => item.title);
-                        titles.forEach(title => wikitubiaCache.add(title.toLowerCase().trim()));
-                        return titles;
-                    }
-                    return [];
-                })
-                .catch(() => []);
-
-            Promise.all([geoFetch, wikiFetch, wikitubiaFetch]).then(([cities, wikiTitles, wikitubiaTitles]) => {
-                updateDatalist(cities, wikiTitles, wikitubiaTitles);
-            }).catch(() => {});
-        }, 300);
-    });
-}
+// State management for Gemini 3.5 mode
+let chatHistory = []; 
 
 if (executeActionBtn) {
     executeActionBtn.addEventListener('click', function() {
         const query = hubInput.value.trim();
+        const mode = document.querySelector('input[name="vaii-mode"]:checked').value;
         
-        // Execute pipeline split: route to vision analyzer model if an image layout is uploaded
+        // 1. VISION ENGINE OVERRIDE
         if (activeImageBase64) {
             executeVisionAnalysis(query || "Describe this image content in clear detail.");
             return;
@@ -378,22 +294,65 @@ if (executeActionBtn) {
             return;
         }
 
+        // 2. GEMINI 3.5 CHAT ROUTING
+        if (mode === 'gemini') {
+            handleGeminiChat(query);
+            return;
+        }
+
+        // 3. NATIVE ROUTING
         if (query.toLowerCase().startsWith("draw ")) {
-            let imagePrompt = query.substring(5).trim();
-            executeImageGeneration(imagePrompt);
+            executeImageGeneration(query.substring(5).trim());
         } else {
             runInfoExecution(query);
         }
     });
 }
 
-if (hubInput) {
-    hubInput.addEventListener('keypress', function(e) {
-        if (e.key === 'Enter' && executeActionBtn) {
-            executeActionBtn.click();
+// Gemini 3.5 Chat Handler
+async function handleGeminiChat(userInput) {
+    output.innerHTML = `<div class="loader-spinner"></div> <span style="color:#aaa;">Gemini 3.5 thinking...</span>`;
+
+    // Initialize chat session if empty
+    if (chatHistory.length === 0) {
+        chatHistory.push({ role: "user", parts: [{ text: "You are VAII, a helpful assistant. Keep responses concise." }] });
+    }
+
+    chatHistory.push({ role: "user", parts: [{ text: userInput }] });
+
+    const visionUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-3.5-flash:generateContent?key=${GEMINI_VISION_KEY}`;
+
+    try {
+        const response = await fetch(visionUrl, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ contents: chatHistory })
+        });
+        const data = await response.json();
+
+        if (data.error) {
+            throw new Error(data.error.message);
         }
-    });
+
+        const modelResponse = data.candidates[0].content.parts[0].text;
+        chatHistory.push({ role: "model", parts: [{ text: modelResponse }] });
+
+        output.innerHTML = `
+            <div style="background: #1a1a1a; padding: 14px; border-radius: 8px; border-left: 3px solid #6f42c1; text-align: left;">
+                <div style="font-size: 0.75rem; color: #888; text-transform: uppercase; margin-bottom: 8px;">✨ Gemini 3.5</div>
+                <div style="color: #eee; white-space: pre-wrap;">${modelResponse}</div>
+            </div>
+        `;
+    } catch (err) {
+        output.innerHTML = `<div style="color: #ff4d4d;">API Error: ${err.message}</div>`;
+        chatHistory.pop(); // Remove the last user message since it failed
+    }
 }
+
+// (Keep your existing renderUnifiedLocationCard, runMarketExecution, executeImageGeneration, 
+// launchTargetUrl, runInfoExecution, runUnifiedWikiPipeline, and compileFinalSourceIndexBox functions below)
+
+    
 
 // ====================================================
 // 8. UNIFIED LOCATION ENGINE: MERGING WEATHER, CLOCK, MAPS
