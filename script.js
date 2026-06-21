@@ -208,7 +208,6 @@ helpToggle.addEventListener('click', function() {
     }
 });
 
-// Tri-Engine suggestion parser firing lookups concurrently
 hubInput.addEventListener('input', function() {
     const query = hubInput.value; 
     const trimmedQuery = query.trim();
@@ -762,7 +761,7 @@ function appendSecondaryWikipediaLayer(query, wikiData, hasWiktionary) {
         }).catch(() => compileFinalSourceIndexBox(query, wikiData, hasWiktionary));
 }
 
-// Rendering Matrix Engine: Structural text deduplication favoring Wikipedia priority slots
+// Rendering Matrix Engine: Upgraded to look at fuzzy title values and string fraction fragments
 function compileFinalSourceIndexBox(query, wikiData, hasWiktionary) {
     let showWiktionary = !!wikiData.wiktionary;
     let showDdg = !!wikiData.ddg;
@@ -772,17 +771,32 @@ function compileFinalSourceIndexBox(query, wikiData, hasWiktionary) {
     const ddgText = wikiData.ddg?.text?.trim();
     const wiktionaryText = wikiData.wiktionary?.text?.trim();
 
-    // Deduplication gate matrix
+    // Deep deduplication clean logic loops
     if (showWikipedia) {
-        if (showDdg && ddgText === wikiText) {
-            showDdg = false;
+        const wikiTitleClean = wikiData.wikipedia.title.toLowerCase().trim();
+        const wikiTextClean = wikiText.toLowerCase().replace(/[^a-z0-9]/g, '');
+
+        if (showDdg) {
+            const ddgTitleClean = wikiData.ddg.title.toLowerCase().trim();
+            const ddgTextClean = ddgText.toLowerCase().replace(/[^a-z0-9]/g, '').replace('...', '');
+            
+            // Check if the titles match exactly or if the descriptions contain chunks of one another
+            if (wikiTitleClean === ddgTitleClean || 
+                wikiTextClean.includes(ddgTextClean) || 
+                ddgTextClean.includes(wikiTextClean) ||
+                (wikiTextClean.substring(0, 40) && ddgTextClean.includes(wikiTextClean.substring(0, 40))) ||
+                (ddgTextClean.substring(0, 40) && wikiTextClean.includes(ddgTextClean.substring(0, 40)))) {
+                showDdg = false;
+            }
         }
-        if (showWiktionary && wiktionaryText === wikiText) {
-            showWiktionary = false;
+        if (showWiktionary) {
+            const wiktTitleClean = wikiData.wiktionary.title.toLowerCase().trim();
+            const wiktTextClean = wiktionaryText.toLowerCase().replace(/[^a-z0-9]/g, '');
+            
+            if (wikiTitleClean === wiktTitleClean || wikiTextClean.includes(wiktTextClean) || wiktTextClean.includes(wikiTextClean)) {
+                showWiktionary = false;
+            }
         }
-    }
-    if (showDdg && showWiktionary && ddgText === wiktionaryText) {
-        showWiktionary = false;
     }
 
     if (!showWikipedia && !showDdg && !showWiktionary) {
