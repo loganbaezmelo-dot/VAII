@@ -9,7 +9,9 @@ import {
     signOut 
 } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
 
-// Core App Configuration (vaiinternet)
+// ==========================================
+// 1. APPLICATION ACCESS INITIALIZATION
+// ==========================================
 const firebaseConfig = {
     apiKey: "AIzaSyA6RmZ6rquzUR1dct30s355PzLu-r1_fwE",
     authDomain: "vaiinternet.firebaseapp.com",
@@ -24,9 +26,9 @@ const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
 const googleProvider = new GoogleAuthProvider();
 
-// ====================================================
-// CONFIGURATION CORE
-// ====================================================
+// ==========================================
+// 2. CRYPTOGRAPHIC DATA INTERACTION HOOKS
+// ==========================================
 const _k1 = "AIzaSyAJ";
 const _k2 = "KTkU0nd6";
 const _k3 = "ZB_zjIcN";
@@ -35,7 +37,9 @@ const _k5 = "HEp4WH8";
 
 const GOOGLE_API_KEY = _k1 + _k2 + _k3 + _k4 + _k5;
 
-// DOM CONTROL NODES
+// ==========================================
+// 3. DOM NODE CONTROL HOOKS
+// ==========================================
 const authContainer = document.getElementById('auth-container');
 const mainApp = document.getElementById('main-app');
 const authTitle = document.getElementById('auth-title');
@@ -74,9 +78,12 @@ const defaultAssistantSuggestions = [
 ];
 
 window.initVaiiMap = function() {
-    console.log("Maps module ready.");
+    console.log("Maps system ready.");
 };
 
+// ==========================================
+// 4. AUTOSUGGEST DATA POPULATION LOOPS
+// ==========================================
 function updateDatalist(cities = [], wikiTitles = [], wikitubiaTitles = []) {
     if (!datalist) return;
     datalist.innerHTML = "";
@@ -101,7 +108,6 @@ function updateDatalist(cities = [], wikiTitles = [], wikitubiaTitles = []) {
     
     cities.forEach(location => {
         const option = document.createElement('option');
-        option.value = location;
         const city = location.name;
         const state = location.admin1;
         const country = location.country;
@@ -111,7 +117,8 @@ function updateDatalist(cities = [], wikiTitles = [], wikitubiaTitles = []) {
         if (state && !parts.includes(state)) parts.push(state);
         if (country && !parts.includes(country)) parts.push(country);
 
-        option.value = parts.join(', ');
+        const labelString = parts.join(', ');
+        option.value = labelString;
         option.setAttribute('data-lat', location.latitude);
         option.setAttribute('data-lon', location.longitude);
         option.setAttribute('data-tz', location.timezone);
@@ -120,7 +127,7 @@ function updateDatalist(cities = [], wikiTitles = [], wikitubiaTitles = []) {
 }
 
 // ==========================================
-// ACCOUNT ACCESS SIGNALS
+// 5. SECURE ACCOUNT ACCESS CONTROLLERS
 // ==========================================
 onAuthStateChanged(auth, (user) => {
     if (user) {
@@ -184,7 +191,7 @@ if (googleSigninBtn) {
 
 if (logoutActionBtn) {
     logoutActionBtn.addEventListener('click', () => {
-        signOut(auth).catch(err => console.error("Sign out fail:", err));
+        signOut(auth).catch(err => console.error("Sign out processing error:", err));
     });
 }
 
@@ -196,7 +203,7 @@ function showAuthError(message) {
 }
 
 // ==========================================
-// MAIN HUB EXECUTIVE LOOPS
+// 6. MAIN PROCESSING INTAKE SYSTEMS
 // ==========================================
 if (helpToggle) {
     helpToggle.addEventListener('click', function() {
@@ -235,6 +242,10 @@ if (hubInput) {
             searchUrlQuery = searchUrlQuery.substring(7).trim();
         } else if (searchUrlQuery.toLowerCase().startsWith("show map ")) {
             searchUrlQuery = searchUrlQuery.substring(9).trim();
+        } else if (searchUrlQuery.toLowerCase().startsWith("weather in ")) {
+            searchUrlQuery = searchUrlQuery.substring(11).trim();
+        } else if (searchUrlQuery.toLowerCase().startsWith("time in ")) {
+            searchUrlQuery = searchUrlQuery.substring(8).trim();
         }
 
         clearTimeout(debounceTimer);
@@ -298,8 +309,11 @@ if (hubInput) {
     });
 }
 
-function runUnifiedWeatherClock(lat, lon, zone, displayName) {
-    output.innerText = `Fetching metrics for ${displayName}...`;
+// ====================================================
+// 7. THE UNIFIED LOCATION ENGINE: MERGING WEATHER, CLOCK, MAPS
+// ====================================================
+function renderUnifiedLocationCard(lat, lon, zone, displayName, greetingHTML = "") {
+    output.innerHTML = greetingHTML + `<div style="color:#888; font-style:italic;">Assembling location data card...</div>`;
     
     fetch(`https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current_weather=true`)
         .then(res => res.json())
@@ -311,23 +325,64 @@ function runUnifiedWeatherClock(lat, lon, zone, displayName) {
             const timeString = new Date().toLocaleTimeString("en-US", { timeZone: zone, hour: '2-digit', minute: '2-digit' });
             const dateString = new Date().toLocaleDateString("en-US", { timeZone: zone, weekday: 'long', month: 'short', day: 'numeric' });
             
-            output.innerHTML = `
-                <div style="background: #1a1a1a; padding: 14px; border-radius: 8px; border-left: 3px solid #007bff; text-align: left; margin-bottom: 15px;">
-                    <strong>📍 ${displayName}</strong><br><br>
-                    🌡️ Temperature: ${tempFahrenheit}°F (${tempCelsius}°C)<br>
-                    💨 Wind Speed: ${windSpeed} km/h
-                    <br><br>
-                    🕒 Local Time: <span style="font-size: 1.3rem; font-weight: bold; color: #fff;">${timeString}</span><br>
-                    📅 Date: ${dateString}
+            output.innerHTML = greetingHTML + `
+                <div style="background: #1a1a1a; padding: 16px; border-radius: 12px; border-left: 4px solid #4da3ff; text-align: left; margin-bottom: 15px;">
+                    <div style="font-size: 1.2rem; font-weight: bold; color: #fff; margin-bottom: 12px;">📍 ${displayName}</div>
+                    
+                    <div style="display: flex; gap: 20px; margin-bottom: 15px; border-bottom: 1px solid #2a2a2a; padding-bottom: 12px;">
+                        <div style="flex: 1;">
+                            <span style="color: #888; font-size: 0.8rem; text-transform: uppercase;">Current Climate</span><br>
+                            <span style="font-size: 1.1rem; font-weight: bold; color: #28a745;">🌡️ ${tempFahrenheit}°F</span> <span style="color:#666; font-size:0.9rem;">(${tempCelsius}°C)</span><br>
+                            <span style="color: #ccc; font-size: 0.85rem;">💨 Wind: ${windSpeed} km/h</span>
+                        </div>
+                        <div style="flex: 1; border-left: 1px solid #2a2a2a; padding-left: 15px;">
+                            <span style="color: #888; font-size: 0.8rem; text-transform: uppercase;">Localized Clock</span><br>
+                            <span style="font-size: 1.1rem; font-weight: bold; color: #ffc107;">🕒 ${timeString}</span><br>
+                            <span style="color: #ccc; font-size: 0.85rem;">📅 ${dateString}</span>
+                        </div>
+                    </div>
+                    
+                    <span style="color: #888; font-size: 0.8rem; text-transform: uppercase; display: block; margin-bottom: 6px;">Interactive Mapping</span>
+                    <div id="vaii-merged-map-canvas" style="width:100%; height:250px; border-radius:8px; background:#252525; border: 1px solid #333;"></div>
                 </div>
             `;
+            
+            // Native Map Injection Loop inside the active card layer
+            if (typeof google !== 'undefined' && google.maps) {
+                const mapCoordinates = { lat: parseFloat(lat), lng: parseFloat(lon) };
+                const loadedMapInstance = new google.maps.Map(document.getElementById('vaii-merged-map-canvas'), {
+                    center: mapCoordinates,
+                    zoom: 12,
+                    disableDefaultUI: false,
+                    styles: [
+                        { elementType: "geometry", stylers: [{ color: "#242f3e" }] },
+                        { elementType: "labels.text.stroke", stylers: [{ color: "#242f3e" }] },
+                        { elementType: "labels.text.fill", stylers: [{ color: "#746855" }] }
+                    ]
+                });
+                
+                new google.maps.Marker({
+                    position: mapCoordinates,
+                    map: loadedMapInstance,
+                    title: displayName
+                });
+            } else {
+                document.getElementById('vaii-merged-map-canvas').innerHTML = `
+                    <div style="padding:20px; color:#ff4d4d; font-size:0.85rem; text-align:center; line-height:200px;">
+                        Google Maps loading error or invalid runtime script authorization keys.
+                    </div>
+                `;
+            }
         })
         .catch(err => {
-            output.innerText = "Error loading weather and time data.";
+            output.innerText = "Error pulling metrics for this spatial location.";
             console.error(err);
         });
 }
 
+// ==========================================
+// 8. DATA EVALUATION UTILITIES
+// ==========================================
 function runMarketExecution(ticker) {
     output.innerText = `Fetching price updates for "${ticker.toUpperCase()}"...`;
     const cleanTicker = ticker.trim().toLowerCase();
@@ -360,21 +415,6 @@ function runMarketExecution(ticker) {
     }
 }
 
-function launchTargetUrl(url) {
-    let contentHTML = `
-        <div class="news-header-msg" style="color: #888; font-style: italic; margin-bottom: 4px; font-size: 0.9rem; line-height: 1.4;">Navigating to external web link...</div>
-        <div style="background: #1a1a1a; padding: 14px; border-radius: 8px; border-left: 3px solid #007bff; text-align: left; margin-bottom: 15px;">
-            🔗 <strong>Address:</strong> <span style="color: #4da3ff; word-break: break-all;">${url}</span>
-        </div>
-        <a href="${url}" target="_blank" style="display: flex; align-items: center; justify-content: space-between; background: #007bff; border-radius: 6px; padding: 10px 14px; color: white; text-decoration: none; font-weight: bold; font-size: 0.95rem;">
-            <span>Launch Link</span>
-            <span>Open Site ↗</span>
-        </a>
-    `;
-    output.innerHTML = contentHTML;
-    window.open(url, '_blank');
-}
-
 function executeImageGeneration(imagePrompt) {
     routingWarning.style.display = "none"; 
     output.innerHTML = `
@@ -401,6 +441,9 @@ function executeImageGeneration(imagePrompt) {
     output.appendChild(img);
 }
 
+// ==========================================
+// 9. STRING ROUTING EXECUTIONS
+// ==========================================
 function runInfoExecution(query) {
     const cleanQuery = query.toLowerCase().trim();
     const cryptoMap = { btc: "bitcoin", eth: "ethereum", sol: "solana", doge: "dogecoin", xrp: "ripple" };
@@ -415,69 +458,61 @@ function runInfoExecution(query) {
         `;
     }
 
-    // Explicit block catch for Workspace keywords to prevent security intercept messages
+    // Block Workspace Triggers 
     if (cleanQuery.includes("calendar") || cleanQuery.includes("calender") || cleanQuery.includes("schedule") || cleanQuery === "agenda" || cleanQuery.includes("email") || cleanQuery.includes("gmail") || cleanQuery.includes("inbox") || cleanQuery.includes("drive") || cleanQuery.includes("files")) {
         output.innerHTML = greetingHTML + `
             <div style="background: #1a1a1a; padding: 14px; border-radius: 8px; border-left: 3px solid #ffc107; text-align: left;">
-                ⚠️ <strong>Workspace Integrations Disabled:</strong><br><br>
-                <span style="color: #aaa; font-size: 0.9rem;">Private workspace elements (Calendar, Gmail, and Drive) are removed to maintain an open authentication route.</span>
+                ⚠️ <strong>Workspace Elements Disabled:</strong><br><br>
+                <span style="color: #aaa; font-size: 0.9rem;">Private calendar and email protocols remain inactive to preserve a standard authorization route.</span>
             </div>
         `;
         return; 
     }
 
-    if (cleanQuery.startsWith("map of ") || cleanQuery.startsWith("show map ")) {
-        const targetLocation = query.replace(/map of /i, "").replace(/show map /i, "").trim();
-        output.innerHTML = greetingHTML + `<div style="color:#888; font-style:italic;">Loading layout...</div>`;
-        
-        fetch(`https://geocoding-api.open-meteo.com/v1/search?name=${encodeURIComponent(targetLocation)}&count=1&language=en&format=json`)
-            .then(res => res.json())
-            .then(data => {
-                if (data.results && data.results.length > 0) {
-                    const loc = data.results[0];
-                    output.innerHTML = greetingHTML + `
-                        <div style="background: #1a1a1a; padding: 14px; border-radius: 8px; border-left: 3px solid #4da3ff; text-align: left;">
-                            🗺️ <strong>Interactive Map: ${loc.name}, ${loc.country || ''}</strong><br><br>
-                            <div id="vaii-js-map-canvas" style="width:100%; height:250px; border-radius:6px; background:#252525;"></div>
-                        </div>
-                    `;
-                    if (typeof google !== 'undefined' && google.maps) {
-                        const mapCoordinates = { lat: loc.latitude, lng: loc.longitude };
-                        const loadedMapInstance = new google.maps.Map(document.getElementById('vaii-js-map-canvas'), {
-                            center: mapCoordinates,
-                            zoom: 12
-                        });
-                        new google.maps.Marker({ position: mapCoordinates, map: loadedMapInstance, title: loc.name });
-                    }
-                } else {
-                    output.innerText = `Could not track coordinates for "${targetLocation}".`;
-                }
-            }).catch(() => { output.innerText = "Failed parsing map lookups."; });
-        return;
-    }
+    // Unified Location Routing Interceptor
+    const isLocationIntent = cleanQuery.startsWith("map of ") || 
+                             cleanQuery.startsWith("show map ") || 
+                             cleanQuery.startsWith("time in ") || 
+                             cleanQuery.startsWith("weather in ") || 
+                             cleanQuery.startsWith("weather ") || 
+                             cleanQuery.startsWith("clock ");
 
-    if (cleanQuery.startsWith("time in ") || cleanQuery.startsWith("weather in ") || cleanQuery.startsWith("weather ") || cleanQuery.startsWith("clock ")) {
-        let parsedLocation = query.replace(/time in /i, "").replace(/weather in /i, "").replace(/weather /i, "").replace(/clock /i, "").trim();
+    if (isLocationIntent) {
+        let parsedLocation = query
+            .replace(/map of /i, "")
+            .replace(/show map /i, "")
+            .replace(/time in /i, "")
+            .replace(/weather in /i, "")
+            .replace(/weather /i, "")
+            .replace(/clock /i, "")
+            .trim();
+            
         fetch(`https://geocoding-api.open-meteo.com/v1/search?name=${encodeURIComponent(parsedLocation)}&count=1&language=en&format=json`)
             .then(res => res.json())
             .then(data => {
                 if (data.results && data.results.length > 0) {
                     const loc = data.results[0];
-                    runUnifiedWeatherClock(loc.latitude, loc.longitude, loc.timezone, `${loc.name}, ${loc.country}`);
+                    const fullDisplayName = `${loc.name}, ${loc.admin1 || ''} (${loc.country})`;
+                    renderUnifiedLocationCard(loc.latitude, loc.longitude, loc.timezone, fullDisplayName, greetingHTML);
                 } else {
-                    output.innerText = `Could not resolve location parameters for "${parsedLocation}".`;
+                    output.innerText = `Could not extract metrics for "${parsedLocation}".`;
                 }
-            }).catch(() => { output.innerText = "Error tracking location parameters."; });
+            }).catch(() => { output.innerText = "Location processing engine connection failure."; });
         return;
     }
 
+    // Datalist Match Fallback Routing 
     const options = Array.from(datalist.options);
     const matchedOption = options.find(opt => opt.value.toLowerCase() === cleanQuery);
     if (matchedOption && matchedOption.getAttribute('data-lat')) {
-        runUnifiedWeatherClock(matchedOption.getAttribute('data-lat'), matchedOption.getAttribute('data-lon'), matchedOption.getAttribute('data-tz'), matchedOption.value);
+        const lat = matchedOption.getAttribute('data-lat');
+        const lon = matchedOption.getAttribute('data-lon');
+        const tz = matchedOption.getAttribute('data-tz');
+        renderUnifiedLocationCard(lat, lon, tz, matchedOption.value, greetingHTML);
         return;
     }
 
+    // Browser Redirection Routing Links
     if (query.toLowerCase().startsWith("open ")) {
         routingWarning.style.display = "block"; 
         let appName = query.substring(5).trim().toLowerCase().replace(/['"]+/g, '');
@@ -504,11 +539,13 @@ function runInfoExecution(query) {
         return;
     }
 
+    // Market Redirection Core Loops
     if (cryptoMap[cleanQuery] || cleanQuery.startsWith("price of ")) {
         runMarketExecution(cleanQuery.startsWith("price of ") ? cleanQuery.substring(9).trim() : cleanQuery);
         return;
     }
 
+    // Math Computations and Unit Transformation Matrix
     if (/^[0-9+\-*/().\s]+$/.test(query) || cleanQuery.includes(" to ")) {
         try {
             if (!cleanQuery.includes(" to ")) {
@@ -523,6 +560,7 @@ function runInfoExecution(query) {
             const source = parts[0].trim();
             const targetLanguage = parts[1].trim();
             const unitMatch = source.match(/^([0-9.]+)\s*([a-zA-Z°]+)$/);
+            
             if (unitMatch) {
                 const num = parseFloat(unitMatch[1]);
                 const fromUnit = unitMatch[2].toLowerCase();
@@ -531,6 +569,10 @@ function runInfoExecution(query) {
                 if (fromUnit === "lbs" && toUnit === "kg") conversionResult = `${(num * 0.45359237).toFixed(2)} kg`;
                 if (fromUnit === "kg" && toUnit === "lbs") conversionResult = `${(num / 0.45359237).toFixed(2)} lbs`;
                 if (fromUnit === "miles" && toUnit === "km") conversionResult = `${(num * 1.60934).toFixed(2)} km`;
+                if (fromUnit === "km" && toUnit === "miles") conversionResult = `${(num / 1.60934).toFixed(2)} miles`;
+                if (fromUnit === "f" && toUnit === "c") conversionResult = `${((num - 32) * 5 / 9).toFixed(1)}°C`;
+                if (fromUnit === "c" && toUnit === "f") conversionResult = `${((num * 9 / 5) + 32).toFixed(1)}°F`;
+                
                 if (conversionResult) {
                     output.innerHTML = `<div style="background: #1a1a1a; padding: 14px; border-radius: 8px; border-left: 3px solid #28a745; text-align: left;">🔄 <strong>Conversion:</strong><br>📤 Result: <strong style="color: #28a745; font-size: 1.3rem; display:block; margin-top:4px;">${conversionResult}</strong></div>`;
                     return;
@@ -545,6 +587,7 @@ function runInfoExecution(query) {
         }
     }
 
+    // Definition Parsing Loops
     routingWarning.style.display = "none";
     if (!query.includes(" ")) {
         fetch(`https://en.wiktionary.org/api/rest_v1/page/definition/${encodeURIComponent(query.toLowerCase())}`)
@@ -567,6 +610,9 @@ function runInfoExecution(query) {
     }
 }
 
+// ==========================================
+// 10. EXTERNAL DOCUMENTATION CRAWL ENGINES
+// ==========================================
 function runUnifiedWikiPipeline(query, wikiData) {
     const famousYoutubersList = ["jacksucksatlife", "mrbeast", "pewdiepie", "markiplier", "caseoh", "jynxzi"];
     const isInfluencer = famousYoutubersList.some(name => query.toLowerCase().includes(name));
