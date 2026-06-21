@@ -431,6 +431,18 @@
                         </div>
                     </div>
 
+                    <!-- Local Browser Storage System Preferences Prompt Manager Drawer -->
+                    <div id="prefs-drawer" class="help-drawer">
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
+                            <strong>⚙️ System Preferences (Gemini Custom Identity):</strong>
+                            <span id="prefs-close-btn" style="cursor: pointer; color: #dc3545; font-weight: bold; font-size: 0.85rem;">✕</span>
+                        </div>
+                        <div style="display: flex; flex-direction: column; gap: 8px; margin-top: 6px;">
+                            <textarea id="prefs-instructions-input" style="width: 100%; height: 75px; background: #1a1a1a; color: #fff; border: 1px solid #3d3d3d; border-radius: 6px; padding: 8px; font-family: inherit; font-size: 0.82rem; resize: vertical; box-sizing: border-box;" placeholder="Type behavioral rules or persona parameters (e.g., Use emojis, adopt a witty style, speak informally)..."></textarea>
+                            <button id="prefs-save-btn" style="background: #007bff; color: white; border: none; padding: 6px 12px; border-radius: 4px; font-size: 0.8rem; cursor: pointer; font-weight: bold; width: 100%; text-align: center; transition: background 0.2s ease;">Save Preferences</button>
+                        </div>
+                    </div>
+
                     <div class="search-container">
                         <!-- Selector Matrix Section Label -->
                         <div style="text-align: center; font-size: 0.75rem; color: #888; margin-bottom: 4px; font-weight: bold; text-transform: uppercase; letter-spacing: 0.5px;">Assistant Engine Mode</div>
@@ -444,10 +456,13 @@
                                 <div style="font-size: 0.7rem; color: #777; margin-top: 4px; line-height: 1.25;">Runs interactive widget layers: maps, weather, arithmetic, translations, tickers, and art creation models.</div>
                             </div>
                             
-                            <div style="flex: 1; max-width: 170px; background: #252525; padding: 10px; border-radius: 8px; border: 1px solid #333; text-align: left;">
-                                <label style="display: flex; align-items: center; gap: 6px; cursor: pointer; user-select: none; font-size: 0.88rem; color: #ccc; font-weight: bold;">
-                                    <input type="radio" name="vaii-mode" value="gemini" style="width: auto !important; height: auto !important; margin: 0; padding: 0;"> Gemini Ecosystem
-                                </label>
+                            <div style="flex: 1; max-width: 170px; background: #252525; padding: 10px; border-radius: 8px; border: 1px solid #333; text-align: left; position: relative;">
+                                <div style="display: flex; justify-content: space-between; align-items: center;">
+                                    <label style="display: flex; align-items: center; gap: 6px; cursor: pointer; user-select: none; font-size: 0.88rem; color: #ccc; font-weight: bold;">
+                                        <input type="radio" name="vaii-mode" value="gemini" style="width: auto !important; height: auto !important; margin: 0; padding: 0;"> Gemini Ecosystem
+                                    </label>
+                                    <span id="prefs-toggle-btn" style="cursor: pointer; font-size: 0.85rem; padding: 2px; color: #888; transition: color 0.2s;" title="System Preferences">⚙️</span>
+                                </div>
                                 <div style="font-size: 0.7rem; color: #777; margin-top: 4px; line-height: 1.25;">Provides a clean conversational thread with persistent historical session memory tracking.</div>
                             </div>
                         </div>
@@ -464,7 +479,7 @@
                             <button id="image-clear-btn" class="clear-preview">✕</button>
                         </div>
                     </div>
-                    <!-- FIXED: Re-aligned accidental data browse structural validation node tag -->
+                    
                     <datalist id="hub-suggestions"></datalist>
                     <div id="weather-output" class="output-box"></div>
                     
