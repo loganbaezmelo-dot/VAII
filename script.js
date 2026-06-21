@@ -92,7 +92,6 @@ function updateDatalist(cities = [], wikiTitles = [], wikitubiaTitles = []) {
     // 4. Inject live calculated geocoding location parameters
     cities.forEach(location => {
         const option = document.createElement('option');
-        option.value = location;
         const city = location.name;
         const state = location.admin1;
         const country = location.country;
@@ -251,7 +250,6 @@ hubInput.addEventListener('input', function() {
             .then(data => {
                 if (data.query && data.query.search) {
                     const titles = data.query.search.map(item => item.title);
-                    // Cache any pulled suggestions to whitelist them later for DuckDuckGo routing
                     titles.forEach(title => wikitubiaCache.add(title.toLowerCase().trim()));
                     return titles;
                 }
@@ -730,18 +728,17 @@ function runUnifiedWikiPipeline(query, wikiData, hasWiktionary) {
         "hasanabi", "asmongold", "ilyasiel", "safiya nygaard", "nigahiga", "davie504", "jolly"
     ];
 
+    const lowerQuery = query.toLowerCase().trim();
+
     fetchDuckDuckGoInstantAnswer(query)
         .then(ddgSearch => {
             const rawText = ddgSearch.AbstractText || ddgSearch.Abstract || "";
             const lowerText = rawText.toLowerCase();
-            const lowerQuery = query.toLowerCase().trim();
             const lowerHeading = ddgSearch.Heading ? ddgSearch.Heading.toLowerCase() : "";
             
             const validKeywords = ["youtuber", "youtube", "influencer", "media personality"];
             const isMediaPersonality = validKeywords.some(keyword => lowerText.includes(keyword) || lowerHeading.includes(keyword));
             const matchesCustomList = famousYoutubersList.some(name => lowerQuery.includes(name) || lowerText.includes(name) || lowerHeading.includes(name));
-            
-            // Evaluates direct string containment matches against dynamically suggested parameters
             const matchesWikitubiaCache = wikitubiaCache.has(lowerQuery) || wikitubiaCache.has(lowerHeading);
             
             if ((isMediaPersonality || matchesCustomList || matchesWikitubiaCache) && rawText) {
@@ -751,10 +748,39 @@ function runUnifiedWikiPipeline(query, wikiData, hasWiktionary) {
                 
                 wikiData.ddg = { title: ddgTitle, text: ddgExtract };
                 appendSecondaryWikipediaLayer(query, wikiData, hasWiktionary);
+            } else if (matchesWikitubiaCache || famousYoutubersList.some(name => lowerQuery.includes(name))) {
+                // Fallback Engine: If DDG has zero abstract records for a Wikitubia creator, parse Fandom description logs directly
+                fetch(`https://youtube.fandom.com/api.php?action=query&list=search&srsearch=${encodeURIComponent(query)}&utf8=&format=json&origin=*`)
+                    .then(res => res.json())
+                    .then(fandomData => {
+                        if (fandomData.query?.search && fandomData.query.search.length > 0) {
+                            const topResult = fandomData.query.search[0];
+                            let fandomExtract = topResult.snippet.replace(/<[^>]*>/g, '').replace(/&quot;/g, '"').trim();
+                            if (!fandomExtract.endsWith('.')) fandomExtract += "...";
+                            wikiData.ddg = { title: topResult.title, text: fandomExtract, isFandomFallback: true };
+                        }
+                        appendSecondaryWikipediaLayer(query, wikiData, hasWiktionary);
+                    }).catch(() => appendSecondaryWikipediaLayer(query, wikiData, hasWiktionary));
             } else {
                 appendSecondaryWikipediaLayer(query, wikiData, hasWiktionary);
             }
-        }).catch(() => appendSecondaryWikipediaLayer(query, wikiData, hasWiktionary));
+        }).catch(() => {
+            if (wikitubiaCache.has(lowerQuery) || famousYoutubersList.some(name => lowerQuery.includes(name))) {
+                fetch(`https://youtube.fandom.com/api.php?action=query&list=search&srsearch=${encodeURIComponent(query)}&utf8=&format=json&origin=*`)
+                    .then(res => res.json())
+                    .then(fandomData => {
+                        if (fandomData.query?.search && fandomData.query.search.length > 0) {
+                            const topResult = fandomData.query.search[0];
+                            let fandomExtract = topResult.snippet.replace(/<[^>]*>/g, '').replace(/&quot;/g, '"').trim();
+                            if (!fandomExtract.endsWith('.')) fandomExtract += "...";
+                            wikiData.ddg = { title: topResult.title, text: fandomExtract, isFandomFallback: true };
+                        }
+                        appendSecondaryWikipediaLayer(query, wikiData, hasWiktionary);
+                    }).catch(() => appendSecondaryWikipediaLayer(query, wikiData, hasWiktionary));
+            } else {
+                appendSecondaryWikipediaLayer(query, wikiData, hasWiktionary);
+            }
+        });
 }
 
 function appendSecondaryWikipediaLayer(query, wikiData, hasWiktionary) {
@@ -808,7 +834,16 @@ function compileFinalSourceIndexBox(query, wikiData, hasWiktionary) {
                 ddgTextClean.includes(wikiTextClean) ||
                 (wikiTextClean.substring(0, 40) && ddgTextClean.includes(wikiTextClean.substring(0, 40))) ||
                 (ddgTextClean.substring(0, 40) && wikiTextClean.includes(ddgTextClean.substring(0, 40)))) {
-                showDdg = false;
+                
+                const lowerQuery = query.toLowerCase().trim();
+                const isInfluencerTopic = wikitubiaCache.has(lowerQuery) || wikiData.ddg.isFandomFallback;
+                
+                // Priority Matrix Refactor: Forces DuckDuckGo to retain focus over influencer/creator paths
+                if (isInfluencerTopic) {
+                    showWikipedia = false;
+                } else {
+                    showDdg = false;
+                }
             }
         }
         if (showWiktionary) {
@@ -880,10 +915,11 @@ function compileFinalSourceIndexBox(query, wikiData, hasWiktionary) {
     }
 
     if (wikiData.ddg) {
+        const linkLabel = wikiData.ddg.isFandomFallback ? "Search Results →" : "Instant Answer →";
         totalHTML += `
             <a href="https://duckduckgo.com/?q=${encodeURIComponent(wikiData.ddg.title)}" target="_blank" style="display: flex; align-items: center; justify-content: space-between; background: #2a2a2a; border: 1px solid #3d3d3d; border-radius: 6px; padding: 6px 10px; color: #4da3ff; text-decoration: none; font-size: 0.82rem; font-weight: bold;">
                 <span style="color: #aaa; font-weight: normal;">🦆 DuckDuckGo</span>
-                <span>Instant Answer →</span>
+                <span>${linkLabel}</span>
             </a>
         `;
     }
