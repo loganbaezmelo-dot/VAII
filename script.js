@@ -664,8 +664,11 @@ function compileFinalSourceIndexBox(query, wikiData) {
         return;
     }
     
-    // RESTORED: Original prewritten text heading layout override
-    totalHTML += `<div style="color: #888; font-style: italic; margin-bottom: 12px; font-size: 0.9rem;">Relevant documentation indices for "${query}":</div>` + blocksHtml.join('<div style="margin: 10px 0;"></div>');
+    // RESTORED ORIGINAL HEADING PHRASING OVERRIDE
+    totalHTML += `<div class="news-header-msg" style="color: #888; font-style: italic; margin-bottom: 12px; font-size: 0.9rem; line-height: 1.4;">I have provided the most relevant text of each information source related to "${query}".</div>`;
+    
+    // RESTORED ORIGINAL SPLIT STRING FOR SEVERAL DATA BLOCKS
+    totalHTML += blocksHtml.join(`<div style="color: #888; font-style: italic; font-size: 0.85rem; margin: 15px 0 8px 0; text-align: left;">This might also be relevant:</div>`);
 
     // MASTER SOURCE INDEX LINK FOOTER
     totalHTML += `
