@@ -150,6 +150,7 @@ function saveCurrentSessionState() {
     renderHistoryListItems();
 }
 
+// History Renderer
 function renderHistoryListItems() {
     if (!historyList) return;
     historyList.innerHTML = "";
@@ -399,9 +400,9 @@ function clearActiveImage() {
     if (cameraTriggerBtn) cameraTriggerBtn.classList.remove('active');
 }
 
-// =========================================================
-// 8. DIRECT CHAT CONNECTOR: PURE GEMINI 3.5 PIPELINE
-// =========================================================
+// ==========================================
+// 8. DIRECT CHAT CONNECTOR: GEMINI 3.5
+// ==========================================
 async function executeGeminiDirectChat(userInput) {
     if (chatHistory.length === 0) {
         chatHistory.push({ role: "user", parts: [{ text: "You are Gemini 3.5, an advanced conversational core engine running inside the VAII interface assistant frame. Keep statements concise, clear, and direct." }] });
@@ -592,7 +593,6 @@ if (executeActionBtn) {
             return;
         }
 
-        // Clean operational path switch layout: route straight to pure chat state or native tools
         if (selectedMode === "gemini") {
             executeGeminiDirectChat(query);
             return;
@@ -616,7 +616,7 @@ if (hubInput) {
 }
 
 // ====================================================
-// 10. UNIFIED LOCATION ENGINE: MERGING WEATHER, CLOCK, MAPS
+// 10. UNIFIED LOCATION ENGINE: WEATHER, CLOCK, MAPS
 // ====================================================
 function renderUnifiedLocationCard(lat, lon, zone, displayName, greetingHTML = "") {
     output.innerHTML = greetingHTML + `<div style="color:#888; font-style:italic;">Assembling location data card...</div>`;
@@ -677,7 +677,7 @@ function renderUnifiedLocationCard(lat, lon, zone, displayName, greetingHTML = "
 }
 
 // ==========================================
-// 11. COGNITIVE PIPELINES: MULTIMODAL VISION ENGINE
+// 11. COGNITIVE PIPELINES: VISION ENGINE
 // ==========================================
 function executeVisionAnalysis(promptText) {
     output.innerHTML = `
@@ -744,7 +744,7 @@ function executeVisionAnalysis(promptText) {
 function runMarketExecution(ticker) {
     output.innerText = `Fetching price updates for "${ticker.toUpperCase()}"...`;
     const cleanTicker = ticker.trim().toLowerCase();
-    const cryptoMap = { btc: "bitcoin", eth: "ethereum", sol: "solana", doge: "dogecoin", xrp: "ripple" };
+    const cryptoMap = { btc: "bitcoin", eth: "ethereum", solana: "solana" };
 
     if (cryptoMap[cleanTicker]) {
         fetch(`https://api.coingecko.com/api/v3/simple/price?ids=${cryptoMap[cleanTicker]}&vs_currencies=usd&include_24hr_change=true`)
@@ -998,7 +998,8 @@ function runUnifiedWikiPipeline(query, wikiData) {
             .then(res => res.json())
             .then(searchData => {
                 if (searchData.items?.length > 0) {
-                    return fetch(`https://www.googleapis.com/youtube/v3/channels?part=statistics,snippet&id=\"${searchData.items[0].id.channelId}\"&key=${GOOGLE_API_KEY}`)
+                    // FIXED: Extracted literal escape string layers out of the routing expression
+                    return fetch(`https://www.googleapis.com/youtube/v3/channels?part=statistics,snippet&id=${searchData.items[0].id.channelId}&key=${GOOGLE_API_KEY}`)
                         .then(res => res.json())
                         .then(channelData => {
                             if (channelData.items?.length > 0) {
