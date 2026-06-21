@@ -131,7 +131,7 @@ function saveCurrentSessionState() {
     if (chatHistory.length <= 2) return; 
     let sessions = getSavedSessions();
     
-    let firstUserMsg = chatHistory.find(m => m.role === 'user' && !m.parts[0].text.includes("advanced conversational core"));
+    let firstUserMsg = chatHistory.find(m => m.role === 'user' && m.parts && m.parts[0] && !m.parts[0].text.includes("advanced conversational core"));
     let rawTitle = firstUserMsg ? firstUserMsg.parts[0].text.trim() : "Gemini Chat";
     let formattedTitle = rawTitle.length > 28 ? rawTitle.substring(0, 25) + "..." : rawTitle;
     
@@ -211,6 +211,7 @@ function renderFullChatLogBubble() {
     output.innerHTML = "";
     
     let dialogueItems = chatHistory.filter(msg => {
+        if (msg.isHtml) return true;
         let textStr = msg.parts[0].text;
         return !textStr.includes("advanced conversational core") && !textStr.includes("System connection established");
     });
@@ -243,7 +244,7 @@ function renderFullChatLogBubble() {
         output.appendChild(bubble);
     });
 
-    // Re-initialize any dynamic Google Maps within the history stream to prevent grey freeze canvas defects
+    // Map canvas re-render check block
     document.querySelectorAll('.vaii-merged-map-canvas').forEach(canvas => {
         if (canvas && !canvas.classList.contains('map-initialized') && typeof google !== 'undefined' && google.maps) {
             canvas.classList.add('map-initialized');
@@ -430,9 +431,9 @@ function clearActiveImage() {
     if (cameraTriggerBtn) cameraTriggerBtn.classList.remove('active');
 }
 
-// ==========================================
+// =========================================================
 // 8. DIRECT CHAT CONNECTOR: PURE GEMINI 3.5 PIPELINE
-// ==========================================
+// =========================================================
 async function executeGeminiDirectChat(userInput) {
     if (chatHistory.length === 0) {
         chatHistory.push({ role: "user", parts: [{ text: "You are Gemini 3.5, an advanced conversational core engine running inside the VAII interface assistant frame. Keep statements concise, clear, and direct." }] });
@@ -449,13 +450,21 @@ async function executeGeminiDirectChat(userInput) {
     output.appendChild(spinnerBubble);
     output.scrollTop = output.scrollHeight;
 
+    // CHANGED: Sanitize the history array right before stringifying to keep Google from parsing custom UI keys
+    const sanitizedHistory = chatHistory
+        .filter(msg => !msg.isHtml) // Strip out custom injected widget containers entirely from model context
+        .map(msg => ({
+            role: msg.role,
+            parts: msg.parts.map(p => ({ text: p.text }))
+        }));
+
     const visionUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-3.5-flash:generateContent?key=${GEMINI_VISION_KEY}`;
 
     try {
         const response = await fetch(visionUrl, {
             method: "POST",
             headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ contents: chatHistory })
+            body: JSON.stringify({ contents: sanitizedHistory })
         });
         const data = await response.json();
 
@@ -486,7 +495,6 @@ async function executeGeminiDirectChat(userInput) {
     }
 }
 
-// Dynamic Output Routing intercept layer checking active engine status
 function handleVaiiDataOutput(rawTextContent, defaultHtmlOutput, runMapCallback = null) {
     const selectedMode = document.querySelector('input[name="vaii-mode"]:checked').value;
     
@@ -502,7 +510,6 @@ function handleVaiiDataOutput(rawTextContent, defaultHtmlOutput, runMapCallback 
     } else {
         output.innerHTML = defaultHtmlOutput;
         
-        // Native inline map compiler loop execution parameters
         document.querySelectorAll('.vaii-merged-map-canvas').forEach(canvas => {
             if (canvas && !canvas.classList.contains('map-initialized') && typeof google !== 'undefined' && google.maps) {
                 canvas.classList.add('map-initialized');
@@ -669,6 +676,7 @@ if (executeActionBtn) {
         const isUrl = /\.[a-z]{2,6}/i.test(query) || query.startsWith('http://') || query.startsWith('https://');
         const cryptoMap = { btc: "bitcoin", eth: "ethereum", sol: "solana", doge: "dogecoin", xrp: "ripple" };
         const isMarket = cryptoMap[cleanQuery] || cleanQuery.startsWith("price of ");
+        const isMarketSearch = isMarket;
         const isMathOrConversion = /^[0-9+\-*/().\s]+$/.test(query) || cleanQuery.includes(" to ");
         const isDraw = cleanQuery.startsWith("draw ");
         
@@ -676,15 +684,13 @@ if (executeActionBtn) {
         const matchedOption = options.find(opt => opt.value.toLowerCase() === cleanQuery);
         const isMatchedLocation = matchedOption && matchedOption.getAttribute('data-lat');
 
-        const isInteractiveWebFeature = isWorkspace || isLocationIntent || isAppRouting || isUrl || isMarket || isMathOrConversion || isDraw || isMatchedLocation;
+        const isInteractiveWebFeature = isWorkspace || isLocationIntent || isAppRouting || isUrl || isMarketSearch || isMathOrConversion || isDraw || isMatchedLocation;
 
-        // If in Gemini mode and it's NOT an explicit interactive layout utility, use the chat stream model directly
         if (selectedMode === "gemini" && !isInteractiveWebFeature) {
             executeGeminiDirectChat(query);
             return;
         }
 
-        // If it is an interactive web utility executed inside Gemini mode, push the user bubble to the screen layout first
         if (selectedMode === "gemini" && isInteractiveWebFeature && !isDraw) {
             if (chatHistory.length === 0) {
                 chatHistory.push({ role: "user", parts: [{ text: "You are Gemini 3.5, an advanced conversational core engine running inside the VAII interface assistant frame. Keep statements concise, clear, and direct." }] });
