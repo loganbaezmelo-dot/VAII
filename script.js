@@ -24,12 +24,8 @@ const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
 const googleProvider = new GoogleAuthProvider();
 
-// Adding the highly sensitive scopes for Gmail and Drive access
-googleProvider.addScope('https://www.googleapis.com/auth/gmail.readonly');
-googleProvider.addScope('https://www.googleapis.com/auth/drive.readonly');
-
 // ====================================================
-// OBFUSCATED CONFIGURATION: SPLIT CLOUD KEY CORE
+// CONFIGURATION CORE
 // ====================================================
 const _k1 = "AIzaSyAJ";
 const _k2 = "KTkU0nd6";
@@ -74,8 +70,6 @@ const defaultAssistantSuggestions = [
     "Open Minecraft", 
     "(12 * 4) / 2",
     "Map of Orlando",
-    "Show my emails",
-    "Show my drive files",
     "Draw a neon cyberpunk switch console artwork"
 ];
 
@@ -126,7 +120,7 @@ function updateDatalist(cities = [], wikiTitles = [], wikitubiaTitles = []) {
 }
 
 // ==========================================
-// IDENTITY LIFECYCLE MANAGERS
+// ACCOUNT ACCESS SIGNALS
 // ==========================================
 onAuthStateChanged(auth, (user) => {
     if (user) {
@@ -184,21 +178,12 @@ if (authSubmitBtn) {
 if (googleSigninBtn) {
     googleSigninBtn.addEventListener('click', () => {
         if (authError) authError.style.display = "none";
-        signInWithPopup(auth, googleProvider)
-            .then((result) => {
-                const credential = GoogleAuthProvider.credentialFromResult(result);
-                const token = credential.accessToken;
-                if (token) {
-                    localStorage.setItem('google_access_token', token);
-                }
-            })
-            .catch(err => showAuthError(err.message));
+        signInWithPopup(auth, googleProvider).catch(err => showAuthError(err.message));
     });
 }
 
 if (logoutActionBtn) {
     logoutActionBtn.addEventListener('click', () => {
-        localStorage.removeItem('google_access_token');
         signOut(auth).catch(err => console.error("Sign out fail:", err));
     });
 }
@@ -419,7 +404,6 @@ function executeImageGeneration(imagePrompt) {
 function runInfoExecution(query) {
     const cleanQuery = query.toLowerCase().trim();
     const cryptoMap = { btc: "bitcoin", eth: "ethereum", sol: "solana", doge: "dogecoin", xrp: "ripple" };
-    const token = localStorage.getItem('google_access_token');
 
     const greetingsList = ["hello", "hi", "hey", "sup", "yo", "greetings", "whats up", "what's up"];
     let greetingHTML = "";
@@ -431,51 +415,15 @@ function runInfoExecution(query) {
         `;
     }
 
-    // GMAIL FEATURE INTEGRATION
-    if (cleanQuery.includes("email") || cleanQuery.includes("gmail") || cleanQuery.includes("inbox")) {
-        if (!token) {
-            output.innerHTML = greetingHTML + `<div style="background: #1a1a1a; padding: 14px; border-radius: 8px; border-left: 3px solid #ff0000;">✉️ Log out and use the <strong>Sign in with Google</strong> button to grant Gmail reading permissions.</div>`;
-            return;
-        }
-        output.innerText = "Checking your inbox...";
-        fetch(`https://gmail.googleapis.com/v1/users/me/messages?maxResults=5`, {
-            headers: { 'Authorization': `Bearer ${token}` }
-        })
-        .then(res => res.json())
-        .then(data => {
-            const msgs = data.messages || [];
-            if (msgs.length === 0) {
-                output.innerHTML = greetingHTML + `<div style="background: #1a1a1a; padding: 14px; border-radius: 8px; border-left: 3px solid #ff4444;">✉️ No recent emails found.</div>`;
-                return;
-            }
-            output.innerHTML = greetingHTML + `<div style="background: #1a1a1a; padding: 14px; border-radius: 8px; border-left: 3px solid #ff4444;">✉️ Found <strong>${msgs.length}</strong> recent email IDs in your inbox loop.</div>`;
-        })
-        .catch(() => { output.innerText = "Failed reading Gmail logs."; });
-        return;
-    }
-
-    // DRIVE FEATURE INTEGRATION
-    if (cleanQuery.includes("drive") || cleanQuery.includes("files") || cleanQuery.includes("docs")) {
-        if (!token) {
-            output.innerHTML = greetingHTML + `<div style="background: #1a1a1a; padding: 14px; border-radius: 8px; border-left: 3px solid #4da3ff;">📁 Log out and use the <strong>Sign in with Google</strong> button to grant Google Drive file tracking permissions.</div>`;
-            return;
-        }
-        output.innerText = "Scanning your Drive database...";
-        fetch(`https://www.googleapis.com/drive/v3/files?pageSize=5`, {
-            headers: { 'Authorization': `Bearer ${token}` }
-        })
-        .then(res => res.json())
-        .then(data => {
-            const files = data.files || [];
-            if (files.length === 0) {
-                output.innerHTML = greetingHTML + `<div style="background: #1a1a1a; padding: 14px; border-radius: 8px; border-left: 3px solid #4da3ff;">📁 No Drive documents found.</div>`;
-                return;
-            }
-            let filesHTML = files.map(f => `<li>📄 ${f.name}</li>`).join('');
-            output.innerHTML = greetingHTML + `<div style="background: #1a1a1a; padding: 14px; border-radius: 8px; border-left: 3px solid #4da3ff;">📁 <strong>Recent Documents:</strong><ul style="margin:8px 0 0 0; padding-left:16px;">${filesHTML}</ul></div>`;
-        })
-        .catch(() => { output.innerText = "Failed pulling cloud storage summaries."; });
-        return;
+    // Explicit block catch for Workspace keywords to prevent security intercept messages
+    if (cleanQuery.includes("calendar") || cleanQuery.includes("calender") || cleanQuery.includes("schedule") || cleanQuery === "agenda" || cleanQuery.includes("email") || cleanQuery.includes("gmail") || cleanQuery.includes("inbox") || cleanQuery.includes("drive") || cleanQuery.includes("files")) {
+        output.innerHTML = greetingHTML + `
+            <div style="background: #1a1a1a; padding: 14px; border-radius: 8px; border-left: 3px solid #ffc107; text-align: left;">
+                ⚠️ <strong>Workspace Integrations Disabled:</strong><br><br>
+                <span style="color: #aaa; font-size: 0.9rem;">Private workspace elements (Calendar, Gmail, and Drive) are removed to maintain an open authentication route.</span>
+            </div>
+        `;
+        return; 
     }
 
     if (cleanQuery.startsWith("map of ") || cleanQuery.startsWith("show map ")) {
