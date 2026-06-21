@@ -110,15 +110,6 @@
             flex-direction: column;
             gap: 12px;
         }
-        <div class="mode-selector" style="display: flex; gap: 15px; margin: 10px 0; justify-content: center; font-size: 0.85rem; color: #aaa;">
-    <label style="cursor: pointer;">
-        <input type="radio" name="vaii-mode" value="native" checked> VAII Native
-    </label>
-    <label style="cursor: pointer;">
-        <input type="radio" name="vaii-mode" value="gemini"> Gemini 3.5
-    </label>
-</div>
-
         .input-row {
             display: flex;
             gap: 8px;
@@ -416,6 +407,15 @@
                     </div>
 
                     <div class="search-container">
+                        <div style="display: flex; gap: 20px; justify-content: center; margin-bottom: 2px; font-size: 0.9rem; color: #ccc;">
+                            <label style="display: flex; align-items: center; gap: 6px; cursor: pointer; user-select: none;">
+                                <input type="radio" name="vaii-mode" value="native" checked style="width: auto !important; height: auto !important; margin: 0; padding: 0;"> VAII Native
+                            </label>
+                            <label style="display: flex; align-items: center; gap: 6px; cursor: pointer; user-select: none;">
+                                <input type="radio" name="vaii-mode" value="gemini" style="width: auto !important; height: auto !important; margin: 0; padding: 0;"> Gemini 3.5
+                            </label>
+                        </div>
+
                         <div class="input-row">
                             <button id="camera-trigger-btn" class="camera-btn">📷</button>
                             <input type="file" id="image-file-input" accept="image/*" style="display: none;">
