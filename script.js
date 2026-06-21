@@ -10,25 +10,40 @@ import {
     signOut 
 } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
 
-// Your brand new updated web app's Firebase configuration layout
+// ====================================================
+// CORE AUTH: OLD RELIABLE FIREBASE CONFIG (vaiinternet)
+// ====================================================
 const firebaseConfig = {
-  apiKey: "AIzaSyDiSUeuVzA1n9d1yyODgOvnv0erey4EipQ",
-  authDomain: "loganhajeheh-i.firebaseapp.com",
-  projectId: "loganhajeheh-i",
-  storageBucket: "loganhajeheh-i.firebasestorage.app",
-  messagingSenderId: "895508601514",
-  appId: "1:895508601514:web:d8f65f587e746d251f4ed3",
-  measurementId: "G-JZTHTP0M74"
+    apiKey: "AIzaSyA6RmZ6rquzUR1dct30s355PzLu-r1_fwE",
+    authDomain: "vaiinternet.firebaseapp.com",
+    projectId: "vaiinternet",
+    storageBucket: "vaiinternet.firebasestorage.app",
+    messagingSenderId: "367548633672",
+    appId: "1:367548633672:web:44da44d1761085424b3e7d",
+    measurementId: "G-0XBYP585WQ"
 };
 
-// Initialize Firebase Entities
 const app = initializeApp(firebaseConfig);
-const analytics = getAnalytics(app);
 const auth = getAuth(app);
 const googleProvider = new GoogleAuthProvider();
 
-// Explicitly inject the scope required to view calendar events during user authentication
-googleProvider.addScope('https://www.googleapis.com/auth/calendar.readonly');
+// ====================================================
+// FUNCTIONS WORKSPACE: NEW FIREBASE CONFIG (loganhajeheh-i)
+// ====================================================
+const workspaceConfig = {
+    apiKey: "AIzaSyDiSUeuVzA1n9d1yyODgOvnv0erey4EipQ",
+    authDomain: "loganhajeheh-i.firebaseapp.com",
+    projectId: "loganhajeheh-i",
+    storageBucket: "loganhajeheh-i.firebasestorage.app",
+    messagingSenderId: "895508601514",
+    appId: "1:895508601514:web:d8f65f587e746d251f4ed3",
+    measurementId: "G-JZTHTP0M74"
+};
+
+const workspaceApp = initializeApp(workspaceConfig, "workspaceApp");
+const workspaceAuth = getAuth(workspaceApp);
+const workspaceGoogleProvider = new GoogleAuthProvider();
+workspaceGoogleProvider.addScope('https://www.googleapis.com/auth/calendar.readonly');
 
 // ====================================================
 // OBFUSCATED CONFIGURATION: SPLIT CLOUD KEY CORE
@@ -128,7 +143,7 @@ function updateDatalist(cities = [], wikiTitles = [], wikitubiaTitles = []) {
 }
 
 // ==========================================
-// 1. FIREBASE AUTHENTICATION INITIALIZATION
+// 1. MAIN APPS IDENTITY MONITORS (vaiinternet)
 // ==========================================
 onAuthStateChanged(auth, (user) => {
     if (user) {
@@ -185,21 +200,13 @@ if (authSubmitBtn) {
 if (googleSigninBtn) {
     googleSigninBtn.addEventListener('click', () => {
         if (authError) authError.style.display = "none";
-        signInWithPopup(auth, googleProvider)
-            .then((result) => {
-                const credential = GoogleAuthProvider.credentialFromResult(result);
-                const token = credential.accessToken;
-                if (token) {
-                    localStorage.setItem('google_oauth_token', token);
-                }
-            })
-            .catch(err => showAuthError(err.message));
+        signInWithPopup(auth, googleProvider).catch(err => showAuthError(err.message));
     });
 }
 
 if (logoutActionBtn) {
     logoutActionBtn.addEventListener('click', () => {
-        localStorage.removeItem('google_oauth_token');
+        localStorage.removeItem('google_workspace_token');
         signOut(auth).catch(err => console.error("Sign out fail:", err));
     });
 }
@@ -210,6 +217,23 @@ function showAuthError(message) {
         authError.style.display = "block";
     }
 }
+
+// Global window function to handle background OAuth popup for Calendar syncing
+window.triggerWorkspaceCalendarSync = function() {
+    signInWithPopup(workspaceAuth, workspaceGoogleProvider)
+        .then((result) => {
+            const credential = GoogleAuthProvider.credentialFromResult(result);
+            const token = credential.accessToken;
+            if (token) {
+                localStorage.setItem('google_workspace_token', token);
+                runInfoExecution("calendar"); // Automatically re-run calendar lookup
+            }
+        })
+        .catch(err => {
+            console.error("Workspace configuration error:", err);
+            alert("Authorization failed. Ensure 'Advanced > Go to App' is tapped on the security warning screen.");
+        });
+};
 
 // ==========================================
 // 2. MAIN HUB INTERFACE OPERATIONAL LOOPS
@@ -444,24 +468,25 @@ function runInfoExecution(query) {
         `;
     }
 
-    // 1. LIVE GOOGLE CALENDAR ENGINE: Pulls real events using valid user credentials
+    // 1. ISOLATED WORKSPACE DECOUPLER: Secure background validation for Calendar requests
     if (cleanQuery.includes("calendar") || cleanQuery.includes("calender") || cleanQuery.includes("schedule") || cleanQuery === "agenda") {
-        const token = localStorage.getItem('google_oauth_token');
+        const token = localStorage.getItem('google_workspace_token');
         if (!token) {
             output.innerHTML = greetingHTML + `
                 <div style="background: #1a1a1a; padding: 14px; border-radius: 8px; border-left: 3px solid #ffc107; text-align: left; margin-bottom: 15px;">
                     📅 <strong>VAII Calendar Module:</strong><br><br>
-                    <span style="color: #ff4d4d; font-size: 0.9rem;">Access Denied. You must log out and use the "Sign in with Google" button to authorize calendar access features.</span>
+                    <span style="color: #aaa; font-size: 0.9rem;">To securely pull your upcoming schedule details, activate your secondary scoped calendar token link:</span><br><br>
+                    <button class="link-calendar-btn" onclick="window.triggerWorkspaceCalendarSync()">🔗 Link Google Calendar</button>
                 </div>
             `;
             return;
         }
 
-        output.innerHTML = greetingHTML + `<div style="color:#888; font-style:italic;">Fetching your upcoming calendar events...</div>`;
+        output.innerHTML = greetingHTML + `<div style="color:#888; font-style:italic;">Fetching your workspace agenda securely...</div>`;
 
         fetch(`https://www.googleapis.com/calendar/v3/calendars/primary/events?maxResults=5&orderBy=startTime&singleEvents=true&access_token=${token}`)
             .then(res => {
-                if (!res.ok) throw new Error("Unauthorized");
+                if (!res.ok) throw new Error("Expired Token");
                 return res.json();
             })
             .then(data => {
@@ -470,7 +495,7 @@ function runInfoExecution(query) {
                     output.innerHTML = greetingHTML + `
                         <div style="background: #1a1a1a; padding: 14px; border-radius: 8px; border-left: 3px solid #ffc107; text-align: left;">
                             📅 <strong>Upcoming Agenda:</strong><br><br>
-                            <span style="color: #aaa;">No upcoming events found in your calendar.</span>
+                            <span style="color: #aaa;">No upcoming schedule tracks found.</span>
                         </div>
                     `;
                     return;
@@ -493,10 +518,12 @@ function runInfoExecution(query) {
                 `;
             })
             .catch(() => {
+                localStorage.removeItem('google_workspace_token');
                 output.innerHTML = greetingHTML + `
                     <div style="background: #1a1a1a; padding: 14px; border-radius: 8px; border-left: 3px solid #ffc107; text-align: left;">
-                        📅 <strong>VAII Calendar Module:</strong><br><br>
-                        <span style="color: #ff4d4d; font-size: 0.9rem;">Token expired or API not enabled. Make sure the Google Calendar API is fully enabled in your Google Cloud dashboard layout.</span>
+                        📅 <strong>Session Expired:</strong><br><br>
+                        <span style="color: #ff4d4d; font-size: 0.9rem;">Workspace clearance expired. Tap down below to refresh authorization permissions:</span><br><br>
+                        <button class="link-calendar-btn" onclick="window.triggerWorkspaceCalendarSync()">🔄 Re-link Calendar Account</button>
                     </div>
                 `;
             });
