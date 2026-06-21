@@ -682,29 +682,22 @@ function runInfoExecution(query) {
                     rawDefinition = "No direct text definition available. Use the index link on the bottom of the page to view the full dictionary entry.";
                 }
                 
-                let infoHTML = `<div class="news-header-msg" style="color: #888; font-style: italic; margin-bottom: 12px; font-size: 0.9rem; line-height: 1.4;">I have provided the most relevant text of each information source related to "${query}".</div>`;
-                infoHTML += `
-                    <div class="aggregated-text" style="font-size: 0.95rem; color: #e0e0e0; line-height: 1.6; margin-bottom: 15px; background: #1a1a1a; padding: 14px; border-radius: 8px; border-left: 3px solid #28a745; text-align: left;">
-                        <strong>${query.charAt(0).toUpperCase() + query.slice(1)}</strong> (${partOfSpeech.toLowerCase()}): ${rawDefinition}
-                    </div>
-                `;
+                let wikiData = {
+                    wiktionary: { title: query, text: rawDefinition, pos: partOfSpeech }
+                };
                 
-                runUnifiedWikiPipeline(query, infoHTML, true);
+                runUnifiedWikiPipeline(query, wikiData, true);
             })
             .catch(() => {
-                runUnifiedWikiPipeline(query, "", false);
+                runUnifiedWikiPipeline(query, {}, false);
             });
     } else {
-        runUnifiedWikiPipeline(query, "", false);
+        runUnifiedWikiPipeline(query, {}, false);
     }
 }
 
 // Restricted DuckDuckGo Core Pipeline with strict influencer and long-list override filters
-function runUnifiedWikiPipeline(query, baselineHTML, hasWiktionary) {
-    if (!baselineHTML) {
-        baselineHTML = `<div class="news-header-msg" style="color: #888; font-style: italic; margin-bottom: 12px; font-size: 0.9rem; line-height: 1.4;">I have provided the most relevant text of each information source related to "${query}".</div>`;
-    }
-
+function runUnifiedWikiPipeline(query, wikiData, hasWiktionary) {
     const famousYoutubersList = [
         "jacksucksatlife", "mrbeast", "pewdiepie", "markiplier", "jacksepticeye", 
         "caseoh", "jynxzi", "kai cenat", "ludwig", "xqc", "moistcr1tikal", "penguinz0", 
@@ -732,22 +725,15 @@ function runUnifiedWikiPipeline(query, baselineHTML, hasWiktionary) {
                 let ddgExtract = rawText;
                 if (ddgExtract.length > 350) ddgExtract = ddgExtract.substring(0, 350) + "...";
                 
-                if (hasWiktionary) {
-                    baselineHTML += `<div style="color: #888; font-style: italic; font-size: 0.85rem; margin: 15px 0 8px 0; text-align: left;">This might also be relevant:</div>`;
-                }
-                baselineHTML += `
-                    <div class="aggregated-text" style="font-size: 0.95rem; color: #e0e0e0; line-height: 1.6; margin-bottom: 15px; background: #1a1a1a; padding: 14px; border-radius: 8px; border-left: 3px solid #de5833; text-align: left;">
-                        <strong>${ddgTitle} (DuckDuckGo):</strong> ${ddgExtract}
-                    </div>
-                `;
-                appendSecondaryWikipediaLayer(query, baselineHTML, true, ddgTitle, hasWiktionary);
+                wikiData.ddg = { title: ddgTitle, text: ddgExtract };
+                appendSecondaryWikipediaLayer(query, wikiData, hasWiktionary);
             } else {
-                appendSecondaryWikipediaLayer(query, baselineHTML, false, null, hasWiktionary);
+                appendSecondaryWikipediaLayer(query, wikiData, hasWiktionary);
             }
-        }).catch(() => appendSecondaryWikipediaLayer(query, baselineHTML, false, null, hasWiktionary));
+        }).catch(() => appendSecondaryWikipediaLayer(query, wikiData, hasWiktionary));
 }
 
-function appendSecondaryWikipediaLayer(query, currentHTML, includedDdg, ddgTitle, hasWiktionary) {
+function appendSecondaryWikipediaLayer(query, wikiData, hasWiktionary) {
     fetch(`https://en.wikipedia.org/w/api.php?action=query&list=search&srsearch=${encodeURIComponent(query)}&utf8=&format=json&origin=*`)
         .then(res => res.json())
         .then(wikiSearch => {
@@ -766,28 +752,69 @@ function appendSecondaryWikipediaLayer(query, currentHTML, includedDdg, ddgTitle
                         }
                         
                         if (wikiExtract) {
-                            if (includedDdg || hasWiktionary) {
-                                currentHTML += `<div style="color: #888; font-style: italic; font-size: 0.85rem; margin: 15px 0 8px 0; text-align: left;">This might also be relevant:</div>`;
-                            }
-                            currentHTML += `
-                                <div class="aggregated-text" style="font-size: 0.95rem; color: #e0e0e0; line-height: 1.6; margin-bottom: 20px; background: #1a1a1a; padding: 14px; border-radius: 8px; border-left: 3px solid #007bff; text-align: left;">
-                                    <strong>${wikipediaTitle}:</strong> ${wikiExtract}
-                                </div>
-                            `;
+                            wikiData.wikipedia = { title: wikipediaTitle, text: wikiExtract };
                         }
-                        compileFinalSourceIndexBox(query, currentHTML, true, wikipediaTitle, includedDdg, ddgTitle, hasWiktionary);
-                    }).catch(() => compileFinalSourceIndexBox(query, currentHTML, false, null, includedDdg, ddgTitle, hasWiktionary));
+                        compileFinalSourceIndexBox(query, wikiData, hasWiktionary);
+                    }).catch(() => compileFinalSourceIndexBox(query, wikiData, hasWiktionary));
             } else {
-                compileFinalSourceIndexBox(query, currentHTML, false, null, includedDdg, ddgTitle, hasWiktionary);
+                compileFinalSourceIndexBox(query, wikiData, hasWiktionary);
             }
-        }).catch(() => compileFinalSourceIndexBox(query, currentHTML, false, null, includedDdg, ddgTitle, hasWiktionary));
+        }).catch(() => compileFinalSourceIndexBox(query, wikiData, hasWiktionary));
 }
 
-function compileFinalSourceIndexBox(query, totalHTML, includeWikiLink, wikiTitle, includeDdgLink, ddgTitle, hasWiktionary) {
-    if (!includeWikiLink && !includeDdgLink && !hasWiktionary) {
+// Rendering Matrix Engine: Structural text deduplication favoring Wikipedia priority slots
+function compileFinalSourceIndexBox(query, wikiData, hasWiktionary) {
+    let showWiktionary = !!wikiData.wiktionary;
+    let showDdg = !!wikiData.ddg;
+    let showWikipedia = !!wikiData.wikipedia;
+
+    const wikiText = wikiData.wikipedia?.text?.trim();
+    const ddgText = wikiData.ddg?.text?.trim();
+    const wiktionaryText = wikiData.wiktionary?.text?.trim();
+
+    // Deduplication gate matrix
+    if (showWikipedia) {
+        if (showDdg && ddgText === wikiText) {
+            showDdg = false;
+        }
+        if (showWiktionary && wiktionaryText === wikiText) {
+            showWiktionary = false;
+        }
+    }
+    if (showDdg && showWiktionary && ddgText === wiktionaryText) {
+        showWiktionary = false;
+    }
+
+    if (!showWikipedia && !showDdg && !showWiktionary) {
         output.innerText = `Could not extract summary tracking metrics for "${query}". Try a broader topic parameter line!`;
         return;
     }
+
+    let blocksHtml = [];
+    if (showWiktionary) {
+        blocksHtml.push(`
+            <div class="aggregated-text" style="font-size: 0.95rem; color: #e0e0e0; line-height: 1.6; background: #1a1a1a; padding: 14px; border-radius: 8px; border-left: 3px solid #28a745; text-align: left;">
+                <strong>${wikiData.wiktionary.title.charAt(0).toUpperCase() + wikiData.wiktionary.title.slice(1)}</strong> (${wikiData.wiktionary.pos.toLowerCase()}): ${wikiData.wiktionary.text}
+            </div>
+        `);
+    }
+    if (showDdg) {
+        blocksHtml.push(`
+            <div class="aggregated-text" style="font-size: 0.95rem; color: #e0e0e0; line-height: 1.6; background: #1a1a1a; padding: 14px; border-radius: 8px; border-left: 3px solid #de5833; text-align: left;">
+                <strong>${wikiData.ddg.title} (DuckDuckGo):</strong> ${wikiData.ddg.text}
+            </div>
+        `);
+    }
+    if (showWikipedia) {
+        blocksHtml.push(`
+            <div class="aggregated-text" style="font-size: 0.95rem; color: #e0e0e0; line-height: 1.6; background: #1a1a1a; padding: 14px; border-radius: 8px; border-left: 3px solid #007bff; text-align: left;">
+                <strong>${wikiData.wikipedia.title}:</strong> ${wikiData.wikipedia.text}
+            </div>
+        `);
+    }
+
+    let totalHTML = `<div class="news-header-msg" style="color: #888; font-style: italic; margin-bottom: 12px; font-size: 0.9rem; line-height: 1.4;">I have provided the most relevant text of each information source related to "${query}".</div>`;
+    totalHTML += blocksHtml.join(`<div style="color: #888; font-style: italic; font-size: 0.85rem; margin: 15px 0 8px 0; text-align: left;">This might also be relevant:</div>`);
 
     totalHTML += `
         <div class="source-box" style="border-top: 1px solid #333; padding-top: 12px; margin-top: 10px;">
@@ -795,7 +822,7 @@ function compileFinalSourceIndexBox(query, totalHTML, includeWikiLink, wikiTitle
             <div class="source-list" style="display: flex; flex-direction: column; gap: 6px;">
     `;
 
-    if (hasWiktionary) {
+    if (wikiData.wiktionary) {
         totalHTML += `
             <a href="https://en.wiktionary.org/wiki/${encodeURIComponent(query)}" target="_blank" style="display: flex; align-items: center; justify-content: space-between; background: #2a2a2a; border: 1px solid #3d3d3d; border-radius: 6px; padding: 6px 10px; color: #4da3ff; text-decoration: none; font-size: 0.82rem; font-weight: bold;">
                 <span style="color: #aaa; font-weight: normal;">📰 Wiktionary</span>
@@ -804,18 +831,18 @@ function compileFinalSourceIndexBox(query, totalHTML, includeWikiLink, wikiTitle
         `;
     }
 
-    if (includeDdgLink && ddgTitle) {
+    if (wikiData.ddg) {
         totalHTML += `
-            <a href="https://duckduckgo.com/?q=${encodeURIComponent(ddgTitle)}" target="_blank" style="display: flex; align-items: center; justify-content: space-between; background: #2a2a2a; border: 1px solid #3d3d3d; border-radius: 6px; padding: 6px 10px; color: #4da3ff; text-decoration: none; font-size: 0.82rem; font-weight: bold;">
+            <a href="https://duckduckgo.com/?q=${encodeURIComponent(wikiData.ddg.title)}" target="_blank" style="display: flex; align-items: center; justify-content: space-between; background: #2a2a2a; border: 1px solid #3d3d3d; border-radius: 6px; padding: 6px 10px; color: #4da3ff; text-decoration: none; font-size: 0.82rem; font-weight: bold;">
                 <span style="color: #aaa; font-weight: normal;">🦆 DuckDuckGo</span>
                 <span>Instant Answer →</span>
             </a>
         `;
     }
 
-    if (includeWikiLink && wikiTitle) {
+    if (wikiData.wikipedia) {
         totalHTML += `
-            <a href="https://en.wikipedia.org/wiki/${encodeURIComponent(wikiTitle)}" target="_blank" style="display: flex; align-items: center; justify-content: space-between; background: #2a2a2a; border: 1px solid #3d3d3d; border-radius: 6px; padding: 6px 10px; color: #4da3ff; text-decoration: none; font-size: 0.82rem; font-weight: bold;">
+            <a href="https://en.wikipedia.org/wiki/${encodeURIComponent(wikiData.wikipedia.title)}" target="_blank" style="display: flex; align-items: center; justify-content: space-between; background: #2a2a2a; border: 1px solid #3d3d3d; border-radius: 6px; padding: 6px 10px; color: #4da3ff; text-decoration: none; font-size: 0.82rem; font-weight: bold;">
                 <span style="color: #aaa; font-weight: normal;">📰 Wikipedia</span>
                 <span>Open Source →</span>
             </a>
