@@ -263,23 +263,6 @@
             box-sizing: border-box;
         }
         
-        .link-calendar-btn {
-            background: #ffc107;
-            color: #121212;
-            border: none;
-            padding: 8px 12px;
-            font-weight: bold;
-            border-radius: 6px;
-            cursor: pointer;
-            margin-top: 10px;
-            font-size: 0.85rem;
-            display: inline-block;
-        }
-        .link-calendar-btn:hover {
-            background: #e0a800;
-        }
-        
-        /* Privacy Footer Styles */
         .policy-footer {
             margin-top: 40px;
             padding: 10px;
@@ -356,7 +339,6 @@
                         <strong>💡 VAII Unified Feature Architecture Guide:</strong>
                         <ul>
                             <li><strong>🧠 Knowledge Base:</strong> Type standard words for Wiktionary definitions or general strings for Wikipedia. If querying a creator tracked inside Wikitubia, VAII launches structural loops inside your live YouTube Data API endpoint.</li>
-                            <li><strong>📅 Calendar Integration:</strong> Ask <code>my calendar</code> or <code>show schedule</code> to access event indexes processed cleanly over your primary Google Calendar arrays.</li>
                             <li><strong>🗺️ Mapping Module:</strong> Ask <code>map of [location]</code> to load real-time spatial cards powered natively by your enabled Maps JavaScript API infrastructure.</li>
                             <li><strong>☀️ Weather & Global Time:</strong> Type any city name (e.g., <code>Paris</code>) or use keywords like <code>weather in Tokyo</code> to fetch climate readings and matching timezone clocks simultaneously.</li>
                             <li><strong>🌐 Websites & External Apps:</strong> Type clear domains (e.g., <code>wikipedia.org</code>) or execution strings like <code>open youtube</code> to process automated link launching.</li>
@@ -375,7 +357,7 @@
                     </div>
                     <datalist id="hub-suggestions"></datalist>
                     <div id="weather-output" class="output-box">
-                        Welcome back! Enter a search query, app routing command, calculation sequence, weather location, translation phrase, crypto ticker, calendar query, map request, or art prompt to begin...
+                        Welcome back! Enter a search query, app routing command, calculation sequence, weather location, translation phrase, crypto ticker, map request, or art prompt to begin...
                     </div>
                     
                     <div style="text-align: right;">
@@ -395,14 +377,13 @@
                     <strong>1. Data Collection and Usage</strong><br>
                     VAII is built as a client-side application. Most processing occurs directly within your browser session.<br>
                     • <em>Authentication Data:</em> Sign-in credentials (email, password, and Google account tokens) are processed securely via Firebase Authentication to verify your identity and manage app access.<br>
-                    • <em>Google User Data:</em> If you choose to link your Google account to utilize advanced assistant features, the App requests specific read-only access scopes (such as Google Calendar access). This token is stored locally on your device (<code>localStorage</code>) and is used solely to fetch your upcoming schedule metrics directly from Google servers. We do not store, copy, or collect your personal calendar events, emails, or files on any external database.<br>
                     • <em>Location and Search Queries:</em> Location queries processed for weather, time, or interactive map modules are sent directly to open-source geocoding networks (Open-Meteo) and the Google Maps JavaScript API to render visual cards.<br><br>
                     
                     <strong>2. Third-Party Services</strong><br>
                     The App interacts with third-party APIs to fulfill user commands: Firebase (Google), Google Cloud Platform (Maps JavaScript API, YouTube Data API), Open-Meteo, Wikipedia, Wiktionary, MyMemory, and Pollinations.ai.<br><br>
                     
                     <strong>3. Data Retention and Security</strong><br>
-                    Your personal OAuth tokens and API access variables remain cached inside your local browser memory space. Logging out of the application completely wipes these tokens from your device storage. We do not maintain server-side logs tracking your query entries or personal data payloads.<br><br>
+                    Your personal API tokens and variables remain cached inside your local browser memory space. Logging out of the application completely wipes these tokens from your device storage. We do not maintain server-side logs tracking your query entries or personal data payloads.<br><br>
                     
                     <strong>4. Changes to This Policy</strong><br>
                     We may update this Privacy Policy from time to time to reflect structural architectural updates.
