@@ -69,7 +69,6 @@
         <p>VAII is built as a client-side application. Most processing occurs directly within your browser session.</p>
         <ul>
             <li><strong>Authentication Data:</strong> Sign-in credentials (email, password, and Google account tokens) are processed securely via Firebase Authentication to verify your identity and manage app access.</li>
-            <li><strong>Google User Data:</strong> If you choose to link your Google account to utilize advanced assistant features, the App requests specific read-only access scopes (such as Google Calendar access). This token is stored locally on your device (<code>localStorage</code>) and is used solely to fetch your upcoming schedule metrics directly from Google servers. We do not store, copy, or collect your personal calendar events, emails, or files on any external database.</li>
             <li><strong>Location and Search Queries:</strong> Location queries processed for weather, time, or interactive map modules are sent directly to open-source geocoding networks (Open-Meteo) and the Google Maps JavaScript API to render visual cards.</li>
         </ul>
 
@@ -84,7 +83,7 @@
         </ul>
 
         <h2>3. Data Retention and Security</h2>
-        <p>Your personal OAuth tokens and API access variables remain cached inside your local browser memory space. Logging out of the application completely wipes these tokens from your device storage. We do not maintain server-side logs tracking your query entries or personal data payloads.</p>
+        <p>Your personal API access variables remain cached inside your local browser memory space. Logging out of the application completely wipes tokens from your device storage. We do not maintain server-side logs tracking your query entries or personal data payloads.</p>
 
         <h2>4. Changes to This Policy</h2>
         <p>We may update this Privacy Policy from time to time to reflect structural architectural updates.</p>
