@@ -370,7 +370,7 @@ function runMarketExecution(ticker) {
             <div style="background: #1a1a1a; padding: 14px; border-radius: 8px; border-left: 3px solid #6f42c1; text-align: left;">
                 <strong>📈 Stock Ticker Tracker: ${ticker.toUpperCase()}</strong><br>
                 <span style="color: #aaa; font-size: 0.9rem;">To view deep market assets without explicit tokens, launch structural metrics directly:</span>
-                <a href="https://finance.yahoo.com/quote/${ticker.toUpperCase()}" target="_blank" style="display: block; text-align: center; margin-top: 10px; background: #6f42c1; color: white; padding: 8px; border-radius: 6px; text-decoration: none; font-weight: bold;">Open Yahoo Finance Chart ↗</a>
+                <a href="https://finance.yahoo.com/quote/${ticker.toUpperCase()}" target="_blank">Open Yahoo Finance Chart ↗</a>
             </div>
             
             <div class="source-box" style="border-top: 1px solid #333; padding-top: 12px; margin-top: 15px;">
@@ -473,7 +473,7 @@ function executeImageGeneration(imagePrompt) {
 
 function runInfoExecution(query) {
     const cleanQuery = query.toLowerCase().trim();
-    const cryptoMap = { btc: "bitcoin", eth: "ethereum", sol = "solana", doge: "dogecoin", xrp: "ripple" };
+    const cryptoMap = { btc: "bitcoin", eth: "ethereum", sol: "solana", doge: "dogecoin", xrp: "ripple" };
 
     // 1. Unified Location / Time Interceptor
     if (cleanQuery.startsWith("time in ") || cleanQuery.startsWith("weather in ") || cleanQuery.startsWith("weather ") || cleanQuery.startsWith("clock ")) {
