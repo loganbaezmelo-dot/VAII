@@ -1,5 +1,4 @@
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
-import { getAnalytics } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-analytics.js";
 import { 
     getAuth, 
     GoogleAuthProvider, 
@@ -10,9 +9,7 @@ import {
     signOut 
 } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
 
-// ====================================================
-// CORE AUTH: OLD RELIABLE FIREBASE CONFIG (vaiinternet)
-// ====================================================
+// Core App Configuration (vaiinternet)
 const firebaseConfig = {
     apiKey: "AIzaSyA6RmZ6rquzUR1dct30s355PzLu-r1_fwE",
     authDomain: "vaiinternet.firebaseapp.com",
@@ -26,24 +23,6 @@ const firebaseConfig = {
 const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
 const googleProvider = new GoogleAuthProvider();
-
-// ====================================================
-// FUNCTIONS WORKSPACE: NEW FIREBASE CONFIG (loganhajeheh-i)
-// ====================================================
-const workspaceConfig = {
-    apiKey: "AIzaSyDiSUeuVzA1n9d1yyODgOvnv0erey4EipQ",
-    authDomain: "loganhajeheh-i.firebaseapp.com",
-    projectId: "loganhajeheh-i",
-    storageBucket: "loganhajeheh-i.firebasestorage.app",
-    messagingSenderId: "895508601514",
-    appId: "1:895508601514:web:d8f65f587e746d251f4ed3",
-    measurementId: "G-JZTHTP0M74"
-};
-
-const workspaceApp = initializeApp(workspaceConfig, "workspaceApp");
-const workspaceAuth = getAuth(workspaceApp);
-const workspaceGoogleProvider = new GoogleAuthProvider();
-workspaceGoogleProvider.addScope('https://www.googleapis.com/auth/calendar.readonly');
 
 // ====================================================
 // OBFUSCATED CONFIGURATION: SPLIT CLOUD KEY CORE
@@ -76,7 +55,6 @@ const routingWarning = document.getElementById('routing-warning');
 const helpToggle = document.getElementById('help-toggle');
 const helpGuide = document.getElementById('help-guide');
 
-let isLoginMode = true;
 let debounceTimer;
 const wikitubiaCache = new Set();
 
@@ -91,7 +69,6 @@ const defaultAssistantSuggestions = [
     "Hello to Spanish", 
     "Open Minecraft", 
     "(12 * 4) / 2",
-    "Show my calendar",
     "Map of Orlando",
     "Draw a neon cyberpunk switch console artwork"
 ];
@@ -143,7 +120,7 @@ function updateDatalist(cities = [], wikiTitles = [], wikitubiaTitles = []) {
 }
 
 // ==========================================
-// 1. MAIN APPS IDENTITY MONITORS (vaiinternet)
+// IDENTITY LIFECYCLE MANAGERS
 // ==========================================
 onAuthStateChanged(auth, (user) => {
     if (user) {
@@ -166,16 +143,16 @@ onAuthStateChanged(auth, (user) => {
 
 if (authToggle) {
     authToggle.addEventListener('click', () => {
-        isLoginMode = !isLoginMode;
+        let isLoginMode = (authSubmitBtn.innerText === "Log In");
         if (authError) authError.style.display = "none";
         if (isLoginMode) {
-            authTitle.innerText = "🔒 Account Sign In";
-            authSubmitBtn.innerText = "Log In";
-            authToggle.innerText = "Need an account? Register instead";
-        } else {
             authTitle.innerText = "✨ Create Account";
             authSubmitBtn.innerText = "Register App User";
             authToggle.innerText = "Already have an account? Sign In";
+        } else {
+            authTitle.innerText = "🔒 Account Sign In";
+            authSubmitBtn.innerText = "Log In";
+            authToggle.innerText = "Need an account? Register instead";
         }
     });
 }
@@ -184,6 +161,7 @@ if (authSubmitBtn) {
     authSubmitBtn.addEventListener('click', () => {
         const email = authEmail.value.trim();
         const password = authPassword.value;
+        let isLoginMode = (authSubmitBtn.innerText === "Log In");
         if (authError) authError.style.display = "none";
         if (!email || !password) {
             showAuthError("Please fill out all credential inputs.");
@@ -206,7 +184,6 @@ if (googleSigninBtn) {
 
 if (logoutActionBtn) {
     logoutActionBtn.addEventListener('click', () => {
-        localStorage.removeItem('google_workspace_token');
         signOut(auth).catch(err => console.error("Sign out fail:", err));
     });
 }
@@ -218,25 +195,8 @@ function showAuthError(message) {
     }
 }
 
-// Global window function to handle background OAuth popup for Calendar syncing
-window.triggerWorkspaceCalendarSync = function() {
-    signInWithPopup(workspaceAuth, workspaceGoogleProvider)
-        .then((result) => {
-            const credential = GoogleAuthProvider.credentialFromResult(result);
-            const token = credential.accessToken;
-            if (token) {
-                localStorage.setItem('google_workspace_token', token);
-                runInfoExecution("calendar"); // Automatically re-run calendar lookup
-            }
-        })
-        .catch(err => {
-            console.error("Workspace configuration error:", err);
-            alert("Authorization failed. Ensure 'Advanced > Go to App' is tapped on the security warning screen.");
-        });
-};
-
 // ==========================================
-// 2. MAIN HUB INTERFACE OPERATIONAL LOOPS
+// DATA ACQUISITION & COMMAND EXECUTIVE PIPELINES
 // ==========================================
 if (helpToggle) {
     helpToggle.addEventListener('click', function() {
@@ -338,9 +298,6 @@ if (hubInput) {
     });
 }
 
-// ----------------------------------------------------
-// UNIFIED ASSISTANT SYSTEMS
-// ----------------------------------------------------
 function runUnifiedWeatherClock(lat, lon, zone, displayName) {
     output.innerText = `Fetching synchronized metrics for ${displayName}...`;
     
@@ -423,20 +380,15 @@ function launchTargetUrl(url) {
 
 function executeImageGeneration(imagePrompt) {
     routingWarning.style.display = "none"; 
-
     output.innerHTML = `
-        <div style="color: #888; font-style: italic; margin-bottom: 12px; font-size: 0.9rem; line-height: 1.4;">
-            🎨 Generating artwork for "${imagePrompt}"...
-        </div>
+        <div style="color: #888; font-style: italic; margin-bottom: 12px; font-size: 0.9rem; line-height: 1.4;">🎨 Generating artwork for "${imagePrompt}"...</div>
         <div class="generation-status" id="image-loader">
             <div class="loader-spinner"></div>
             <span style="color: #eee; font-size: 0.9rem;">VAII AI engine is assembling pixels...</span>
         </div>
     `;
-
     const seed = Math.floor(Math.random() * 1000000);
     const imageUrl = `https://image.pollinations.ai/p/${encodeURIComponent(imagePrompt)}?width=1080&height=1080&nologo=true&seed=${seed}`;
-
     const img = new Image();
     img.src = imageUrl;
     img.style.width = "100%";
@@ -444,7 +396,6 @@ function executeImageGeneration(imagePrompt) {
     img.style.marginTop = "10px";
     img.style.display = "none";
     img.style.boxShadow = "0 4px 15px rgba(0,0,0,0.5)";
-
     img.onload = function() {
         const loader = document.getElementById("image-loader");
         if (loader) loader.remove();
@@ -462,75 +413,12 @@ function runInfoExecution(query) {
     if (greetingsList.includes(cleanQuery)) {
         greetingHTML = `
             <div style="background: #1a1a1a; padding: 14px; border-radius: 8px; border-left: 3px solid #17a2b8; text-align: left; margin-bottom: 15px;">
-                👋 <strong>VAII Assistant:</strong><br>
-                <span>Hello! How can I help you today? Baseline parameters initialized.</span>
+                👋 <strong>VAII Assistant:</strong><br><span>Hello! How can I help you today? Baseline parameters initialized.</span>
             </div>
         `;
     }
 
-    // 1. ISOLATED WORKSPACE DECOUPLER: Secure background validation for Calendar requests
-    if (cleanQuery.includes("calendar") || cleanQuery.includes("calender") || cleanQuery.includes("schedule") || cleanQuery === "agenda") {
-        const token = localStorage.getItem('google_workspace_token');
-        if (!token) {
-            output.innerHTML = greetingHTML + `
-                <div style="background: #1a1a1a; padding: 14px; border-radius: 8px; border-left: 3px solid #ffc107; text-align: left; margin-bottom: 15px;">
-                    📅 <strong>VAII Calendar Module:</strong><br><br>
-                    <span style="color: #aaa; font-size: 0.9rem;">To securely pull your upcoming schedule details, activate your secondary scoped calendar token link:</span><br><br>
-                    <button class="link-calendar-btn" onclick="window.triggerWorkspaceCalendarSync()">🔗 Link Google Calendar</button>
-                </div>
-            `;
-            return;
-        }
-
-        output.innerHTML = greetingHTML + `<div style="color:#888; font-style:italic;">Fetching your workspace agenda securely...</div>`;
-
-        fetch(`https://www.googleapis.com/calendar/v3/calendars/primary/events?maxResults=5&orderBy=startTime&singleEvents=true&access_token=${token}`)
-            .then(res => {
-                if (!res.ok) throw new Error("Expired Token");
-                return res.json();
-            })
-            .then(data => {
-                const events = data.items || [];
-                if (events.length === 0) {
-                    output.innerHTML = greetingHTML + `
-                        <div style="background: #1a1a1a; padding: 14px; border-radius: 8px; border-left: 3px solid #ffc107; text-align: left;">
-                            📅 <strong>Upcoming Agenda:</strong><br><br>
-                            <span style="color: #aaa;">No upcoming schedule tracks found.</span>
-                        </div>
-                    `;
-                    return;
-                }
-
-                let eventsHTML = events.map(evt => {
-                    const start = evt.start.dateTime || evt.start.date;
-                    const formattedDate = new Date(start).toLocaleDateString("en-US", { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' });
-                    return `<div style="margin-bottom:8px; border-bottom:1px solid #333; padding-bottom:4px;">
-                        <strong style="color:#ffc107;">• ${evt.summary || 'Untitled Event'}</strong><br>
-                        <span style="font-size:0.82rem; color:#888;">⏰ ${formattedDate}</span>
-                    </div>`;
-                }).join('');
-
-                output.innerHTML = greetingHTML + `
-                    <div style="background: #1a1a1a; padding: 14px; border-radius: 8px; border-left: 3px solid #ffc107; text-align: left;">
-                        📅 <strong>Upcoming Agenda:</strong><br><br>
-                        ${eventsHTML}
-                    </div>
-                `;
-            })
-            .catch(() => {
-                localStorage.removeItem('google_workspace_token');
-                output.innerHTML = greetingHTML + `
-                    <div style="background: #1a1a1a; padding: 14px; border-radius: 8px; border-left: 3px solid #ffc107; text-align: left;">
-                        📅 <strong>Session Expired:</strong><br><br>
-                        <span style="color: #ff4d4d; font-size: 0.9rem;">Workspace clearance expired. Tap down below to refresh authorization permissions:</span><br><br>
-                        <button class="link-calendar-btn" onclick="window.triggerWorkspaceCalendarSync()">🔄 Re-link Calendar Account</button>
-                    </div>
-                `;
-            });
-        return;
-    }
-
-    // 2. NATIVE MAPS JAVASCRIPT SDK CANVAS CONSTRUCTOR
+    // 1. NATIVE MAPS JAVASCRIPT SDK CANVAS CONSTRUCTOR
     if (cleanQuery.startsWith("map of ") || cleanQuery.startsWith("show map ")) {
         const targetLocation = query.replace(/map of /i, "").replace(/show map /i, "").trim();
         output.innerHTML = greetingHTML + `<div style="color:#888; font-style:italic;">Resolving coordinates...</div>`;
@@ -540,41 +428,24 @@ function runInfoExecution(query) {
             .then(data => {
                 if (data.results && data.results.length > 0) {
                     const loc = data.results[0];
-                    
                     output.innerHTML = greetingHTML + `
                         <div style="background: #1a1a1a; padding: 14px; border-radius: 8px; border-left: 3px solid #4da3ff; text-align: left;">
                             🗺️ <strong>Interactive Map: ${loc.name}, ${loc.country || ''}</strong><br><br>
                             <div id="vaii-js-map-canvas" style="width:100%; height:250px; border-radius:6px; background:#252525;"></div>
                         </div>
                     `;
-                    
                     if (typeof google !== 'undefined' && google.maps) {
                         const mapCoordinates = { lat: loc.latitude, lng: loc.longitude };
                         const loadedMapInstance = new google.maps.Map(document.getElementById('vaii-js-map-canvas'), {
                             center: mapCoordinates,
-                            zoom: 12,
-                            disableDefaultUI: false
+                            zoom: 12
                         });
-                        
-                        new google.maps.Marker({
-                            position: mapCoordinates,
-                            map: loadedMapInstance,
-                            title: loc.name
-                        });
-                    } else {
-                        document.getElementById('vaii-js-map-canvas').innerHTML = `
-                            <div style="padding:20px; color:#ff4d4d; font-size:0.85rem;">
-                                Google Maps script library missing or unauthorized. Verify runtime console logs.
-                            </div>
-                        `;
+                        new google.maps.Marker({ position: mapCoordinates, map: loadedMapInstance, title: loc.name });
                     }
                 } else {
                     output.innerText = `Could not track coordinates for "${targetLocation}".`;
                 }
-            })
-            .catch(() => {
-                output.innerText = "Failed parsing spatial lookups.";
-            });
+            }).catch(() => { output.innerText = "Failed parsing spatial lookups."; });
         return;
     }
 
@@ -585,75 +456,49 @@ function runInfoExecution(query) {
             .then(data => {
                 if (data.results && data.results.length > 0) {
                     const loc = data.results[0];
-                    const displayName = `${loc.name}, ${loc.admin1 || ''} ${loc.country}`;
-                    runUnifiedWeatherClock(loc.latitude, loc.longitude, loc.timezone, displayName);
+                    runUnifiedWeatherClock(loc.latitude, loc.longitude, loc.timezone, `${loc.name}, ${loc.country}`);
                 } else {
                     output.innerText = `Could not resolve location parameters for "${parsedLocation}".`;
                 }
-            })
-            .catch(() => { output.innerText = "Error tracking location parameters."; });
+            }).catch(() => { output.innerText = "Error tracking location parameters."; });
         return;
     }
 
     const options = Array.from(datalist.options);
     const matchedOption = options.find(opt => opt.value.toLowerCase() === cleanQuery);
     if (matchedOption && matchedOption.getAttribute('data-lat')) {
-        const lat = matchedOption.getAttribute('data-lat');
-        const lon = matchedOption.getAttribute('data-lon');
-        const tz = matchedOption.getAttribute('data-tz');
-        runUnifiedWeatherClock(lat, lon, tz, matchedOption.value);
+        runUnifiedWeatherClock(matchedOption.getAttribute('data-lat'), matchedOption.getAttribute('data-lon'), matchedOption.getAttribute('data-tz'), matchedOption.value);
         return;
     }
 
     if (query.toLowerCase().startsWith("open ")) {
         routingWarning.style.display = "block"; 
         let appName = query.substring(5).trim().toLowerCase().replace(/['"]+/g, '');
-        
-        if (!appName) {
-            output.innerText = "Please specify what you want to open.";
-            return;
-        }
-
+        if (!appName) { output.innerText = "Please specify what you want to open."; return; }
         output.innerText = `Resolving routing for "${appName}"...`;
-
         const randomizedRoutes = {
-            "gemini": ["https://gemini.google.com", "https://gemini.com"],
+            "gemini": ["https://gemini.google.com"],
             "google gemini": ["https://gemini.google.com"],
-            "google deepmind": ["https://deepmind.google/"],
-            "deepmind": ["https://deepmind.google/"],
-            "youtube music": ["https://music.youtube.com", "https://youtube.com/music"],
+            "youtube music": ["https://music.youtube.com"],
             "minecraft": ["https://minecraft.net"],
             "wikipedia": ["https://wikipedia.org"]
         };
-
         if (randomizedRoutes[appName]) {
-            const routesList = randomizedRoutes[appName];
-            const randomChoice = routesList[Math.floor(Math.random() * routesList.length)];
-            launchTargetUrl(randomChoice);
+            launchTargetUrl(randomizedRoutes[appName][0]);
             return;
         }
-
-        let safeDomainName = appName.replace(/\s+/g, '');
-        launchTargetUrl(`https://${safeDomainName}.com`);
+        launchTargetUrl(`https://${appName.replace(/\s+/g, '')}.com`);
         return;
     }
 
-    const isUrlPattern = /\.[a-z]{2,6}/i.test(query);
-    const hasProtocol = query.startsWith('http://') || query.startsWith('https://');
-
-    if (hasProtocol || isUrlPattern) {
+    if (/\.[a-z]{2,6}/i.test(query) || query.startsWith('http://') || query.startsWith('https://')) {
         routingWarning.style.display = "block"; 
-        let targetUrl = query;
-        if (!hasProtocol) {
-            targetUrl = 'https://' + query;
-        }
-        launchTargetUrl(targetUrl);
+        launchTargetUrl(query.startsWith('http') ? query : 'https://' + query);
         return;
     }
 
     if (cryptoMap[cleanQuery] || cleanQuery.startsWith("price of ")) {
-        let parsedTicker = cleanQuery.startsWith("price of ") ? cleanQuery.substring(9).trim() : cleanQuery;
-        runMarketExecution(parsedTicker);
+        runMarketExecution(cleanQuery.startsWith("price of ") ? cleanQuery.substring(9).trim() : cleanQuery);
         return;
     }
 
@@ -661,12 +506,7 @@ function runInfoExecution(query) {
         try {
             if (!cleanQuery.includes(" to ")) {
                 const result = Function(`"use strict"; return (${query})`)();
-                output.innerHTML = `
-                    <div style="background: #1a1a1a; padding: 14px; border-radius: 8px; border-left: 3px solid #28a745; text-align: left;">
-                        🔢 <strong>Calculation Result:</strong><br>
-                        <span style="font-size: 1.3rem; font-weight: bold;">${query} = ${result}</span>
-                    </div>
-                `;
+                output.innerHTML = `<div style="background: #1a1a1a; padding: 14px; border-radius: 8px; border-left: 3px solid #28a745; text-align: left;">🔢 <strong>Calculation Result:</strong><br><span style="font-size: 1.3rem; font-weight: bold;">${query} = ${result}</span></div>`;
                 return;
             }
         } catch(e) {}
@@ -675,131 +515,66 @@ function runInfoExecution(query) {
             const parts = query.split(/ to /i);
             const source = parts[0].trim();
             const targetLanguage = parts[1].trim();
-
-            const unitRegex = /^([0-9.]+)\s*([a-zA-Z°]+)$/;
-            const unitMatch = source.match(unitRegex);
+            const unitMatch = source.match(/^([0-9.]+)\s*([a-zA-Z°]+)$/);
             if (unitMatch) {
                 const num = parseFloat(unitMatch[1]);
                 const fromUnit = unitMatch[2].toLowerCase();
                 const toUnit = targetLanguage.toLowerCase();
                 let conversionResult = null;
-
                 if (fromUnit === "lbs" && toUnit === "kg") conversionResult = `${(num * 0.45359237).toFixed(2)} kg`;
                 if (fromUnit === "kg" && toUnit === "lbs") conversionResult = `${(num / 0.45359237).toFixed(2)} lbs`;
                 if (fromUnit === "miles" && toUnit === "km") conversionResult = `${(num * 1.60934).toFixed(2)} km`;
-                if (fromUnit === "km" && toUnit === "miles") conversionResult = `${(num / 1.60934).toFixed(2)} miles`;
-                if (fromUnit === "f" && toUnit === "c") conversionResult = `${((num - 32) * 5 / 9).toFixed(1)}°C`;
-                if (fromUnit === "c" && toUnit === "f") conversionResult = `${((num * 9 / 5) + 32).toFixed(1)}°F`;
-
                 if (conversionResult) {
-                    output.innerHTML = `
-                        <div style="background: #1a1a1a; padding: 14px; border-radius: 8px; border-left: 3px solid #28a745; text-align: left;">
-                            🔄 <strong>Unit Conversion Core:</strong><br>
-                            📥 Input Query: <em>"${query}"</em><br>
-                            📤 Calculation Result: <strong style="color: #28a745; font-size: 1.3rem; display:block; margin-top:4px;">${conversionResult}</strong>
-                        </div>
-                    `;
+                    output.innerHTML = `<div style="background: #1a1a1a; padding: 14px; border-radius: 8px; border-left: 3px solid #28a745; text-align: left;">🔄 <strong>Unit Conversion Core:</strong><br>📤 Calculation Result: <strong style="color: #28a745; font-size: 1.3rem; display:block; margin-top:4px;">${conversionResult}</strong></div>`;
                     return;
                 }
             }
-
-            output.innerText = `Processing translation loop...`;
             fetch(`https://api.mymemory.translated.net/get?q=${encodeURIComponent(source)}&langpair=en|${encodeURIComponent(targetLanguage.substring(0,2))}`)
                 .then(res => res.json())
                 .then(data => {
-                    output.innerHTML = `
-                        <div style="background: #1a1a1a; padding: 14px; border-radius: 8px; border-left: 3px solid #28a745; text-align: left;">
-                            🗣️ <strong>Translation Asset Core:</strong><br>
-                            📥 Original (EN): <em>"${source}"</em><br>
-                            📤 Translated (${targetLanguage.toUpperCase()}): <strong style="color: #4da3ff; font-size: 1.1rem; display:block; margin-top:4px;">"${data.responseData.translatedText}"</strong>
-                        </div>
-                    `;
-                }).catch(() => {
-                    output.innerHTML = `
-                        <div style="background: #1a1a1a; padding: 14px; border-radius: 8px; border-left: 3px solid #28a745; text-align: left;">
-                            🔄 <strong>Conversion / External Routing Core</strong><br>
-                            Evaluating query string parameter link directly: <a href="https://www.google.com/search?q=${encodeURIComponent(query)}" target="_blank">Launch Conversion Card ↗</a>
-                        </div>
-                    `;
-                });
+                    output.innerHTML = `<div style="background: #1a1a1a; padding: 14px; border-radius: 8px; border-left: 3px solid #28a745; text-align: left;">🗣️ <strong>Translation Asset Core:</strong><br>📤 Translated: <strong style="color: #4da3ff; font-size: 1.1rem; display:block; margin-top:4px;">"${data.responseData.translatedText}"</strong></div>`;
+                }).catch(() => {});
             return;
         }
     }
 
     routingWarning.style.display = "none";
-    const isSingleWord = !query.includes(" ");
-
-    if (isSingleWord) {
-        output.innerText = `Looking up definition for "${query}"...`;
+    if (!query.includes(" ")) {
         fetch(`https://en.wiktionary.org/api/rest_v1/page/definition/${encodeURIComponent(query.toLowerCase())}`)
-            .then(res => {
-                if (!res.ok) throw new Error("Word not found");
-                return res.json();
-            })
+            .then(res => res.json())
             .then(dictData => {
                 const key = Object.keys(dictData)[0];
-                if (!dictData[key] || dictData[key].length === 0) throw new Error();
-                
-                const definitionObj = dictData[key][0];
-                const partOfSpeech = definitionObj.partOfSpeech || "noun";
-                let rawDefinition = (definitionObj.definitions && definitionObj.definitions.length > 0) ? definitionObj.definitions[0].definition.replace(/<[^>]*>/g, '').trim() : "";
-                
-                if (!rawDefinition) {
-                    rawDefinition = "No direct text definition available. Use the index link on the bottom of the page to view the full dictionary entry.";
-                }
-                
-                let wikiData = {
-                    wiktionary: { title: query, text: rawDefinition, pos: partOfSpeech }
-                };
+                const rawDefinition = dictData[key][0].definitions[0].definition.replace(/<[^>]*>/g, '').trim();
+                let wikiData = { wiktionary: { title: query, text: rawDefinition, pos: dictData[key][0].partOfSpeech || "noun" } };
                 if (greetingHTML) wikiData.greeting = greetingHTML;
-                
-                runUnifiedWikiPipeline(query, wikiData, true);
-            })
-            .catch(() => {
+                runUnifiedWikiPipeline(query, wikiData);
+            }).catch(() => {
                 let wikiData = {};
                 if (greetingHTML) wikiData.greeting = greetingHTML;
-                runUnifiedWikiPipeline(query, wikiData, false);
+                runUnifiedWikiPipeline(query, wikiData);
             });
     } else {
         let wikiData = {};
         if (greetingHTML) wikiData.greeting = greetingHTML;
-        runUnifiedWikiPipeline(query, wikiData, false);
+        runUnifiedWikiPipeline(query, wikiData);
     }
 }
 
-function runUnifiedWikiPipeline(query, wikiData, hasWiktionary) {
-    const famousYoutubersList = [
-        "jacksucksatlife", "mrbeast", "pewdiepie", "markiplier", "jacksepticeye", 
-        "caseoh", "jynxzi", "kai cenat", "ludwig", "xqc", "moistcr1tikal", "penguinz0", 
-        "sidemen", "ksi", "w2s", "wroetoshaw", "miniminter", "vikkstar", "vikkstar123", 
-        "mrwhosetheboss", "mkbhd", "marques brownlee", "linustechtips", "unbox therapy", 
-        "dantdm", "popularmmos", "stampy", "stampylonghead", "dream", "technoblade", 
-        "tommyinnit", "lazarbeam", "airrack", "ryan trahan", "smosh", "gmm", "rhett and link",
-        "jacksepticeye", "pokimane", "valkyrae", "ninja", "shroud", "disguised toast", "sykkuno",
-        "hasanabi", "asmongold", "ilyasiel", "safiya nygaard", "nigahiga", "davie504", "jolly"
-    ];
-
-    const lowerQuery = query.toLowerCase().trim();
-    const isInfluencer = wikitubiaCache.has(lowerQuery) || famousYoutubersList.some(name => lowerQuery.includes(name));
+function runUnifiedWikiPipeline(query, wikiData) {
+    const famousYoutubersList = ["jacksucksatlife", "mrbeast", "pewdiepie", "markiplier", "caseoh", "jynxzi"];
+    const isInfluencer = famousYoutubersList.some(name => query.toLowerCase().includes(name));
 
     const youtubeFetch = (isInfluencer && GOOGLE_API_KEY)
         ? fetch(`https://www.googleapis.com/youtube/v3/search?part=snippet&type=channel&q=${encodeURIComponent(query)}&key=${GOOGLE_API_KEY}`)
             .then(res => res.json())
             .then(searchData => {
-                if (searchData.items && searchData.items.length > 0) {
-                    const channelId = searchData.items[0].id.channelId;
-                    return fetch(`https://www.googleapis.com/youtube/v3/channels?part=statistics,snippet&id=${channelId}&key=${GOOGLE_API_KEY}`)
+                if (searchData.items?.length > 0) {
+                    return fetch(`https://www.googleapis.com/youtube/v3/channels?part=statistics,snippet&id=${searchData.items[0].id.channelId}&key=${GOOGLE_API_KEY}`)
                         .then(res => res.json())
                         .then(channelData => {
-                            if (channelData.items && channelData.items.length > 0) {
+                            if (channelData.items?.length > 0) {
                                 const item = channelData.items[0];
-                                wikiData.youtube = {
-                                    title: item.snippet.title,
-                                    text: item.snippet.description || "No profile bio text compiled.",
-                                    subs: parseInt(item.statistics.subscriberCount).toLocaleString(),
-                                    views: parseInt(item.statistics.viewCount).toLocaleString(),
-                                    customUrl: item.snippet.customUrl || ""
-                                };
+                                wikiData.youtube = { title: item.snippet.title, text: item.snippet.description, subs: parseInt(item.statistics.subscriberCount).toLocaleString(), views: parseInt(item.statistics.viewCount).toLocaleString(), customUrl: item.snippet.customUrl || "" };
                             }
                         });
                 }
@@ -809,133 +584,33 @@ function runUnifiedWikiPipeline(query, wikiData, hasWiktionary) {
     const wikipediaFetch = fetch(`https://en.wikipedia.org/w/api.php?action=query&list=search&srsearch=${encodeURIComponent(query)}&utf8=&format=json&origin=*`)
         .then(res => res.json())
         .then(wikiSearch => {
-            if (wikiSearch.query?.search && wikiSearch.query.search.length > 0) {
-                let wikipediaTitle = wikiSearch.query.search[0].title;
-                if (wikiSearch.query.search[1] && (wikipediaTitle.toLowerCase().includes("refer to") || wikiSearch.query.search[0].snippet.toLowerCase().includes("may refer to"))) {
-                    wikipediaTitle = wikiSearch.query.search[1].title;
-                }
-                
-                return fetch(`https://en.wikipedia.org/api/rest_v1/page/summary/${encodeURIComponent(wikipediaTitle.replace(/ /g, '_'))}`)
+            if (wikiSearch.query?.search?.length > 0) {
+                return fetch(`https://en.wikipedia.org/api/rest_v1/page/summary/${encodeURIComponent(wikiSearch.query.search[0].title.replace(/ /g, '_'))}`)
                     .then(res => res.json())
-                    .then(summaryData => {
-                        let wikiExtract = summaryData.extract || "";
-                        if (summaryData.type === "disambiguation" || wikiExtract.toLowerCase().includes("may refer to")) {
-                            wikiExtract = "Multiple context records have been located. Browse the full article space using the search portal down below.";
-                        }
-                        
-                        if (wikiExtract) {
-                            wikiData.wikipedia = { title: wikipediaTitle, text: wikiExtract };
-                        }
-                    });
+                    .then(summaryData => { wikiData.wikipedia = { title: wikiSearch.query.search[0].title, text: summaryData.extract }; });
             }
         }).catch(() => null);
 
-    Promise.all([youtubeFetch, wikipediaFetch]).then(() => {
-        compileFinalSourceIndexBox(query, wikiData, hasWiktionary);
-    });
+    Promise.all([youtubeFetch, wikipediaFetch]).then(() => { compileFinalSourceIndexBox(query, wikiData); });
 }
 
-function compileFinalSourceIndexBox(query, wikiData, hasWiktionary) {
-    let showWiktionary = !!wikiData.wiktionary;
-    let showWikipedia = !!wikiData.wikipedia;
-    let showYoutube = !!wikiData.youtube;
-
-    const wikiText = wikiData.wikipedia?.text?.trim();
-    const wikitionaryText = wikiData.wiktionary?.text?.trim();
-
-    if (showWikipedia) {
-        const wikiTitleClean = wikiData.wikipedia.title.toLowerCase().trim();
-        const wikiTextClean = wikiText.toLowerCase().replace(/[^a-z0-9]/g, '');
-
-        if (showWiktionary) {
-            const wiktTitleClean = wikiData.wiktionary.title.toLowerCase().trim();
-            const wiktTextClean = wikitionaryText.toLowerCase().replace(/[^a-z0-9]/g, '');
-            
-            if (wikiTitleClean === wiktTitleClean || wikiTextClean.includes(wiktTextClean) || wiktTextClean.includes(wikiTextClean)) {
-                showWiktionary = false;
-            }
-        }
+function compileFinalSourceIndexBox(query, wikiData) {
+    let blocksHtml = [];
+    if (wikiData.wiktionary) {
+        blocksHtml.push(`<div style="background: #1a1a1a; padding: 14px; border-radius: 8px; border-left: 3px solid #28a745; text-align: left;"><strong>${wikiData.wiktionary.title}</strong> (${wikiData.wiktionary.pos}): ${wikiData.wiktionary.text}</div>`);
+    }
+    if (wikiData.youtube) {
+        blocksHtml.push(`<div style="background: #1a1a1a; padding: 14px; border-radius: 8px; border-left: 3px solid #ff0000; text-align: left;"><strong>📺 ${wikiData.youtube.title}</strong><br><span style="font-size: 0.85rem; color: #aaa;">🔴 Subs: ${wikiData.youtube.subs} | Views: ${wikiData.youtube.views}</span><br><br><em>${wikiData.youtube.text}</em></div>`);
+    }
+    if (wikiData.wikipedia) {
+        blocksHtml.push(`<div style="background: #1a1a1a; padding: 14px; border-radius: 8px; border-left: 3px solid #007bff; text-align: left;"><strong>${wikiData.wikipedia.title}:</strong> ${wikiData.wikipedia.text}</div>`);
     }
 
-    if (!showWikipedia && !showWiktionary && !showYoutube) {
-        let totalHTML = "";
-        if (wikiData.greeting) {
-            totalHTML += wikiData.greeting;
-            totalHTML += `<div class="news-header-msg" style="color: #888; font-style: italic; margin-bottom: 12px; font-size: 0.9rem; line-height: 1.4;">Could not extract additional summary metrics for "${query}".</div>`;
-            output.innerHTML = totalHTML;
-        } else {
-            output.innerText = `Could not extract summary tracking metrics for "${query}". Try a broader topic parameter line!`;
-        }
+    let totalHTML = wikiData.greeting || "";
+    if (blocksHtml.length === 0) {
+        output.innerHTML = totalHTML + `<div>No references compiled for "${query}".</div>`;
         return;
     }
-
-    let blocksHtml = [];
-    if (showWiktionary) {
-        blocksHtml.push(`
-            <div class="aggregated-text" style="font-size: 0.95rem; color: #e0e0e0; line-height: 1.6; background: #1a1a1a; padding: 14px; border-radius: 8px; border-left: 3px solid #28a745; text-align: left;">
-                <strong>${wikiData.wiktionary.title.charAt(0).toUpperCase() + wikiData.wiktionary.title.slice(1)}</strong> (${wikiData.wiktionary.pos.toLowerCase()}): ${wikiData.wiktionary.text}
-            </div>
-        `);
-    }
-    if (showYoutube) {
-        blocksHtml.push(`
-            <div class="aggregated-text" style="font-size: 0.95rem; color: #e0e0e0; line-height: 1.6; background: #1a1a1a; padding: 14px; border-radius: 8px; border-left: 3px solid #ff0000; text-align: left;">
-                <strong>📺 ${wikiData.youtube.title} (YouTube)</strong><br>
-                <span style="font-size: 0.85rem; color: #aaa;">🔴 Subscribers: ${wikiData.youtube.subs} | 👁️ Total Views: ${wikiData.youtube.views}</span><br><br>
-                <em>${wikiData.youtube.text}</em>
-            </div>
-        `);
-    }
-    if (showWikipedia) {
-        blocksHtml.push(`
-            <div class="aggregated-text" style="font-size: 0.95rem; color: #e0e0e0; line-height: 1.6; background: #1a1a1a; padding: 14px; border-radius: 8px; border-left: 3px solid #007bff; text-align: left;">
-                <strong>${wikiData.wikipedia.title}:</strong> ${wikiData.wikipedia.text}
-            </div>
-        `);
-    }
-
-    let totalHTML = "";
-    if (wikiData.greeting) {
-        totalHTML += wikiData.greeting;
-    }
-    
-    totalHTML += `<div class="news-header-msg" style="color: #888; font-style: italic; margin-bottom: 12px; font-size: 0.9rem; line-height: 1.4;">I have provided the most relevant text of each information source related to "${query}".</div>`;
-    totalHTML += blocksHtml.join(`<div style="color: #888; font-style: italic; font-size: 0.85rem; margin: 15px 0 8px 0; text-align: left;">This might also be relevant:</div>`);
-
-    totalHTML += `
-        <div class="source-box" style="border-top: 1px solid #333; padding-top: 12px; margin-top: 10px;">
-            <span style="display: block; font-size: 0.75rem; color: #777; font-weight: bold; text-transform: uppercase; margin-bottom: 8px; letter-spacing: 0.5px;">Sources Index</span>
-            <div class="source-list" style="display: flex; flex-direction: column; gap: 6px;">
-    `;
-
-    if (wikiData.wiktionary) {
-        totalHTML += `
-            <a href="https://en.wiktionary.org/wiki/${encodeURIComponent(query)}" target="_blank" style="display: flex; align-items: center; justify-content: space-between; background: #2a2a2a; border: 1px solid #3d3d3d; border-radius: 6px; padding: 6px 10px; color: #4da3ff; text-decoration: none; font-size: 0.82rem; font-weight: bold;">
-                <span style="color: #aaa; font-weight: normal;">📰 Wiktionary</span>
-                <span>Open Source →</span>
-            </a>
-        `;
-    }
-
-    if (wikiData.youtube) {
-        const channelPath = wikiData.youtube.customUrl ? wikiData.youtube.customUrl : `@channel`;
-        totalHTML += `
-            <a href="https://www.youtube.com/${channelPath}" target="_blank" style="display: flex; align-items: center; justify-content: space-between; background: #2a2a2a; border: 1px solid #3d3d3d; border-radius: 6px; padding: 6px 10px; color: #ff4444; text-decoration: none; font-size: 0.82rem; font-weight: bold;">
-                <span style="color: #aaa; font-weight: normal;">🔴 YouTube Channel</span>
-                <span>Live Metrics →</span>
-            </a>
-        `;
-    }
-
-    if (wikiData.wikipedia) {
-        totalHTML += `
-            <a href="https://en.wikipedia.org/wiki/${encodeURIComponent(wikiData.wikipedia.title)}" target="_blank" style="display: flex; align-items: center; justify-content: space-between; background: #2a2a2a; border: 1px solid #3d3d3d; border-radius: 6px; padding: 6px 10px; color: #4da3ff; text-decoration: none; font-size: 0.82rem; font-weight: bold;">
-                <span style="color: #aaa; font-weight: normal;">📰 Wikipedia</span>
-                <span>Open Source →</span>
-            </a>
-        `;
-    }
-
-    totalHTML += `</div></div>`;
+    totalHTML += `<div style="color: #888; font-style: italic; margin-bottom: 12px; font-size: 0.9rem;">Relevant documentation indices for "${query}":</div>` + blocksHtml.join('<div style="margin: 10px 0;"></div>');
     output.innerHTML = totalHTML;
 }
