@@ -476,7 +476,8 @@ function executeVisionAnalysis(promptText) {
         </div>
     `;
 
-    const visionUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${GEMINI_VISION_KEY}`;
+    // Switch the model string from 1.5-flash to 3.5-flash
+const visionUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-3.5-flash:generateContent?key=${GEMINI_VISION_KEY}`;
 
     const payload = {
         contents: [{
