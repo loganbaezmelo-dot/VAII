@@ -386,6 +386,39 @@ function runMarketExecution(ticker) {
     }
 }
 
+function launchTargetUrl(url) {
+    const isDiceRoll = output.innerHTML.includes("🎲");
+    let contentHTML = `
+        <div class="news-header-msg" style="color: #888; font-style: italic; margin-bottom: 4px; font-size: 0.9rem; line-height: 1.4;">Navigating to external web link...</div>
+        <div style="background: #1a1a1a; padding: 14px; border-radius: 8px; border-left: 3px solid #007bff; text-align: left; margin-bottom: 15px;">
+            🔗 <strong>Resolved Address:</strong> <span style="color: #4da3ff; word-break: break-all;">${url}</span>
+        </div>
+        <a href="${url}" target="_blank" style="display: flex; align-items: center; justify-content: space-between; background: #007bff; border-radius: 6px; padding: 10px 14px; color: white; text-decoration: none; font-weight: bold; font-size: 0.95rem;">
+            <span>Launch Link</span>
+            <span>Open Site ↗</span>
+        </a>
+    `;
+    
+    if (isDiceRoll) {
+        output.innerHTML = `<div style="font-size:0.8rem; color:#888; margin-bottom:5px;">🎲 Random selection active</div>` + contentHTML;
+    } else {
+        output.innerHTML = contentHTML;
+    }
+    
+    output.innerHTML += `
+        <div class="source-box" style="border-top: 1px solid #333; padding-top: 12px; margin-top: 15px; text-align: left;">
+            <span style="display: block; font-size: 0.75rem; color: #777; font-weight: bold; text-transform: uppercase; margin-bottom: 8px; letter-spacing: 0.5px;">Sources Index</span>
+            <div class="source-list" style="display: flex; flex-direction: column;">
+                <div style="display: flex; align-items: center; justify-content: space-between; background: #2a2a2a; border: 1px solid #3d3d3d; border-radius: 6px; padding: 6px 10px; color: #eee; font-size: 0.82rem;">
+                    <span style="color: #aaa;">🌐 VAII Multi-Domain Routing Module</span>
+                    <span style="color: #777; font-size:0.75rem;">Local Redirect</span>
+                </div>
+            </div>
+        </div>
+    `;
+    window.open(url, '_blank');
+}
+
 function executeImageGeneration(imagePrompt) {
     routingWarning.style.display = "none"; 
 
@@ -440,8 +473,9 @@ function executeImageGeneration(imagePrompt) {
 
 function runInfoExecution(query) {
     const cleanQuery = query.toLowerCase().trim();
-    const cryptoMap = { btc: "bitcoin", eth: "ethereum", sol: "solana", doge: "dogecoin", xrp: "ripple" };
+    const cryptoMap = { btc: "bitcoin", eth: "ethereum", sol = "solana", doge: "dogecoin", xrp: "ripple" };
 
+    // 1. Unified Location / Time Interceptor
     if (cleanQuery.startsWith("time in ") || cleanQuery.startsWith("weather in ") || cleanQuery.startsWith("weather ") || cleanQuery.startsWith("clock ")) {
         let parsedLocation = query.replace(/time in /i, "").replace(/weather in /i, "").replace(/weather /i, "").replace(/clock /i, "").trim();
         fetch(`https://geocoding-api.open-meteo.com/v1/search?name=${encodeURIComponent(parsedLocation)}&count=1&language=en&format=json`)
@@ -459,6 +493,7 @@ function runInfoExecution(query) {
         return;
     }
 
+    // 2. Datalist Option Interceptor (Weather / Clock click match)
     const options = Array.from(datalist.options);
     const matchedOption = options.find(opt => opt.value.toLowerCase() === cleanQuery);
     if (matchedOption && matchedOption.getAttribute('data-lat')) {
@@ -469,15 +504,65 @@ function runInfoExecution(query) {
         return;
     }
 
+    // 3. Open Command Interceptor (Top-level priority routing)
+    if (query.toLowerCase().startsWith("open ")) {
+        routingWarning.style.display = "block"; 
+        let appName = query.substring(5).trim().toLowerCase().replace(/['"]+/g, '');
+        
+        if (!appName) {
+            output.innerText = "Please specify what you want to open.";
+            return;
+        }
+
+        output.innerText = `Resolving routing for "${appName}"...`;
+
+        const randomizedRoutes = {
+            "gemini": ["https://gemini.google.com", "https://gemini.com"],
+            "google gemini": ["https://gemini.google.com"],
+            "google deepmind": ["https://deepmind.google/"],
+            "deepmind": ["https://deepmind.google/"],
+            "youtube music": ["https://music.youtube.com", "https://youtube.com/music"],
+            "minecraft": ["https://minecraft.net"],
+            "wikipedia": ["https://wikipedia.org"]
+        };
+
+        if (randomizedRoutes[appName]) {
+            const routesList = randomizedRoutes[appName];
+            const randomChoice = routesList[Math.floor(Math.random() * routesList.length)];
+            launchTargetUrl(randomChoice);
+            return;
+        }
+
+        let safeDomainName = appName.replace(/\s+/g, '');
+        launchTargetUrl(`https://${safeDomainName}.com`);
+        return;
+    }
+
+    // 4. URL Pattern Interceptor (Top-level priority routing)
+    const isUrlPattern = /\.[a-z]{2,6}/i.test(query);
+    const hasProtocol = query.startsWith('http://') || query.startsWith('https://');
+
+    if (hasProtocol || isUrlPattern) {
+        routingWarning.style.display = "block"; 
+        let targetUrl = query;
+        if (!hasProtocol) {
+            targetUrl = 'https://' + query;
+        }
+        launchTargetUrl(targetUrl);
+        return;
+    }
+
+    // 5. Crypto / Market Interceptor
     if (cryptoMap[cleanQuery] || cleanQuery.startsWith("price of ")) {
         let parsedTicker = cleanQuery.startsWith("price of ") ? cleanQuery.substring(9).trim() : cleanQuery;
         runMarketExecution(parsedTicker);
         return;
     }
 
-    if (/^[0-9+\-*/().\s]+$/.test(query) || cleanQuery.includes("to")) {
+    // 6. Math / Unit Conversion / Translation Loop (Scoped and protected against string hijacking)
+    if (/^[0-9+\-*/().\s]+$/.test(query) || cleanQuery.includes(" to ")) {
         try {
-            if (!cleanQuery.includes("to")) {
+            if (!cleanQuery.includes(" to ")) {
                 const result = Function(`"use strict"; return (${query})`)();
                 output.innerHTML = `
                     <div style="background: #1a1a1a; padding: 14px; border-radius: 8px; border-left: 3px solid #28a745; text-align: left;">
@@ -566,7 +651,7 @@ function runInfoExecution(query) {
                     output.innerHTML = `
                         <div style="background: #1a1a1a; padding: 14px; border-radius: 8px; border-left: 3px solid #28a745; text-align: left;">
                             🔄 <strong>Conversion / External Routing Core</strong><br>
-                            Evaluating query string parameter link directly: <a href="https://www.google.com/search?q=${encodeURIComponent(query)}" target="_blank;">Launch Conversion Card ↗</a>
+                            Evaluating query string parameter link directly: <a href="https://www.google.com/search?q=${encodeURIComponent(query)}" target="_blank">Launch Conversion Card ↗</a>
                         </div>
                     `;
                 });
@@ -574,53 +659,10 @@ function runInfoExecution(query) {
         }
     }
 
-    if (query.toLowerCase().startsWith("open ")) {
-        routingWarning.style.display = "block"; 
-        let appName = query.substring(5).trim().toLowerCase().replace(/['"]+/g, '');
-        
-        if (!appName) {
-            output.innerText = "Please specify what you want to open.";
-            return;
-        }
-
-        output.innerText = `Resolving routing for "${appName}"...`;
-
-        const randomizedRoutes = {
-            "gemini": ["https://gemini.google.com", "https://gemini.com"],
-            "google gemini": ["https://gemini.google.com"],
-            "google deepmind": ["https://deepmind.google/"],
-            "deepmind": ["https://deepmind.google/"],
-            "youtube music": ["https://music.youtube.com", "https://youtube.com/music"],
-            "minecraft": ["https://minecraft.net"],
-            "wikipedia": ["https://wikipedia.org"]
-        };
-
-        if (randomizedRoutes[appName]) {
-            const routesList = randomizedRoutes[appName];
-            const randomChoice = routesList[Math.floor(Math.random() * routesList.length)];
-            launchTargetUrl(randomChoice);
-            return;
-        }
-
-        let safeDomainName = appName.replace(/\s+/g, '');
-        launchTargetUrl(`https://${safeDomainName}.com`);
-        return;
-    }
-
-    const isUrlPattern = /\.[a-z]{2,6}/i.test(query);
-    const hasProtocol = query.startsWith('http://') || query.startsWith('https://');
-
-    if (hasProtocol || isUrlPattern) {
-        routingWarning.style.display = "block"; 
-        let targetUrl = query;
-        if (!hasProtocol) {
-            targetUrl = 'https://' + query;
-        }
-        launchTargetUrl(targetUrl);
-        return;
-    }
-
+    // 7. General Knowledge / Dictionary Pipeline
+    routingWarning.style.display = "none";
     const isSingleWord = !query.includes(" ");
+
     if (isSingleWord) {
         output.innerText = `Looking up definition for "${query}"...`;
         fetch(`https://en.wiktionary.org/api/rest_v1/page/definition/${encodeURIComponent(query.toLowerCase())}`)
@@ -663,7 +705,6 @@ function runUnifiedWikiPipeline(query, baselineHTML, hasWiktionary) {
         baselineHTML = `<div class="news-header-msg" style="color: #888; font-style: italic; margin-bottom: 12px; font-size: 0.9rem; line-height: 1.4;">I have provided the most relevant text of each information source related to "${query}".</div>`;
     }
 
-    // Explicit long list override filter for high profile internet personalities
     const famousYoutubersList = [
         "jacksucksatlife", "mrbeast", "pewdiepie", "markiplier", "jacksepticeye", 
         "caseoh", "jynxzi", "kai cenat", "ludwig", "xqc", "moistcr1tikal", "penguinz0", 
@@ -684,8 +725,6 @@ function runUnifiedWikiPipeline(query, baselineHTML, hasWiktionary) {
             
             const validKeywords = ["youtuber", "youtube", "influencer", "media personality"];
             const isMediaPersonality = validKeywords.some(keyword => lowerText.includes(keyword) || lowerHeading.includes(keyword));
-            
-            // Check if the parameter configuration hits any entries inside our custom list
             const matchesCustomList = famousYoutubersList.some(name => lowerQuery.includes(name) || lowerText.includes(name) || lowerHeading.includes(name));
             
             if ((isMediaPersonality || matchesCustomList) && rawText) {
