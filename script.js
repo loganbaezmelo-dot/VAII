@@ -59,8 +59,18 @@ const routingWarning = document.getElementById('routing-warning');
 const helpToggle = document.getElementById('help-toggle');
 const helpGuide = document.getElementById('help-guide');
 
+// New Vision DOM Bindings
+const cameraTriggerBtn = document.getElementById('camera-trigger-btn');
+const imageFileInput = document.getElementById('image-file-input');
+const imagePreviewContainer = document.getElementById('image-preview-container');
+const imagePreviewThumbnail = document.getElementById('image-preview-thumbnail');
+const imagePreviewFilename = document.getElementById('image-preview-filename');
+const imageClearBtn = document.getElementById('image-clear-btn');
+
 let debounceTimer;
-let searchAbortController = null; // Global reference tracker to kill ghost fetches
+let searchAbortController = null;
+let activeImageBase64 = null; // Stores image payload context
+let activeImageMimeType = null;
 const wikitubiaCache = new Set();
 
 const welcomeMessageText = `Welcome back! Enter a search query, app routing command, calculation sequence, weather location, translation phrase, crypto ticker, map request, or art prompt to begin...`;
@@ -142,6 +152,7 @@ onAuthStateChanged(auth, (user) => {
             hubInput.value = "";
             hubInput.placeholder = "Type a command...";
         }
+        clearActiveImage();
         updateDatalist([], [], []);
     } else {
         if (authContainer) authContainer.style.display = "block";
@@ -204,7 +215,53 @@ function showAuthError(message) {
 }
 
 // ==========================================
-// 6. MAIN PROCESSING INTAKE SYSTEMS
+// 6. HARDWARE INTEGRATION: VISION ATTACHMENT LABS
+// ==========================================
+if (cameraTriggerBtn && imageFileInput) {
+    cameraTriggerBtn.addEventListener('click', () => {
+        imageFileInput.click();
+    });
+}
+
+if (imageFileInput) {
+    imageFileInput.addEventListener('change', (e) => {
+        const file = e.target.files[0];
+        if (!file) return;
+
+        activeImageMimeType = file.type;
+        imagePreviewFilename.innerText = file.name;
+
+        const reader = new FileReader();
+        reader.onload = function(event) {
+            const fullDataUrl = event.target.result;
+            imagePreviewThumbnail.src = fullDataUrl;
+            imagePreviewContainer.style.display = "flex";
+            cameraTriggerBtn.classList.add('active');
+            
+            // Extract pure base64 chunk string out of the stream URL template
+            activeImageBase64 = fullDataUrl.split(',')[1];
+        };
+        reader.readAsDataURL(file);
+    });
+}
+
+if (imageClearBtn) {
+    imageClearBtn.addEventListener('click', () => {
+        clearActiveImage();
+    });
+}
+
+function clearActiveImage() {
+    activeImageBase64 = null;
+    activeImageMimeType = null;
+    if (imageFileInput) imageFileInput.value = "";
+    if (imagePreviewThumbnail) imagePreviewThumbnail.src = "";
+    if (imagePreviewContainer) imagePreviewContainer.style.display = "none";
+    if (cameraTriggerBtn) cameraTriggerBtn.classList.remove('active');
+}
+
+// ==========================================
+// 7. MAIN PROCESSING INTAKE SYSTEMS
 // ==========================================
 if (helpToggle) {
     helpToggle.addEventListener('click', function() {
@@ -230,12 +287,10 @@ if (hubInput) {
             routingWarning.style.display = "none";
         }
 
-        // Kill any outstanding network connections instantly before they can backlog the thread
         if (searchAbortController) {
             searchAbortController.abort();
         }
 
-        // Exit out immediately if the user is explicitly heading to an external link or command string
         if (lowerQuery.startsWith('open ') || "open".startsWith(lowerQuery) || trimmedQuery.startsWith('http://') || trimmedQuery.startsWith('https://') || /\.[a-z]{2,6}/i.test(trimmedQuery)) {
             updateDatalist([], [], []); 
             clearTimeout(debounceTimer); 
@@ -260,7 +315,6 @@ if (hubInput) {
 
         clearTimeout(debounceTimer);
         debounceTimer = setTimeout(() => {
-            // Generate a fresh abort signal for this specific keystroke execution path
             searchAbortController = new AbortController();
             const signal = searchAbortController.signal;
 
@@ -301,6 +355,13 @@ if (hubInput) {
 if (executeActionBtn) {
     executeActionBtn.addEventListener('click', function() {
         const query = hubInput.value.trim();
+        
+        // Handle explicit image attachment queries via the Gemini Multimodal engine layout
+        if (activeImageBase64) {
+            executeVisionAnalysis(query || "Describe this image content in clear detail.");
+            return;
+        }
+
         if (!query) {
             output.innerText = "Please input a term or prompt value first.";
             return;
@@ -324,7 +385,7 @@ if (hubInput) {
 }
 
 // ====================================================
-// 7. THE UNIFIED LOCATION ENGINE: MERGING WEATHER, CLOCK, MAPS
+// 8. UNIFIED LOCATION ENGINE: MERGING WEATHER, CLOCK, MAPS
 // ====================================================
 function renderUnifiedLocationCard(lat, lon, zone, displayName, greetingHTML = "") {
     output.innerHTML = greetingHTML + `<div style="color:#888; font-style:italic;">Assembling location data card...</div>`;
@@ -394,8 +455,62 @@ function renderUnifiedLocationCard(lat, lon, zone, displayName, greetingHTML = "
 }
 
 // ==========================================
-// 8. DATA EVALUATION UTILITIES
+// 9. COGNITIVE PIPELINES: MULTIMODAL VISION ENGINE
 // ==========================================
+function executeVisionAnalysis(promptText) {
+    output.innerHTML = `
+        <div class="generation-status">
+            <div class="loader-spinner"></div>
+            <span style="color: #eee; font-size: 0.9rem;">VAII vision engine is processing image parameters...</span>
+        </div>
+    `;
+
+    // Target the ultra-fast native multi-modal vision framework via our constructed key
+    const visionUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${GOOGLE_API_KEY}`;
+
+    const payload = {
+        contents: [{
+            parts: [
+                { text: promptText },
+                {
+                    inlineData: {
+                        mimeType: activeImageMimeType || "image/jpeg",
+                        data: activeImageBase64
+                    }
+                }
+            ]
+        }]
+    };
+
+    fetch(visionUrl, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload)
+    })
+    .then(res => res.json())
+    .then(data => {
+        try {
+            const descriptionResult = data.candidates[0].content.parts[0].text;
+            
+            output.innerHTML = `
+                <div style="background: #1a1a1a; padding: 14px; border-radius: 8px; border-left: 3px solid #007bff; text-align: left;">
+                    <div style="font-size: 0.75rem; color: #888; text-transform: uppercase; font-weight: bold; margin-bottom: 8px; letter-spacing: 0.5px;">👁️ Image Analysis Output</div>
+                    <div style="color: #eee; font-size: 0.95rem; line-height: 1.5; white-space: pre-wrap;">${descriptionResult}</div>
+                </div>
+            `;
+            // Clear file state configuration to prevent sticky re-execution bugs
+            clearActiveImage();
+        } catch (e) {
+            output.innerText = "Error decoding structural parameters from the analysis endpoint payload.";
+            console.error("Payload parse break:", data);
+        }
+    })
+    .catch(err => {
+        output.innerText = "Network intercept error connecting to Google vision matrices.";
+        console.error(err);
+    });
+}
+
 function runMarketExecution(ticker) {
     output.innerText = `Fetching price updates for "${ticker.toUpperCase()}"...`;
     const cleanTicker = ticker.trim().toLowerCase();
@@ -455,7 +570,7 @@ function executeImageGeneration(imagePrompt) {
 }
 
 // ==========================================
-// 9. STRING ROUTING EXECUTIONS
+// 10. STRING ROUTING EXECUTIONS
 // ==========================================
 function runInfoExecution(query) {
     const cleanQuery = query.toLowerCase().trim();
@@ -471,7 +586,6 @@ function runInfoExecution(query) {
         `;
     }
 
-    // Block Workspace Triggers 
     if (cleanQuery.includes("calendar") || cleanQuery.includes("calender") || cleanQuery.includes("schedule") || cleanQuery === "agenda" || cleanQuery.includes("email") || cleanQuery.includes("gmail") || cleanQuery.includes("inbox") || cleanQuery.includes("drive") || cleanQuery.includes("files")) {
         output.innerHTML = greetingHTML + `
             <div style="background: #1a1a1a; padding: 14px; border-radius: 8px; border-left: 3px solid #ffc107; text-align: left;">
@@ -482,7 +596,6 @@ function runInfoExecution(query) {
         return; 
     }
 
-    // Unified Location Routing Interceptor
     const isLocationIntent = cleanQuery.startsWith("map of ") || 
                              cleanQuery.startsWith("show map ") || 
                              cleanQuery.startsWith("time in ") || 
@@ -514,7 +627,6 @@ function runInfoExecution(query) {
         return;
     }
 
-    // Datalist Match Fallback Routing 
     const options = Array.from(datalist.options);
     const matchedOption = options.find(opt => opt.value.toLowerCase() === cleanQuery);
     if (matchedOption && matchedOption.getAttribute('data-lat')) {
@@ -525,7 +637,6 @@ function runInfoExecution(query) {
         return;
     }
 
-    // Browser Redirection Routing Links
     if (query.toLowerCase().startsWith("open ")) {
         routingWarning.style.display = "block"; 
         let appName = query.substring(5).trim().toLowerCase().replace(/['"]+/g, '');
@@ -552,13 +663,11 @@ function runInfoExecution(query) {
         return;
     }
 
-    // Market Redirection Core Loops
     if (cryptoMap[cleanQuery] || cleanQuery.startsWith("price of ")) {
         runMarketExecution(cleanQuery.startsWith("price of ") ? cleanQuery.substring(9).trim() : cleanQuery);
         return;
     }
 
-    // Math Computations and Unit Transformation Matrix
     if (/^[0-9+\-*/().\s]+$/.test(query) || cleanQuery.includes(" to ")) {
         try {
             if (!cleanQuery.includes(" to ")) {
@@ -600,7 +709,6 @@ function runInfoExecution(query) {
         }
     }
 
-    // Definition Parsing Loops
     routingWarning.style.display = "none";
     if (!query.includes(" ")) {
         fetch(`https://en.wiktionary.org/api/rest_v1/page/definition/${encodeURIComponent(query.toLowerCase())}`)
@@ -624,7 +732,7 @@ function runInfoExecution(query) {
 }
 
 // ==========================================
-// 10. EXTERNAL DOCUMENTATION CRAWL ENGINES
+// 11. EXTERNAL DOCUMENTATION CRAWL ENGINES
 // ==========================================
 function runUnifiedWikiPipeline(query, wikiData) {
     const famousYoutubersList = ["jacksucksatlife", "mrbeast", "pewdiepie", "markiplier", "caseoh", "jynxzi"];
@@ -678,13 +786,9 @@ function compileFinalSourceIndexBox(query, wikiData) {
         return;
     }
     
-    // RESTORED ORIGINAL HEADING PHRASING OVERRIDE
     totalHTML += `<div class="news-header-msg" style="color: #888; font-style: italic; margin-bottom: 12px; font-size: 0.9rem; line-height: 1.4;">I have provided the most relevant text of each information source related to "${query}".</div>`;
-    
-    // RESTORED ORIGINAL SPLIT STRING FOR SEVERAL DATA BLOCKS
     totalHTML += blocksHtml.join(`<div style="color: #888; font-style: italic; font-size: 0.85rem; margin: 15px 0 8px 0; text-align: left;">This might also be relevant:</div>`);
 
-    // MASTER SOURCE INDEX LINK FOOTER
     totalHTML += `
         <div class="source-box" style="border-top: 1px solid #333; padding-top: 12px; margin-top: 15px;">
             <span style="display: block; font-size: 0.75rem; color: #777; font-weight: bold; text-transform: uppercase; margin-bottom: 8px; letter-spacing: 0.5px;">Sources Index</span>
