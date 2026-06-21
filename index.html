@@ -420,18 +420,22 @@
                         </ul>
                     </div>
 
+                    <!-- Gemini Multi-Turn Persistent Session Registry List Drawer -->
                     <div id="history-drawer" class="help-drawer">
                         <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
                             <strong>📜 Saved Gemini Chats:</strong>
                             <button id="new-chat-btn" style="background: #28a745; color: white; border: none; padding: 4px 10px; border-radius: 4px; font-size: 0.75rem; cursor: pointer; font-weight: bold;">➕ New Chat</button>
                         </div>
                         <div id="history-list" style="display: flex; flex-direction: column; gap: 6px; max-height: 160px; overflow-y: auto; margin-top: 5px; padding-right: 2px;">
-                            </div>
+                            <!-- Active threads populated here -->
+                        </div>
                     </div>
 
                     <div class="search-container">
+                        <!-- Selector Matrix Section Label -->
                         <div style="text-align: center; font-size: 0.75rem; color: #888; margin-bottom: 4px; font-weight: bold; text-transform: uppercase; letter-spacing: 0.5px;">Assistant Engine Mode</div>
                         
+                        <!-- Descriptive row layouts for option nodes -->
                         <div style="display: flex; gap: 12px; justify-content: center; margin-bottom: 6px;">
                             <div style="flex: 1; max-width: 170px; background: #252525; padding: 10px; border-radius: 8px; border: 1px solid #333; text-align: left;">
                                 <label style="display: flex; align-items: center; gap: 6px; cursor: pointer; user-select: none; font-size: 0.88rem; color: #ccc; font-weight: bold;">
@@ -460,10 +464,9 @@
                             <button id="image-clear-btn" class="clear-preview">✕</button>
                         </div>
                     </div>
-                    <browse id="hub-suggestions"></datalist>
-                    <div id="weather-output" class="output-box">
-                        Welcome back! Enter a search query, app routing command, calculation sequence, weather location, translation phrase, crypto ticker, map request, or art prompt to begin...
-                    </div>
+                    <!-- FIXED: Re-aligned accidental data browse structural validation node tag -->
+                    <datalist id="hub-suggestions"></datalist>
+                    <div id="weather-output" class="output-box"></div>
                     
                     <div style="text-align: right;">
                         <button id="logout-action-btn" class="logout-btn">Log Out</button>
