@@ -466,20 +466,14 @@ function clearActiveImage() {
 async function executeGeminiDirectChat(userInput) {
     if (chatHistory.length === 0) {
         const localInstructions = localStorage.getItem('vaii_gemini_instructions') || '';
-        let systemPrompt = "You are Gemini, an advanced conversational core running inside the VAII architecture frame. STRICT STRUCTURAL RULE: You do NOT possess built-in web services, maps, currency handlers, weather telemetry, or drawing capabilities. All of those proprietary features belong exclusively to a completely separate system engine option on this dashboard named 'VAII Native'. Your singular purpose here is providing deep, persistent multi-turn conversational reasoning and textual chat history records. Keep statements direct and clear.";
+        let systemPrompt = "You are Gemini, an advanced conversational core. You do NOT have access to VAII Native web services (maps, weather, etc). Your purpose is deep reasoning and history tracking. Keep responses concise.";
         
         if (localInstructions.trim()) {
-            systemPrompt += `\n\n[USER SYSTEM INSTRUCTIONS / REQUIRED PERSONALITY PARAMETERS]:\n${localInstructions.trim()}`;
+            systemPrompt += `\n\n[SYSTEM INSTRUCTIONS]:\n${localInstructions.trim()}`;
         }
 
-        chatHistory.push({ 
-            role: "user", 
-            parts: [{ text: systemPrompt }] 
-        });
-        chatHistory.push({ 
-            role: "model", 
-            parts: [{ text: "System connection established. Isolated chat parameters synced. I am fully aware of my persona guidelines and that I do not contain VAII Native utilities." }] 
-        });
+        chatHistory.push({ role: "user", parts: [{ text: systemPrompt }] });
+        chatHistory.push({ role: "model", parts: [{ text: "System ready. Persona loaded." }] });
     }
 
     chatHistory.push({ role: "user", parts: [{ text: userInput }] });
@@ -488,79 +482,63 @@ async function executeGeminiDirectChat(userInput) {
     const spinnerBubble = document.createElement('div');
     spinnerBubble.id = "gemini-active-typing-indicator";
     spinnerBubble.style = "text-align: left; padding: 10px; color: #aaa; font-style: italic; display: flex; align-items: center;";
-    spinnerBubble.innerHTML = `<div class="loader-spinner"></div> Syncing conversational context vectors...`;
+    spinnerBubble.innerHTML = `<div class="loader-spinner"></div> Processing...`;
     output.appendChild(spinnerBubble);
-    output.scrollTop = output.scrollHeight;
 
-    const sanitizedContents = chatHistory.map(msg => {
-        return {
-            role: msg.role || "user",
-            parts: (msg.parts || []).map(p => ({ text: p.text || "" }))
-        };
-    });
+    // Sanitize: Strip custom UI fields (activeModelName) before sending to API
+    const sanitizedContents = chatHistory.map(msg => ({
+        role: msg.role,
+        parts: msg.parts.map(p => ({ text: p.text }))
+    }));
 
-    let successfulResponseText = null;
-    let successfulModelLabel = "";
-    let structuralErrorDetected = null;
+    let finalResponse = null;
+    let usedModelName = "";
 
+    // Loop through the tree. If one fails, it just proceeds to the next 'i'.
     for (let i = 0; i < BASELINE_FALLBACK_TREE.length; i++) {
         const modelObj = BASELINE_FALLBACK_TREE[i];
-        const visionUrl = `https://generativelanguage.googleapis.com/v1beta/models/${modelObj.id}:generateContent?key=${GEMINI_VISION_KEY}`;
-        
         try {
-            const response = await fetch(visionUrl, {
+            const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${modelObj.id}:generateContent?key=${GEMINI_VISION_KEY}`, {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({ contents: sanitizedContents })
             });
+
             const data = await response.json();
 
-            if (data.error) {
-                if (response.status === 400 || data.error.status === "INVALID_ARGUMENT") {
-                    structuralErrorDetected = data.error.message;
-                    break; 
-                }
-                console.warn(`Model generation tier [${modelObj.name}] quota full. Cascading downstream...`);
+            // If the API call itself fails (e.g. 429 Rate Limit)
+            if (!response.ok) {
+                console.warn(`${modelObj.name} failed (${response.status}). Trying next model...`);
                 continue; 
             }
 
-            if (!data.candidates || !data.candidates[0].content || !data.candidates[0].content.parts || !data.candidates[0].content.parts[0].text) {
-                continue;
-            }
-
-            successfulResponseText = data.candidates[0].content.parts[0].text;
-            successfulModelLabel = modelObj.name;
+            // If the response is valid
+            finalResponse = data.candidates[0].content.parts[0].text;
+            usedModelName = modelObj.name;
             break; 
         } catch (err) {
-            console.error(`Network exception on model asset [${modelObj.name}]:`, err);
+            console.error(`Error with ${modelObj.name}:`, err);
             continue;
         }
     }
 
-    const indicatorNode = document.getElementById("gemini-active-typing-indicator");
-    if (indicatorNode) indicatorNode.remove();
+    document.getElementById("gemini-active-typing-indicator")?.remove();
 
-    if (structuralErrorDetected) {
-        const errorDiv = document.createElement('div');
-        errorDiv.style = "background: #1a1a1a; padding: 14px; border-radius: 8px; border-left: 3px solid #ff4d4d; text-align: left; margin-bottom: 10px;";
-        errorDiv.innerHTML = `
-            <div style="font-size: 0.75rem; color: #ff4d4d; text-transform: uppercase; font-weight: bold; margin-bottom: 8px;">⚠️ History Thread Structure Fault</div>
-            <div style="color: #eee; font-size: 0.95rem; line-height: 1.5;">
-                ${structuralErrorDetected}<br><br>
-                <span style="color: #aaa; font-size: 0.85rem;">VAII automatically dropped your last submission entry to keep this specific session from breaking permanently.</span>
-            </div>
-        `;
-        output.appendChild(errorDiv);
-        chatHistory.pop(); 
-        return;
-    }
-
-    if (successfulResponseText !== null) {
+    if (finalResponse) {
         chatHistory.push({ 
             role: "model", 
-            parts: [{ text: successfulResponseText }],
-            activeModelName: successfulModelLabel 
+            parts: [{ text: finalResponse }],
+            activeModelName: usedModelName 
         });
+        renderFullChatLogBubble();
+        saveCurrentSessionState();
+    } else {
+        // Only show this if the loop finishes without success
+        output.innerHTML += `<div style="color: #ff4d4d; padding: 10px;">All models are currently rate-limited or unavailable. Please wait a moment.</div>`;
+        chatHistory.pop();
+    }
+}
+
 
         renderFullChatLogBubble();
         saveCurrentSessionState();
