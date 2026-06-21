@@ -420,22 +420,18 @@
                         </ul>
                     </div>
 
-                    <!-- Gemini Multi-Turn Persistent Session Registry List Drawer -->
                     <div id="history-drawer" class="help-drawer">
                         <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
                             <strong>📜 Saved Gemini Chats:</strong>
                             <button id="new-chat-btn" style="background: #28a745; color: white; border: none; padding: 4px 10px; border-radius: 4px; font-size: 0.75rem; cursor: pointer; font-weight: bold;">➕ New Chat</button>
                         </div>
                         <div id="history-list" style="display: flex; flex-direction: column; gap: 6px; max-height: 160px; overflow-y: auto; margin-top: 5px; padding-right: 2px;">
-                            <!-- Active threads populated here -->
-                        </div>
+                            </div>
                     </div>
 
                     <div class="search-container">
-                        <!-- Selector Matrix Section Label -->
                         <div style="text-align: center; font-size: 0.75rem; color: #888; margin-bottom: 4px; font-weight: bold; text-transform: uppercase; letter-spacing: 0.5px;">Assistant Engine Mode</div>
                         
-                        <!-- descriptive row layouts for option nodes -->
                         <div style="display: flex; gap: 12px; justify-content: center; margin-bottom: 6px;">
                             <div style="flex: 1; max-width: 170px; background: #252525; padding: 10px; border-radius: 8px; border: 1px solid #333; text-align: left;">
                                 <label style="display: flex; align-items: center; gap: 6px; cursor: pointer; user-select: none; font-size: 0.88rem; color: #ccc; font-weight: bold;">
@@ -446,7 +442,7 @@
                             
                             <div style="flex: 1; max-width: 170px; background: #252525; padding: 10px; border-radius: 8px; border: 1px solid #333; text-align: left;">
                                 <label style="display: flex; align-items: center; gap: 6px; cursor: pointer; user-select: none; font-size: 0.88rem; color: #ccc; font-weight: bold;">
-                                    <input type="radio" name="vaii-mode" value="gemini" style="width: auto !important; height: auto !important; margin: 0; padding: 0;"> Gemini 3.5
+                                    <input type="radio" name="vaii-mode" value="gemini" style="width: auto !important; height: auto !important; margin: 0; padding: 0;"> Gemini Ecosystem
                                 </label>
                                 <div style="font-size: 0.7rem; color: #777; margin-top: 4px; line-height: 1.25;">Provides a clean conversational thread with persistent historical session memory tracking.</div>
                             </div>
@@ -464,7 +460,7 @@
                             <button id="image-clear-btn" class="clear-preview">✕</button>
                         </div>
                     </div>
-                    <datalist id="hub-suggestions"></datalist>
+                    <browse id="hub-suggestions"></datalist>
                     <div id="weather-output" class="output-box">
                         Welcome back! Enter a search query, app routing command, calculation sequence, weather location, translation phrase, crypto ticker, map request, or art prompt to begin...
                     </div>
