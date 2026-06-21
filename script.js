@@ -47,7 +47,9 @@ const _v5 = "HU4b4Xmg_CYURTOmgJQ";
 
 const GEMINI_VISION_KEY = _v1 + _v2 + _v3 + _v4 + _v5;
 
-// Strict Chronological Fallback Tree Order
+// Global model array stack populated dynamically via the Google directory API
+let dynamicModelChain = [];
+
 const BASELINE_FALLBACK_TREE = [
     { name: "Gemini 3.5", id: "gemini-3.5-flash" },
     { name: "Gemini 3.1", id: "gemini-3.1-flash" },
@@ -85,6 +87,13 @@ const historyToggle = document.getElementById('history-toggle');
 const historyDrawer = document.getElementById('history-drawer');
 const historyList = document.getElementById('history-list');
 const newChatBtn = document.getElementById('new-chat-btn');
+
+// System Preferences UI Hooks
+const prefsToggleBtn = document.getElementById('prefs-toggle-btn');
+const prefsDrawer = document.getElementById('prefs-drawer');
+const prefsCloseBtn = document.getElementById('prefs-close-btn');
+const prefsInstructionsInput = document.getElementById('prefs-instructions-input');
+const prefsSaveBtn = document.getElementById('prefs-save-btn');
 
 // Vision Engine UI Bindings
 const cameraTriggerBtn = document.getElementById('camera-trigger-btn');
@@ -128,6 +137,39 @@ function renderMarkdownTextToHtml(rawMarkdownText) {
     safeHtml = safeHtml.replace(/\n/g, "<br>");
     
     return safeHtml;
+}
+
+// ==========================================================
+// 3.8 FUTURE-PROOF INTELLIGENT MODEL DISCOVERY DIRECTORY
+// ==========================================================
+async function discoverActiveModelChain() {
+    const listUrl = `https://generativelanguage.googleapis.com/v1beta/models?key=${GEMINI_VISION_KEY}`;
+    
+    try {
+        const response = await fetch(listUrl);
+        const data = await response.json();
+        
+        if (data && data.models) {
+            const liveIds = data.models
+                .filter(m => m.supportedGenerationMethods && m.supportedGenerationMethods.includes("generateContent"))
+                .map(m => m.name.replace("models/", ""));
+                
+            dynamicModelChain = BASELINE_FALLBACK_TREE.filter(model => liveIds.includes(model.id));
+            
+            data.models.forEach(m => {
+                const cleanId = m.name.replace("models/", "");
+                if (!dynamicModelChain.some(model => model.id === cleanId) && (cleanId.includes("gemini") || cleanId.includes("gemma"))) {
+                    dynamicModelChain.push({ name: cleanId.toUpperCase(), id: cleanId });
+                }
+            });
+        }
+    } catch (e) {
+        console.warn("Dynamic discovery tracking failed.", e);
+    }
+    
+    if (dynamicModelChain.length === 0) {
+        dynamicModelChain = [...BASELINE_FALLBACK_TREE];
+    }
 }
 
 function updateWelcomeMessageText() {
@@ -329,6 +371,12 @@ onAuthStateChanged(auth, (user) => {
         initializeFreshChatSession();
         clearActiveImage();
         renderHistoryListItems();
+        
+        // Populate local storage preferences into the UI input area boundary
+        if (prefsInstructionsInput) {
+            prefsInstructionsInput.value = localStorage.getItem('vaii_gemini_instructions') || '';
+        }
+        
         updateDatalist([], [], []);
     } else {
         if (authContainer) authContainer.style.display = "block";
@@ -439,11 +487,21 @@ function clearActiveImage() {
 // =========================================================
 async function executeGeminiDirectChat(userInput) {
     if (chatHistory.length === 0) {
+        // Read local storage configuration settings parameters 
+        const localInstructions = localStorage.getItem('vaii_gemini_instructions') || '';
+        
+        let systemPrompt = "You are Gemini, an advanced conversational core running inside the VAII architecture frame. STRICT STRUCTURAL RULE: You do NOT possess built-in web services, maps, currency handlers, weather telemetry, or drawing capabilities. All of those proprietary features belong exclusively to a completely separate system engine option on this dashboard named 'VAII Native'. Your singular purpose here is providing deep, persistent multi-turn conversational reasoning and textual chat history records. Keep statements direct and clear.";
+        
+        // CHANGED: Append local custom instruction sets seamlessly into initialization vectors if available
+        if (localInstructions.trim()) {
+            systemPrompt += `\n\n[USER SYSTEM INSTRUCTIONS / REQUIRED PERSONALITY PARAMETERS]:\n${localInstructions.trim()}`;
+        }
+
         chatHistory.push({ 
             role: "user", 
-            parts: [{ text: "You are Gemini, an advanced conversational core running inside the VAII architecture frame. STRICT STRUCTURAL RULE: You do NOT possess built-in web services, maps, currency handlers, weather telemetry, or drawing capabilities. All of those proprietary features belong exclusively to a completely separate system engine option on this dashboard named 'VAII Native'. Your singular purpose here is providing deep, persistent multi-turn conversational reasoning and textual chat history records. Keep statements direct and clear." }] 
+            parts: [{ text: systemPrompt }] 
         });
-        chatHistory.push({ role: "model", parts: [{ text: "System connection established. Isolated chat parameters synced. I am fully aware I do not contain VAII Native utilities." }] });
+        chatHistory.push({ role: "model", parts: [{ text: "System connection established. Isolated chat parameters synced. I am fully aware of my persona guidelines and that I do not contain VAII Native utilities." }] });
     }
 
     chatHistory.push({ role: "user", parts: [{ text: userInput }] });
@@ -456,17 +514,11 @@ async function executeGeminiDirectChat(userInput) {
     output.appendChild(spinnerBubble);
     output.scrollTop = output.scrollHeight;
 
-    let successfulResponseText = null;
-    let successfulModelLabel = "";
-    let structuralErrorDetected = null;
-
-    // Sanitation map step to remove variable layout configurations from object models completely
     const sanitizedContents = chatHistory.map(msg => ({
         role: msg.role,
         parts: msg.parts.map(p => ({ text: p.text }))
     }));
 
-    // FIXED: Loop steps through BASELINE_FALLBACK_TREE exactly from top to bottom
     for (let i = 0; i < BASELINE_FALLBACK_TREE.length; i++) {
         const modelObj = BASELINE_FALLBACK_TREE[i];
         const visionUrl = `https://generativelanguage.googleapis.com/v1beta/models/${modelObj.id}:generateContent?key=${GEMINI_VISION_KEY}`;
@@ -484,7 +536,7 @@ async function executeGeminiDirectChat(userInput) {
                     structuralErrorDetected = data.error.message;
                     break; 
                 }
-                console.warn(`Model generation tier [${modelObj.name}] quota full. Cascading downstream...`);
+                console.warn(`Model generation tier [${modelObj.name}] quota full.`);
                 continue; 
             }
 
@@ -503,21 +555,6 @@ async function executeGeminiDirectChat(userInput) {
 
     const indicatorNode = document.getElementById("gemini-active-typing-indicator");
     if (indicatorNode) indicatorNode.remove();
-
-    if (structuralErrorDetected) {
-        const errorDiv = document.createElement('div');
-        errorDiv.style = "background: #1a1a1a; padding: 14px; border-radius: 8px; border-left: 3px solid #ff4d4d; text-align: left; margin-bottom: 10px;";
-        errorDiv.innerHTML = `
-            <div style="font-size: 0.75rem; color: #ff4d4d; text-transform: uppercase; font-weight: bold; margin-bottom: 8px;">⚠️ History Thread Structure Fault</div>
-            <div style="color: #eee; font-size: 0.95rem; line-height: 1.5;">
-                ${structuralErrorDetected}<br><br>
-                <span style="color: #aaa; font-size: 0.85rem;">VAII automatically dropped your last submission entry to keep this specific session from breaking permanently. Clear out this session history thread or adjust parameter inputs.</span>
-            </div>
-        `;
-        output.appendChild(errorDiv);
-        chatHistory.pop(); 
-        return;
-    }
 
     if (successfulResponseText !== null) {
         chatHistory.push({ 
@@ -593,6 +630,44 @@ document.querySelectorAll('input[name="vaii-mode"]').forEach(radio => {
     });
 });
 
+// CHANGED: Hooked up new interactive drawer event bindings for the System Preferences interface elements
+if (prefsToggleBtn) {
+    prefsToggleBtn.addEventListener('click', function(e) {
+        e.stopPropagation(); 
+        if (prefsDrawer.style.display === "block") {
+            prefsDrawer.style.display = "none";
+            prefsToggleBtn.style.color = "#888";
+        } else {
+            prefsDrawer.style.display = "block";
+            prefsToggleBtn.style.color = "#007bff";
+            if (helpGuide) helpGuide.style.display = "none";
+            if (historyDrawer) historyDrawer.style.display = "none";
+            if (helpToggle) helpToggle.innerText = "?";
+            if (historyToggle) historyToggle.innerText = "📜";
+        }
+    });
+}
+
+if (prefsCloseBtn) {
+    prefsCloseBtn.addEventListener('click', function() {
+        prefsDrawer.style.display = "none";
+        prefsToggleBtn.style.color = "#888";
+    });
+}
+
+if (prefsSaveBtn) {
+    prefsSaveBtn.addEventListener('click', function() {
+        const instructionsText = prefsInstructionsInput.value.trim();
+        localStorage.setItem('vaii_gemini_instructions', instructionsText);
+        
+        prefsDrawer.style.display = "none";
+        prefsToggleBtn.style.color = "#888";
+        
+        // Wipe active thread state boundary context so the fresh custom vibe initializes cleanly immediately
+        initializeFreshChatSession();
+    });
+}
+
 if (helpToggle) {
     helpToggle.addEventListener('click', function() {
         if (helpGuide.style.display === "block") {
@@ -602,7 +677,9 @@ if (helpToggle) {
             helpGuide.style.display = "block";
             helpToggle.innerText = "✕";
             if (historyDrawer) historyDrawer.style.display = "none";
+            if (prefsDrawer) prefsDrawer.style.display = "none";
             if (historyToggle) historyToggle.innerText = "📜";
+            if (prefsToggleBtn) prefsToggleBtn.style.color = "#888";
         }
     });
 }
@@ -616,7 +693,9 @@ if (historyToggle) {
             historyDrawer.style.display = "block";
             historyToggle.innerText = "✕";
             if (helpGuide) helpGuide.style.display = "none";
+            if (prefsDrawer) prefsDrawer.style.display = "none";
             if (helpToggle) helpToggle.innerText = "?";
+            if (prefsToggleBtn) prefsToggleBtn.style.color = "#888";
             renderHistoryListItems();
         }
     });
@@ -930,285 +1009,4 @@ function executeImageGeneration(imagePrompt) {
         img.style.display = "block";
     };
     output.appendChild(img);
-}
-
-// URL Redirection
-function launchTargetUrl(url) {
-    routingWarning.style.display = "block"; 
-    const htmlOutput = `
-        <div class="news-header-msg" style="color: #888; font-style: italic; margin-bottom: 4px; font-size: 0.9rem; line-height: 1.4;">Navigating to external web link...</div>
-        <div style="background: #1a1a1a; padding: 14px; border-radius: 8px; border-left: 3px solid #007bff; text-align: left; margin-bottom: 15px;">
-            🔗 <strong>Address:</strong> <span style="color: #4da3ff; word-break: break-all;">${url}</span>
-        </div>
-        <a href="${url}" target="_blank" style="display: flex; align-items: center; justify-content: space-between; background: #007bff; border-radius: 6px; padding: 10px 14px; color: white; text-decoration: none; font-weight: bold; font-size: 0.95rem;">
-            <span>Launch Link</span>
-            <span>Open Site ↗</span>
-        </a>
-    `;
-    output.innerHTML = htmlOutput;
-    window.open(url, '_blank');
-}
-
-// ==========================================
-// 12. STRING ROUTING EXECUTIONS
-// ==========================================
-function runInfoExecution(query) {
-    const cleanQuery = query.toLowerCase().trim();
-    const cryptoMap = { btc: "bitcoin", eth: "ethereum", solana: "solana" };
-
-    const greetingsList = ["hello", "hi", "hey", "sup", "yo", "greetings"];
-    let greetingHTML = "";
-    if (greetingsList.includes(cleanQuery)) {
-        greetingHTML = `
-            <div style="background: #1a1a1a; padding: 14px; border-radius: 8px; border-left: 3px solid #17a2b8; text-align: left; margin-bottom: 15px;">
-                👋 <strong>Assistant:</strong><br><span>Hello! How can I help you today? System initialized.</span>
-            </div>
-        `;
-    }
-
-    if (cleanQuery.includes("calendar") || cleanQuery.includes("calender") || cleanQuery.includes("schedule") || cleanQuery === "agenda" || cleanQuery.includes("email") || cleanQuery.includes("gmail") || cleanQuery.includes("inbox")) {
-        const htmlLayout = greetingHTML + `
-            <div style="background: #1a1a1a; padding: 14px; border-radius: 8px; border-left: 3px solid #ffc107; text-align: left;">
-                ⚠️ <strong>Workspace Elements Disabled:</strong><br><br>
-                <span style="color: #aaa; font-size: 0.9rem;">Private calendar and email protocols remain inactive to preserve a standard authorization route.</span>
-            </div>
-        `;
-        handleVaiiDataOutput("", htmlLayout);
-        return; 
-    }
-
-    const isLocationIntent = cleanQuery.startsWith("map of ") || 
-                             cleanQuery.startsWith("show map ") || 
-                             cleanQuery.startsWith("time in ") || 
-                             cleanQuery.startsWith("weather in ") || 
-                             cleanQuery.startsWith("weather ") || 
-                             cleanQuery.startsWith("clock ");
-
-    if (isLocationIntent) {
-        let parsedLocation = query
-            .replace(/map of /i, "")
-            .replace(/show map /i, "")
-            .replace(/time in /i, "")
-            .replace(/weather in /i, "")
-            .replace(/weather /i, "")
-            .replace(/clock /i, "")
-            .trim();
-            
-        fetch(`https://geocoding-api.open-meteo.com/v1/search?name=${encodeURIComponent(parsedLocation)}&count=1&language=en&format=json`)
-            .then(res => res.json())
-            .then(data => {
-                if (data.results && data.results.length > 0) {
-                    const loc = data.results[0];
-                    const fullDisplayName = `${loc.name}, ${loc.admin1 || ''} (${loc.country})`;
-                    renderUnifiedLocationCard(loc.latitude, loc.longitude, loc.timezone, fullDisplayName, greetingHTML);
-                } else {
-                    handleVaiiDataOutput("", `<div>Could not extract metrics for "${parsedLocation}".</div>`);
-                }
-            }).catch(() => { handleVaiiDataOutput("", "<div>Location processing engine connection failure.</div>"); });
-        return;
-    }
-
-    const options = Array.from(datalist.options);
-    const matchedOption = options.find(opt => opt.value.toLowerCase() === cleanQuery);
-    if (matchedOption && matchedOption.getAttribute('data-lat')) {
-        const lat = matchedOption.getAttribute('data-lat');
-        const lon = matchedOption.getAttribute('data-lon');
-        const tz = matchedOption.getAttribute('data-tz');
-        renderUnifiedLocationCard(lat, lon, tz, matchedOption.value, greetingHTML);
-        return;
-    }
-
-    if (query.toLowerCase().startsWith("open ")) {
-        let appName = query.substring(5).trim().toLowerCase().replace(/['"]+/g, '');
-        if (!appName) { output.innerText = "Please specify what you want to open."; return; }
-        output.innerText = `Resolving address for "${appName}"...`;
-        const randomizedRoutes = {
-            "gemini": ["https://gemini.google.com"],
-            "google gemini": ["https://gemini.google.com"],
-            "youtube music": ["https://music.youtube.com"],
-            "minecraft": ["https://minecraft.net"],
-            "wikipedia": ["https://wikipedia.org"]
-        };
-        if (randomizedRoutes[appName]) {
-            launchTargetUrl(randomizedRoutes[appName][0]);
-            return;
-        }
-        launchTargetUrl(`https://${appName.replace(/\s+/g, '')}.com`);
-        return;
-    }
-
-    if (/\.[a-z]{2,6}/i.test(query) || query.startsWith('http://') || query.startsWith('https://')) {
-        launchTargetUrl(query.startsWith('http') ? query : 'https://' + query);
-        return;
-    }
-
-    if (cryptoMap[cleanQuery] || cleanQuery.startsWith("price of ")) {
-        runMarketExecution(cleanQuery.startsWith("price of ") ? cleanQuery.substring(9).trim() : cleanQuery);
-        return;
-    }
-
-    if (/^[0-9+\-*/().\s]+$/.test(query) || cleanQuery.includes(" to ")) {
-        try {
-            if (!cleanQuery.includes(" to ")) {
-                const result = Function(`"use strict"; return (${query})`)();
-                const htmlOutput = `<div style="background: #1a1a1a; padding: 14px; border-radius: 8px; border-left: 3px solid #28a745; text-align: left;">🔢 <strong>Calculation:</strong><br><span style="font-size: 1.3rem; font-weight: bold;">${query} = ${result}</span></div>`;
-                handleVaiiDataOutput("", htmlOutput);
-                return;
-            }
-        } catch(e) {}
-
-        if (cleanQuery.includes(" to ")) {
-            const parts = query.split(/ to /i);
-            const source = parts[0].trim();
-            const targetLanguage = parts[1].trim();
-            const unitMatch = source.match(/^([0-9.]+)\s*([a-zA-Z°]+)$/);
-            
-            if (unitMatch) {
-                const num = parseFloat(unitMatch[1]);
-                const fromUnit = unitMatch[2].toLowerCase();
-                const toUnit = targetLanguage.toLowerCase();
-                let conversionResult = null;
-                if (fromUnit === "lbs" && toUnit === "kg") conversionResult = `${(num * 0.45359237).toFixed(2)} kg`;
-                if (fromUnit === "kg" && toUnit === "lbs") conversionResult = `${(num / 0.45359237).toFixed(2)} lbs`;
-                if (fromUnit === "miles" && toUnit === "km") conversionResult = `${(num * 1.60934).toFixed(2)} km`;
-                if (fromUnit === "km" && toUnit === "miles") conversionResult = `${(num / 1.60934).toFixed(2)} miles`;
-                if (fromUnit === "f" && toUnit === "c") conversionResult = `${((num - 32) * 5 / 9).toFixed(1)}°C`;
-                if (fromUnit === "c" && toUnit === "f") conversionResult = `${((num * 9 / 5) + 32).toFixed(1)}°F`;
-                
-                if (conversionResult) {
-                    const htmlOutput = `<div style="background: #1a1a1a; padding: 14px; border-radius: 8px; border-left: 3px solid #28a745; text-align: left;">🔄 <strong>Conversion:</strong><br>📤 Result: <strong style="color: #28a745; font-size: 1.3rem; display:block; margin-top:4px;">${conversionResult}</strong></div>`;
-                    handleVaiiDataOutput("", htmlOutput);
-                    return;
-                }
-            }
-            fetch(`https://api.mymemory.translated.net/get?q=${encodeURIComponent(source)}&langpair=en|${encodeURIComponent(targetLanguage.substring(0,2))}`)
-                .then(res => res.json())
-                .then(data => {
-                    const transText = data.responseData.translatedText;
-                    const htmlOutput = `<div style="background: #1a1a1a; padding: 14px; border-radius: 8px; border-left: 3px solid #4da3ff; text-align: left;">🗣️ <strong>Translation:</strong><br>📤 Result: <strong style="color: #4da3ff; font-size: 1.1rem; display:block; margin-top:4px;">"${transText}"</strong></div>`;
-                    handleVaiiDataOutput("", htmlOutput);
-                }).catch(() => {
-                    handleVaiiDataOutput("", "<div>Translation engine network failure.</div>");
-                });
-            return;
-        }
-    }
-
-    routingWarning.style.display = "none";
-    if (!query.includes(" ")) {
-        fetch(`https://en.wiktionary.org/api/rest_v1/page/definition/${encodeURIComponent(query.toLowerCase())}`)
-            .then(res => res.json())
-            .then(dictData => {
-                const key = Object.keys(dictData)[0];
-                const rawDefinition = dictData[key][0].definitions[0].definition.replace(/<[^>]*>/g, '').trim();
-                let wikiData = { wiktionary: { title: query, text: rawDefinition, pos: dictData[key][0].partOfSpeech || "noun" } };
-                if (greetingHTML) wikiData.greeting = greetingHTML;
-                runUnifiedWikiPipeline(query, wikiData);
-            }).catch(() => {
-                let wikiData = {};
-                if (greetingHTML) wikiData.greeting = greetingHTML;
-                runUnifiedWikiPipeline(query, wikiData);
-            });
-    } else {
-        let wikiData = {};
-        if (greetingHTML) wikiData.greeting = greetingHTML;
-        runUnifiedWikiPipeline(query, wikiData);
-    }
-}
-
-// ==========================================
-// 13. EXTERNAL DOCUMENTATION CRAWL ENGINES
-// ==========================================
-function runUnifiedWikiPipeline(query, wikiData) {
-    const famousYoutubersList = ["jacksucksatlife", "mrbeast", "pewdiepie", "markiplier", "caseoh", "jynxzi"];
-    const isInfluencer = famousYoutubersList.some(name => query.toLowerCase().includes(name));
-
-    const youtubeFetch = (isInfluencer && GOOGLE_API_KEY)
-        ? fetch(`https://www.googleapis.com/youtube/v3/search?part=snippet&type=channel&q=${encodeURIComponent(query)}&key=${GOOGLE_API_KEY}`)
-            .then(res => res.json())
-            .then(searchData => {
-                if (searchData.items?.length > 0) {
-                    return fetch(`https://www.googleapis.com/youtube/v3/channels?part=statistics,snippet&id=${searchData.items[0].id.channelId}&key=${GOOGLE_API_KEY}`)
-                        .then(res => res.json())
-                        .then(channelData => {
-                            if (channelData.items?.length > 0) {
-                                const item = channelData.items[0];
-                                wikiData.youtube = { title: item.snippet.title, text: item.snippet.description, subs: parseInt(item.statistics.subscriberCount).toLocaleString(), views: parseInt(item.statistics.viewCount).toLocaleString(), customUrl: item.snippet.customUrl || "" };
-                            }
-                        });
-                }
-            }).catch(() => null)
-        : Promise.resolve();
-
-    const wikipediaFetch = fetch(`https://en.wikipedia.org/w/api.php?action=query&list=search&srsearch=${encodeURIComponent(query)}&utf8=&format=json&origin=*`)
-        .then(res => res.json())
-        .then(wikiSearch => {
-            if (wikiSearch.query?.search?.length > 0) {
-                return fetch(`https://en.wikipedia.org/api/rest_v1/page/summary/${encodeURIComponent(wikiSearch.query.search[0].title.replace(/ /g, '_'))}`)
-                    .then(res => res.json())
-                    .then(summaryData => { wikiData.wikipedia = { title: wikiSearch.query.search[0].title, text: summaryData.extract }; });
-            }
-        }).catch(() => null);
-
-    Promise.all([youtubeFetch, wikipediaFetch]).then(() => { compileFinalSourceIndexBox(query, wikiData); });
-}
-
-function compileFinalSourceIndexBox(query, wikiData) {
-    let blocksHtml = [];
-
-    if (wikiData.wiktionary) {
-        blocksHtml.push(`<div style="background: #1a1a1a; padding: 14px; border-radius: 8px; border-left: 3px solid #28a745; text-align: left;"><strong>${wikiData.wiktionary.title}</strong> (${wikiData.wiktionary.pos}): ${wikiData.wiktionary.text}</div>`);
-    }
-    if (wikiData.youtube) {
-        blocksHtml.push(`<div style="background: #1a1a1a; padding: 14px; border-radius: 8px; border-left: 3px solid #ff0000; text-align: left;"><strong>📺 ${wikiData.youtube.title}</strong><br><span style="font-size: 0.85rem; color: #aaa;">🔴 Subs: ${wikiData.youtube.subs} | Views: ${wikiData.youtube.views}</span><br><br><em>${wikiData.youtube.text}</em></div>`);
-    }
-    if (wikiData.wikipedia) {
-        blocksHtml.push(`<div style="background: #1a1a1a; padding: 14px; border-radius: 8px; border-left: 3px solid #007bff; text-align: left;"><strong>${wikiData.wikipedia.title}:</strong> ${wikiData.wikipedia.text}</div>`);
-    }
-
-    let totalHTML = wikiData.greeting || "";
-    if (blocksHtml.length === 0) {
-        handleVaiiDataOutput("", totalHTML + `<div>No matches found for "${query}".</div>`);
-        return;
-    }
-    
-    totalHTML += `<div class="news-header-msg" style="color: #888; font-style: italic; margin-bottom: 12px; font-size: 0.9rem; line-height: 1.4;">I have provided the most relevant text of each information source related to "${query}".</div>`;
-    totalHTML += blocksHtml.join(`<div style="color: #888; font-style: italic; font-size: 0.85rem; margin: 15px 0 8px 0; text-align: left;">This might also be relevant:</div>`);
-
-    totalHTML += `
-        <div class="source-box" style="border-top: 1px solid #333; padding-top: 12px; margin-top: 15px;">
-            <span style="display: block; font-size: 0.75rem; color: #777; font-weight: bold; text-transform: uppercase; margin-bottom: 8px; letter-spacing: 0.5px;">Sources Index</span>
-            <div class="source-list" style="display: flex; flex-direction: column; gap: 6px;">
-    `;
-
-    if (wikiData.wiktionary) {
-        totalHTML += `
-            <a href="https://en.wiktionary.org/wiki/${encodeURIComponent(query)}" target="_blank" style="display: flex; align-items: center; justify-content: space-between; background: #2a2a2a; border: 1px solid #3d3d3d; border-radius: 6px; padding: 6px 10px; color: #4da3ff; text-decoration: none; font-size: 0.82rem; font-weight: bold;">
-                <span style="color: #aaa; font-weight: normal;">📰 Wiktionary</span>
-                <span>Open Source →</span>
-            </a>
-        `;
-    }
-
-    if (wikiData.youtube) {
-        const channelPath = wikiData.youtube.customUrl ? wikiData.youtube.customUrl : `@channel`;
-        totalHTML += `
-            <a href="https://www.youtube.com/${channelPath}" target="_blank" style="display: flex; align-items: center; justify-content: space-between; background: #2a2a2a; border: 1px solid #3d3d3d; border-radius: 6px; padding: 6px 10px; color: #ff4444; text-decoration: none; font-size: 0.82rem; font-weight: bold;">
-                <span style="color: #aaa; font-weight: normal;">🔴 YouTube Channel</span>
-                <span>Live Metrics →</span>
-            </a>
-        `;
-    }
-
-    if (wikiData.wikipedia) {
-        totalHTML += `
-            <a href="https://en.wikipedia.org/wiki/${encodeURIComponent(wikiData.wikipedia.title)}" target="_blank" style="display: flex; align-items: center; justify-content: space-between; background: #2a2a2a; border: 1px solid #3d3d3d; border-radius: 6px; padding: 6px 10px; color: #4da3ff; text-decoration: none; font-size: 0.82rem; font-weight: bold;">
-                <span style="color: #aaa; font-weight: normal;">📰 Wikipedia</span>
-                <span>Open Source →</span>
-            </a>
-        `;
-    }
-
-    totalHTML += `</div></div>`;
-    handleVaiiDataOutput("", totalHTML);
 }
