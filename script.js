@@ -432,7 +432,7 @@ function runInfoExecution(query) {
         return; 
     }
 
-    // 2. FIXED ENDPOINT INTENT GATE: Official Live Maps SDK Core
+    // 2. CORERCTED ENDPOINT INTENT GATE: Official Live Maps Embed REST URL
     if (cleanQuery.startsWith("map of ") || cleanQuery.startsWith("show map ")) {
         const targetLocation = query.replace(/map of /i, "").replace(/show map /i, "").trim();
         output.innerHTML = greetingHTML + `
@@ -637,6 +637,7 @@ function runInfoExecution(query) {
     }
 }
 
+// REST OF THE FILE UNCHANGED FROM PREVIOUS TURN (Wiki/YouTube compilation frameworks)
 function runUnifiedWikiPipeline(query, wikiData, hasWiktionary) {
     const famousYoutubersList = [
         "jacksucksatlife", "mrbeast", "pewdiepie", "markiplier", "jacksepticeye", 
