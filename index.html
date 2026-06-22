@@ -324,25 +324,6 @@
             padding: 10px;
             font-size: 0.8rem;
         }
-        .policy-summary {
-            cursor: pointer;
-            text-decoration: underline;
-            color: #4da3ff;
-            user-select: none;
-            font-weight: bold;
-        }
-        .policy-content-box {
-            background: #1e1e1e;
-            color: #ccc;
-            text-align: left;
-            padding: 16px;
-            border-radius: 8px;
-            border: 1px solid #333;
-            margin-top: 12px;
-            line-height: 1.5;
-            max-height: 250px;
-            overflow-y: auto;
-        }
     </style>
 </head>
 <body>
@@ -395,43 +376,29 @@
                     </div>
 
                     <div id="help-guide" class="help-drawer">
-                        <strong>💡 VAII Assistant Feature Guide (Note: Web services are exclusively supported on VAII Native mode):</strong>
+                        <strong>💡 VAII Assistant Feature Guide:</strong>
                         <ul>
-                            <li><strong>🧠 Knowledge Base:</strong> Type standard words for dictionary definitions or terms for general information summaries. If searching for creators, VAII looks up channel data.</li>
+                            <li><strong>🧠 Knowledge Base:</strong> Type standard words for dictionary definitions or terms for general information summaries.</li>
                             <li><strong>👁️ Gemini Vision Engine:</strong> Tap the camera icon to select or capture an image file. Enter your question inside the input block to analyze data properties.</li>
                             <li><strong>🗺️ Interactive Maps:</strong> Type <code>map of [location]</code> or <code>show map [location]</code> to load a live visual layout of that area.</li>
                             <li><strong>☀️ Weather & Local Time:</strong> Type any city name or phrases like <code>weather in Tokyo</code> to check conditions and matching clocks instantly.</li>
                             <li><strong>🌐 Web Link Routing:</strong> Input domains like <code>wikipedia.org</code> or clear commands like <code>open youtube</code> to launch them.</li>
                             <li><strong>🔢 Calculations & Conversions:</strong> Type math equations directly or conversion strings like <code>193 lbs to kg</code> to display solutions.</li>
                             <li><strong>🔄 Translations:</strong> Enter translation patterns like <code>Hello to Spanish</code> to convert text.</li>
-                            <li><strong>📈 Market Trackers:</strong> Input stock symbols or crypto tickers directly (such as <code>BTC</code> or <code>AAPL</code>) for real-time market estimates.</li>
+                            <li><strong>📈 Market Trackers:</strong> Input stock symbols or crypto tickers directly for real-time market estimates.</li>
                             <li><strong>🎨 AI Art Generator:</strong> Type <code>draw </code> before any description to compile custom artwork on the screen.</li>
-                        </ul>
-                        
-                        <br><strong>🌐 Supported Web Services & API Partners (VAII Native Matrix):</strong>
-                        <ul>
-                            <li><strong>Google Maps Platform:</strong> Powers enterprise-grade map canvas synchronization and spatial location geocoding routines.</li>
-                            <li><strong>YouTube Data API v3:</strong> Drives high-throughput metadata requests to isolate content creator demographics, channel validation diagnostics, sub tallies, and view metrics.</li>
-                            <li><strong>Google AI Studio (Gemini Core Ecosystem):</strong> Establishes endpoints for multi-turn cognitive chat history states and multimodal vision model analysis scripts.</li>
-                            <li><strong>Open-Meteo Telemetry Network:</strong> Supplies global meteorological monitoring arrays for real-time weather forecasting data points and spatial time zone clocks.</li>
-                            <li><strong>Wikimedia Reference Engine:</strong> Connects public open-source Wikipedia summaries and lexical Wiktionary phrase indices.</li>
-                            <li><strong>MyMemory Translation Cluster:</strong> Automates structured translation text normalization pipelines across diverse language pairs.</li>
-                            <li><strong>Pollinations.ai Framework:</strong> Feeds contextual text vectors into high-fidelity image composition neural networks.</li>
                         </ul>
                     </div>
 
-                    <!-- Gemini Multi-Turn Persistent Session Registry List Drawer -->
                     <div id="history-drawer" class="help-drawer">
                         <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
                             <strong>📜 Saved Gemini Chats:</strong>
                             <button id="new-chat-btn" style="background: #28a745; color: white; border: none; padding: 4px 10px; border-radius: 4px; font-size: 0.75rem; cursor: pointer; font-weight: bold;">➕ New Chat</button>
                         </div>
                         <div id="history-list" style="display: flex; flex-direction: column; gap: 6px; max-height: 160px; overflow-y: auto; margin-top: 5px; padding-right: 2px;">
-                            <!-- Active threads populated here -->
                         </div>
                     </div>
 
-                    <!-- Local Browser Storage System Preferences Prompt Manager Drawer -->
                     <div id="prefs-drawer" class="help-drawer">
                         <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
                             <strong>⚙️ System Preferences (Gemini Custom Identity):</strong>
@@ -444,10 +411,8 @@
                     </div>
 
                     <div class="search-container">
-                        <!-- Selector Matrix Section Label -->
                         <div style="text-align: center; font-size: 0.75rem; color: #888; margin-bottom: 4px; font-weight: bold; text-transform: uppercase; letter-spacing: 0.5px;">Assistant Engine Mode</div>
                         
-                        <!-- Descriptive row layouts for option nodes -->
                         <div style="display: flex; gap: 12px; justify-content: center; margin-bottom: 6px;">
                             <div style="flex: 1; max-width: 170px; background: #252525; padding: 10px; border-radius: 8px; border: 1px solid #333; text-align: left;">
                                 <label style="display: flex; align-items: center; gap: 6px; cursor: pointer; user-select: none; font-size: 0.88rem; color: #ccc; font-weight: bold;">
@@ -490,29 +455,10 @@
             </div>
         </main>
 
-        <footer class="policy-footer">
-            <details>
-                <summary class="policy-summary">Privacy Policy</summary>
-                <div class="policy-content-box">
-                    <strong style="color: #fff; display: block; margin-bottom: 8px; font-size: 0.9rem;">Privacy Policy for VAII (Virtual Assistant)</strong>
-                    VAII ("the App") is a personal virtual assistant application designed to provide search integrations and productivity tools. This policy explains how data is handled within the App.<br><br>
-                    
-                    <strong>1. Data Handling</strong><br>
-                    VAII operates as a client-side application. Processing occurs directly within your browser session.<br>
-                    • <em>Authentication:</em> Credentials and login profiles are handled securely via Firebase Authentication to manage access.<br>
-                    • <em>Image Evaluation:</em> Attached image assets are translated into transient memory buffers inside your browser frame to build context metrics over securely processed pipelines. No server logs store visual parameters.<br>
-                    • <em>Queries and Maps:</em> Search parameters for weather, time, or map tracking are processed via public informational endpoints and mapping tools to render your local visual cards.<br><br>
-                    
-                    <strong>2. Integrated Services</strong><br>
-                    The App communicates with standard informational tools to fulfill commands: Firebase, Google Cloud Platform (Maps, YouTube, Gemini Vision), Open-Meteo, Wikipedia, Wiktionary, MyMemory, and Pollinations.ai.<br><br>
-                    
-                    <strong>3. Storage Security</strong><br>
-                    Your session settings remain stored safely inside local browser memory. Signing out removes these variables permanently from your hardware. No continuous tracking systems run on background database servers.<br><br>
-                    
-                    <strong>4. Policy Updates</strong><br>
-                    This policy may be adjusted to align with future assistant updates.
-                </div>
-            </details>
+        <footer class="policy-footer" style="text-align: center;">
+            <a href="privacy.html" class="policy-summary" style="text-decoration: none; color: #4da3ff; font-weight: bold; font-size: 0.85rem;">
+                ▶ Privacy Policy
+            </a>
         </footer>
     </div>
 
