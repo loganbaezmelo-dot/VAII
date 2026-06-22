@@ -863,6 +863,34 @@ newChatBtn?.addEventListener('click', () => {
     if (historyDrawer) historyDrawer.style.display = "none";
 });
 
+cameraTriggerBtn?.addEventListener('click', () => {
+    imageFileInput?.click();
+});
+
+imageFileInput?.addEventListener('change', (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = (event) => {
+        const dataUrl = event.target.result;
+        const [mimeData, base64Data] = dataUrl.split(',');
+        
+        activeImageMimeType = mimeData.split(':')[1].split(';')[0];
+        activeImageBase64 = base64Data;
+
+        imagePreviewThumbnail.src = dataUrl;
+        imagePreviewFilename.innerText = file.name;
+        imagePreviewContainer.style.display = "flex";
+        cameraTriggerBtn.classList.add('active');
+    };
+    reader.readAsDataURL(file);
+});
+
+imageClearBtn?.addEventListener('click', () => {
+    clearActiveImage();
+});
+
 hubInput?.addEventListener('input', () => {
     const query = hubInput.value; 
     const trimmedQuery = query.trim();
