@@ -376,18 +376,22 @@
                     </div>
 
                     <div id="help-guide" class="help-drawer">
-                        <strong>💡 VAII Assistant Feature Guide:</strong>
+                        <strong>💡 All Supported Services inside VAII Native:</strong>
+                        <span style="font-size: 0.8rem; color: #aaa; display: block; margin-bottom: 8px;">These core operations process natively via external live integrations:</span>
                         <ul>
-                            <li><strong>🧠 Knowledge Base:</strong> Type standard words for dictionary definitions or terms for general information summaries.</li>
-                            <li><strong>👁️ Gemini Vision Engine:</strong> Tap the camera icon to select or capture an image file. Enter your question inside the input block to analyze data properties.</li>
-                            <li><strong>🗺️ Interactive Maps:</strong> Type <code>map of [location]</code> or <code>show map [location]</code> to load a live visual layout of that area.</li>
+                            <li><strong>🧠 Knowledge Base:</strong> Input a single distinct vocabulary term to fetch live lexical definitions via Wiktionary.</li>
+                            <li><strong>👁️ Gemini Vision Engine:</strong> Tap the camera icon to select or capture an image file. Enter your question to analyze data properties.</li>
+                            <li><strong>🗺️ Interactive Maps:</strong> Type <code>map of [location]</code> or <code>show map [location]</code> to load a live visual layout.</li>
                             <li><strong>☀️ Weather & Local Time:</strong> Type any city name or phrases like <code>weather in Tokyo</code> to check conditions and matching clocks instantly.</li>
-                            <li><strong>🌐 Web Link Routing:</strong> Input domains like <code>wikipedia.org</code> or clear commands like <code>open youtube</code> to launch them.</li>
+                            <li><strong>🌐 Web Link Routing:</strong> Input domains like <code>wikipedia.org</code> or commands like <code>open youtube</code> to launch them.</li>
                             <li><strong>🔢 Calculations & Conversions:</strong> Type math equations directly or conversion strings like <code>193 lbs to kg</code> to display solutions.</li>
                             <li><strong>🔄 Translations:</strong> Enter translation patterns like <code>Hello to Spanish</code> to convert text.</li>
                             <li><strong>📈 Market Trackers:</strong> Input stock symbols or crypto tickers directly for real-time market estimates.</li>
                             <li><strong>🎨 AI Art Generator:</strong> Type <code>draw </code> before any description to compile custom artwork on the screen.</li>
                         </ul>
+                        <div style="margin-top: 10px; color: #ff4d4d; font-size: 0.8rem; font-weight: bold; padding-top: 8px; border-top: 1px solid #3d3d3d;">
+                            ⚠️ CRITICAL RULE: The Gemini Ecosystem mode is an isolated text environment and cannot execute any of the above web widgets.
+                        </div>
                     </div>
 
                     <div id="history-drawer" class="help-drawer">
@@ -418,7 +422,7 @@
                                 <label style="display: flex; align-items: center; gap: 6px; cursor: pointer; user-select: none; font-size: 0.88rem; color: #ccc; font-weight: bold;">
                                     <input type="radio" name="vaii-mode" value="native" checked style="width: auto !important; height: auto !important; margin: 0; padding: 0;"> VAII Native
                                 </label>
-                                <div style="font-size: 0.7rem; color: #777; margin-top: 4px; line-height: 1.25;">Runs interactive widget layers: maps, weather, arithmetic, translations, tickers, and art creation models.</div>
+                                <div style="font-size: 0.7rem; color: #777; margin-top: 4px; line-height: 1.25;">Runs all internet integrations: maps, weather, arithmetic, translations, tickers, and art creation models.</div>
                             </div>
                             
                             <div style="flex: 1; max-width: 170px; background: #252525; padding: 10px; border-radius: 8px; border: 1px solid #333; text-align: left; position: relative;">
@@ -428,7 +432,7 @@
                                     </label>
                                     <span id="prefs-toggle-btn" style="cursor: pointer; font-size: 0.85rem; padding: 2px; color: #888; transition: color 0.2s;" title="System Preferences">⚙️</span>
                                 </div>
-                                <div style="font-size: 0.7rem; color: #777; margin-top: 4px; line-height: 1.25;">Provides a clean conversational thread with persistent historical session memory tracking.</div>
+                                <div style="font-size: 0.7rem; color: #ff6b6b; margin-top: 4px; line-height: 1.25; font-style: italic;">No integrations supported. Text-based historical conversational thread only.</div>
                             </div>
                         </div>
 
