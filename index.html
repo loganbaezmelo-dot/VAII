@@ -386,6 +386,7 @@
                             <li><strong>🗺️ Interactive Maps:</strong> Type <code>map of [location]</code> or <code>show map [location]</code> to load a live visual layout via Google Maps API.</li>
                             <li><strong>☀️ Weather & Local Time:</strong> Type any city name or phrases like <code>weather in Tokyo</code> to check conditions and matching clocks instantly via Open-Meteo API.</li>
                             <li><strong>🌐 Web Link Routing:</strong> Input domains like <code>wikipedia.org</code> or commands like <code>open youtube</code> to launch them.</li>
+                            <li><strong>🍔 Local Food Ordering:</strong> Type commands like <code>order a burger</code> or <code>find ice cream near me</code> to automatically map and route to the best local delivery spots via Google Places API.</li>
                             <li><strong>🔢 Calculations & Conversions:</strong> Type math equations directly or conversion strings like <code>193 lbs to kg</code> to display solutions.</li>
                             <li><strong>🔄 Translations:</strong> Enter translation patterns like <code>Hello to Spanish</code> to convert text via the MyMemory API.</li>
                             <li><strong>📈 Market Trackers:</strong> Input stock symbols or crypto tickers directly for real-time market estimates via CoinGecko API.</li>
@@ -468,7 +469,7 @@
         </footer>
     </div>
 
-    <script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyAJKTkU0nd6ZB_zjIcNQCAQQsffHEp4WH8&callback=initVaiiMap" async defer></script>
+    <script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyAJKTkU0nd6ZB_zjIcNQCAQQsffHEp4WH8&callback=initVaiiMap&libraries=places" async defer></script>
     <script type="module" src="script.js"></script>
 </body>
 </html>
