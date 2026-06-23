@@ -18,6 +18,7 @@ The primary runtime chassis. This mode intercepts user queries and routes them t
 * **☀️ Weather & Time Telemetry:** Pulls real-time climate readings, wind speeds, and localized timezones using the **Open-Meteo Geocoding and Forecast APIs**.
 * **🔴 Creator Metrics:** Fetches live subscriber and view counts for specific influencers utilizing the **YouTube Data API v3**.
 * **🌐 Web Routing:** Parses domains and custom commands (e.g., `open youtube`) to securely trigger window redirections.
+* **🍔 Local Food Concierge:** Uses browser **Geolocation** and the **Google Places API** to find highly-rated nearby restaurants, generating parameter-injected deep links for UberEats, DoorDash, and Google local ordering.
 * **🔢 Native Calculator & Converter:** Processes raw arithmetic via strict JavaScript execution and handles metric/imperial unit conversions.
 * **🗣️ Language Translation:** Routes semantic phrases through the **MyMemory Translation API**.
 * **📈 Market Trackers:** Queries the **CoinGecko API** for real-time cryptocurrency values and 24-hour change metrics.
@@ -45,7 +46,7 @@ This is due to strict Google Cloud security policies (`Error 403: disallowed_use
 To run this application locally, you must supply and configure the following API keys within `script.js`:
 
 1.  **Firebase Config:** Initialize your project with your specific `apiKey`, `authDomain`, and `projectId`.
-2.  **Google Maps API Key:** Required for spatial rendering.
+2.  **Google Maps API Key:** Required for spatial rendering and the Local Food Concierge (ensure `&libraries=places` is appended to the script tag in `index.html`).
 3.  **Google Cloud / Gemini API Key:** Required for both the Vision Engine and the Gemini Ecosystem fallback tree.
 4.  **YouTube Data API Key:** Required for live subscriber tracking.
 
