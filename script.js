@@ -636,7 +636,6 @@ function executeLocalFoodSearch(queryText) {
     let cleanQuery = originalQuery.toLowerCase();
     let explicitLocation = "";
     
-    // Extract manual location routing (e.g. " in Orlando", " near Miami")
     const locInMatch = originalQuery.match(/\s+in\s+(.+)$/i);
     const locNearMatch = originalQuery.match(/\s+near\s+(.+)$/i);
     
@@ -690,15 +689,12 @@ function executeLocalFoodSearch(queryText) {
         </div>
     `;
 
-    // Renders if GPS fails or no results match the radius parameters
     const renderFallbackCard = (brandName, suggestionText, fallbackLoc) => {
         const locString = fallbackLoc ? ` ${fallbackLoc}` : "";
         
-        // Strip out weird characters to prevent 404s and search engine breaks
         const cleanFallbackString = (brandName + locString).replace(/[^a-zA-Z0-9 ,]/g, '');
         const encFallback = encodeURIComponent(cleanFallbackString);
         
-        const ueLink = `https://www.ubereats.com/search?q=${encFallback}`;
         const ddLink = `https://www.doordash.com/search/store/${encFallback}/`;
         const goLink = `https://www.google.com/search?q=Order+delivery+from+${encFallback}`;
 
@@ -710,9 +706,6 @@ function executeLocalFoodSearch(queryText) {
                 
                 <div style="font-size: 0.75rem; color: #aaa; text-transform: uppercase; font-weight: bold; margin-bottom: 8px;">Auto-Routing Delivery Links</div>
                 <div style="display: flex; flex-direction: column; gap: 8px;">
-                    <a href="${ueLink}" target="_blank" style="display: flex; align-items: center; justify-content: space-between; background: #06C167; border-radius: 6px; padding: 10px 14px; color: #fff; text-decoration: none; font-weight: bold; font-size: 0.9rem;">
-                        <span>Route to UberEats</span><span>➔</span>
-                    </a>
                     <a href="${ddLink}" target="_blank" style="display: flex; align-items: center; justify-content: space-between; background: #FF3008; border-radius: 6px; padding: 10px 14px; color: #fff; text-decoration: none; font-weight: bold; font-size: 0.9rem;">
                         <span>Route to DoorDash</span><span>➔</span>
                     </a>
@@ -747,28 +740,25 @@ function executeLocalFoodSearch(queryText) {
                 const rating = bestPlace.rating || "N/A";
                 const address = bestPlace.formatted_address || "";
                 
-                // Embed exact found item alongside the exact physical location/address details cleanly
                 const cleanAddressSearch = (placeName + " " + address).replace(/[^a-zA-Z0-9 ,]/g, '');
                 const encQuery = encodeURIComponent(cleanAddressSearch);
                 
                 const googleOrderLink = `https://www.google.com/search?q=Order+delivery+from+${encQuery}`;
-                const uberEatsLink = `https://www.ubereats.com/search?q=${encQuery}`;
                 const doorDashLink = `https://www.doordash.com/search/store/${encQuery}/`;
-                const mapLink = `https://www.google.com/maps/search/?api=1&query=$${encodeURIComponent(placeName + " " + address)}`;
+                const mapLink = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(placeName + " " + address)}`;
+
+                let suggestionHTML = dbMatch ? `<div style="color: #ccc; font-size: 0.95rem; margin-bottom: 4px;">💡 Suggested: <strong>${searchItemName}</strong></div>` : "";
 
                 const htmlOutput = `
                     <div style="background: #1a1a1a; padding: 16px; border-radius: 12px; border-left: 4px solid #ff9800; text-align: left; margin-bottom: 15px;">
                         <div style="font-size: 0.8rem; color: #ff9800; text-transform: uppercase; font-weight: bold; margin-bottom: 4px;">🍔 GPS Confirmed Match</div>
                         <div style="font-size: 1.2rem; font-weight: bold; color: #fff; margin-bottom: 8px;">${placeName}</div>
-                        <div style="color: #ccc; font-size: 0.95rem; margin-bottom: 4px;">💡 Suggested: <strong>${searchItemName}</strong></div>
+                        ${suggestionHTML}
                         <div style="color: #ccc; font-size: 0.95rem; margin-bottom: 4px;">⭐ Rating: ${rating} / 5.0</div>
                         <a href="${mapLink}" target="_blank" style="color: #ff9800; text-decoration: none; font-size: 0.85rem; display: block; margin-bottom: 15px;">📍 ${address} ↗</a>
                         
                         <div style="font-size: 0.75rem; color: #aaa; text-transform: uppercase; font-weight: bold; margin-bottom: 8px;">Auto-Routing Delivery Links</div>
                         <div style="display: flex; flex-direction: column; gap: 8px;">
-                            <a href="${uberEatsLink}" target="_blank" style="display: flex; align-items: center; justify-content: space-between; background: #06C167; border-radius: 6px; padding: 10px 14px; color: #fff; text-decoration: none; font-weight: bold; font-size: 0.9rem;">
-                                <span>Route to UberEats</span><span>➔</span>
-                            </a>
                             <a href="${doorDashLink}" target="_blank" style="display: flex; align-items: center; justify-content: space-between; background: #FF3008; border-radius: 6px; padding: 10px 14px; color: #fff; text-decoration: none; font-weight: bold; font-size: 0.9rem;">
                                 <span>Route to DoorDash</span><span>➔</span>
                             </a>
@@ -786,7 +776,7 @@ function executeLocalFoodSearch(queryText) {
     };
 
     if (explicitLocation) {
-        processPlacesSearch(null, null); // bypass GPS if manual location is specified
+        processPlacesSearch(null, null);
     } else if (navigator.geolocation) {
         navigator.geolocation.getCurrentPosition(
             (position) => { processPlacesSearch(position.coords.latitude, position.coords.longitude); },
@@ -1275,13 +1265,11 @@ hubInput?.addEventListener('input', () => {
     let foodSuggestions = [];
     let cleanInput = trimmedQuery.toLowerCase();
     
-    // Instantly filter pre-compiled database when typing order/find parameters
     if (/^(o|or|ord|orde|order|f|fi|fin|find)/i.test(cleanInput)) {
         let searchTarget = cleanInput.replace(/^(order|find)\s+/i, '').trim();
         if (searchTarget.length > 0) {
             foodSuggestions = ALL_FOOD_SUGGESTIONS.filter(s => s.toLowerCase().includes(searchTarget)).slice(0, 12);
         } else {
-            // Default top 12 random suggestions if they just typed "order "
             foodSuggestions = ALL_FOOD_SUGGESTIONS.slice(0, 12);
         }
     }
