@@ -421,10 +421,16 @@ function renderFullChatLogBubble() {
     output.scrollTop = output.scrollHeight;
 }
 
-function updateDatalist(cities = [], wikiTitles = [], wikitubiaTitles = []) {
+function updateDatalist(cities = [], wikiTitles = [], wikitubiaTitles = [], foodSuggestions = []) {
     if (!datalist) return;
     datalist.innerHTML = "";
     
+    foodSuggestions.forEach(item => {
+        const option = document.createElement('option');
+        option.value = item;
+        datalist.appendChild(option);
+    });
+
     defaultAssistantSuggestions.forEach(item => {
         const option = document.createElement('option');
         option.value = item;
@@ -655,8 +661,8 @@ function executeLocalFoodSearch(queryText) {
         const encItem = encodeURIComponent(suggestionText || queryText);
         
         const ueLink = `https://www.ubereats.com/search?q=${encName}+${encItem}`;
-        const ddLink = `https://www.doordash.com/search/store/${encName}/`;
-        const goLink = `https://www.google.com/search?q=Order+from+${encName}`;
+        const ddLink = `https://www.doordash.com/search/store/${encName}%20${encItem}/`;
+        const goLink = `https://www.google.com/search?q=Order+${encItem}+from+${encName}`;
 
         const htmlOutput = `
             <div style="background: #1a1a1a; padding: 16px; border-radius: 12px; border-left: 4px solid #007bff; text-align: left; margin-bottom: 15px;">
@@ -715,9 +721,10 @@ function executeLocalFoodSearch(queryText) {
                     const encPlace = encodeURIComponent(placeName);
                     const encFood = encodeURIComponent(dbMatch ? dbMatch.item : queryText);
                     
-                    const googleOrderLink = `https://www.google.com/search?q=Order+from+${encPlace}+${encodeURIComponent(address)}`;
+                    const googleOrderLink = `https://www.google.com/search?q=Order+${encFood}+from+${encPlace}+${encodeURIComponent(address)}`;
                     const uberEatsLink = `https://www.ubereats.com/search?q=${encPlace}+${encFood}`;
-                    const doorDashLink = `https://www.doordash.com/search/store/${encPlace}/`;
+                    const doorDashLink = `https://www.doordash.com/search/store/${encPlace}%20${encFood}/`;
+                    const mapLink = `https://www.google.com/maps/search/?api=1&query=${encPlace}+${encodeURIComponent(address)}`;
 
                     let suggestionHTML = dbMatch ? `<div style="color: #ccc; font-size: 0.95rem; margin-bottom: 4px;">💡 Suggested: <strong>${dbMatch.item}</strong></div>` : "";
 
@@ -727,7 +734,7 @@ function executeLocalFoodSearch(queryText) {
                             <div style="font-size: 1.2rem; font-weight: bold; color: #fff; margin-bottom: 8px;">${placeName}</div>
                             ${suggestionHTML}
                             <div style="color: #ccc; font-size: 0.95rem; margin-bottom: 4px;">⭐ Rating: ${rating} / 5.0</div>
-                            <div style="color: #888; font-size: 0.85rem; margin-bottom: 15px;">📍 ${address}</div>
+                            <a href="${mapLink}" target="_blank" style="color: #ff9800; text-decoration: none; font-size: 0.85rem; display: block; margin-bottom: 15px;">📍 ${address} ↗</a>
                             
                             <div style="font-size: 0.75rem; color: #aaa; text-transform: uppercase; font-weight: bold; margin-bottom: 8px;">Auto-Routing Delivery Links</div>
                             <div style="display: flex; flex-direction: column; gap: 8px;">
@@ -1229,14 +1236,36 @@ hubInput?.addEventListener('input', () => {
     const trimmedQuery = query.trim();
     if (routingWarning) routingWarning.style.display = trimmedQuery.toLowerCase().startsWith('open ') ? "block" : "none";
 
+    let foodSuggestions = [];
+    const orderMatch = trimmedQuery.match(/^(order me a |order a |order some |order |find )/i);
+    
+    if (orderMatch) {
+        let justFood = trimmedQuery.substring(orderMatch[0].length).trim().toLowerCase();
+        if (justFood.length >= 1) {
+            for (let cat in LOCAL_FOOD_DB) {
+                if (cat.includes(justFood)) {
+                    LOCAL_FOOD_DB[cat].forEach(b => foodSuggestions.push(`order ${b.name}`));
+                }
+                LOCAL_FOOD_DB[cat].forEach(b => {
+                    if (b.name.toLowerCase().includes(justFood) || b.item.toLowerCase().includes(justFood)) {
+                        foodSuggestions.push(`order ${b.name}`);
+                    }
+                });
+            }
+            foodSuggestions = [...new Set(foodSuggestions)].slice(0, 8);
+        }
+    }
+
     if (searchAbortController) searchAbortController.abort();
     if (trimmedQuery.length < 3 || trimmedQuery.toLowerCase().startsWith('open ') || /\.[a-z]{2,6}/i.test(trimmedQuery)) {
-        updateDatalist([], [], []); 
+        updateDatalist([], [], [], foodSuggestions); 
         clearTimeout(debounceTimer); 
         return; 
     }
 
     let searchUrlQuery = trimmedQuery.replace(/map of |show map |weather in |time in /i, "").trim();
+    searchUrlQuery = searchUrlQuery.replace(/order me a |order a |order some |order | near me|find /i, "").trim();
+
     clearTimeout(debounceTimer);
     debounceTimer = setTimeout(() => {
         searchAbortController = new AbortController();
@@ -1250,7 +1279,7 @@ hubInput?.addEventListener('input', () => {
             .then(res => res.json()).then(data => data.query?.search?.map(item => item.title) || []).catch(() => []);
 
         Promise.all([geoFetch, wikiFetch, wikitubiaFetch]).then(([cities, wikiTitles, wikitubiaTitles]) => {
-            updateDatalist(cities, wikiTitles, wikitubiaTitles);
+            updateDatalist(cities, wikiTitles, wikitubiaTitles, foodSuggestions);
         }).catch(() => {});
     }, 300);
 });
@@ -1314,7 +1343,7 @@ onAuthStateChanged(auth, (user) => {
         clearActiveImage();
         renderHistoryListItems();
         if (prefsInstructionsInput) prefsInstructionsInput.value = localStorage.getItem('vaii_gemini_instructions') || '';
-        updateDatalist([], [], []);
+        updateDatalist([], [], [], []);
     } else {
         authContainer.style.display = "block";
         mainApp.style.display = "none";
