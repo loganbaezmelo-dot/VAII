@@ -18,7 +18,7 @@ The primary runtime chassis. This mode intercepts user queries and routes them t
 * **☀️ Weather & Time Telemetry:** Pulls real-time climate readings, wind speeds, and localized timezones using the **Open-Meteo Geocoding and Forecast APIs**.
 * **🔴 Creator Metrics:** Fetches live subscriber and view counts for specific influencers utilizing the **YouTube Data API v3**.
 * **🌐 Web Routing:** Parses domains and custom commands (e.g., `open youtube`) to securely trigger window redirections.
-* **🍔 Local Food Concierge:** Uses browser **Geolocation** and the **Google Places API** to find highly-rated nearby restaurants, generating parameter-injected deep links for DoorDash and Google local ordering.
+* **🍔 Local Food Concierge:** Uses an internal database of 150+ popular chains, browser **Geolocation**, and the **Google Places API** to map your specific request (e.g., `order McDonald's` or `order a burger`). It generates parameter-injected deep links for the **Google Food Aggregator** and **DoorDash**. *Note: DoorDash will offer direct delivery if the matched location is within your local delivery radius; otherwise, it gracefully falls back to pickup options.*
 * **🔢 Native Calculator & Converter:** Processes raw arithmetic via strict JavaScript execution and handles metric/imperial unit conversions.
 * **🗣️ Language Translation:** Routes semantic phrases through the **MyMemory Translation API**.
 * **📈 Market Trackers:** Queries the **CoinGecko API** for real-time cryptocurrency values and 24-hour change metrics.
