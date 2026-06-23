@@ -280,7 +280,7 @@ window.initVaiiMap = function() {
 // ==========================================
 function renderMarkdown(text) {
     if (!text) return "";
-    let safeHtml = text.replace(/&/g, "&").replace(/</g, "<").replace(/>/g, ">"); 
+    let safeHtml = text.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;"); 
     safeHtml = safeHtml.replace(/\*\*(.*?)\*\*/g, "<strong>$1</strong>");
     safeHtml = safeHtml.replace(/\*(.*?)\*/g, "<em>$1</em>");
     safeHtml = safeHtml.replace(/^[\s]*[\*\-]\s+(.*)$/gm, "<li style='margin-left: 15px; margin-bottom: 4px;'>$1</li>");
@@ -466,22 +466,6 @@ function handleVaiiDataOutput(rawTextContent, defaultHtmlOutput, runMapCallback 
     if (runMapCallback) runMapCallback();
 }
 
-function showAuthError(message) {
-    if (authError) {
-        authError.innerText = message.replace("Firebase: ", "");
-        authError.style.display = "block";
-    }
-}
-
-function clearActiveImage() {
-    activeImageBase64 = null;
-    activeImageMimeType = null;
-    if (imageFileInput) imageFileInput.value = "";
-    if (imagePreviewThumbnail) imagePreviewThumbnail.src = "";
-    if (imagePreviewContainer) imagePreviewContainer.style.display = "none";
-    if (cameraTriggerBtn) cameraTriggerBtn.classList.remove('active');
-}
-
 // ==========================================
 // 4. CHAT ENGINE (GEMINI FALLBACK LOOP)
 // ==========================================
@@ -619,7 +603,7 @@ async function triggerBackgroundTitleGeneration(userMsg, modelResponse, runningM
 }
 
 // ==========================================
-// 5. NATIVE MODULES (MAPS, WEATHER, VISION)
+// 5. NATIVE MODULES (MAPS, WEATHER, VISION, FOOD)
 // ==========================================
 function executeLocalFoodSearch(queryText) {
     routingWarning.style.display = "none";
@@ -628,7 +612,6 @@ function executeLocalFoodSearch(queryText) {
     let cleanQuery = originalQuery.toLowerCase();
     let explicitLocation = "";
     
-    // Parse location suffix modifiers (" in Orlando", " near Miami")
     const locInMatch = originalQuery.match(/\s+in\s+(.+)$/i);
     const locNearMatch = originalQuery.match(/\s+near\s+(.+)$/i);
     
@@ -670,7 +653,6 @@ function executeLocalFoodSearch(queryText) {
         searchBrandName = cleanQuery; 
     }
 
-    // Assemble unified search engine parameter
     let placesSearchQuery = searchBrandName;
     if (explicitLocation) {
         placesSearchQuery += ` in ${explicitLocation}`;
@@ -684,14 +666,13 @@ function executeLocalFoodSearch(queryText) {
     `;
 
     const renderFallbackCard = (brandName, suggestionText, fallbackLoc) => {
-        const locString = fallbackLoc ? ` ${fallbackLoc}` : "";
         const encName = encodeURIComponent(brandName);
         const encItem = encodeURIComponent(suggestionText);
-        const encLoc = encodeURIComponent(locString);
         
-        const ueLink = `https://www.ubereats.com/search?q=${encName}+${encItem}${encLoc}`;
-        const ddLink = `https://www.doordash.com/search/store/${encName}%20${encItem}%20${encLoc}/`;
-        const goLink = `https://www.google.com/search?q=Order+${encItem}+from+${encName}${encLoc}`;
+        // Strip out map details to prevent the routing parameters from overloading app path templates
+        const ueLink = `https://www.ubereats.com/search?q=${encName}+${encItem}`;
+        const ddLink = `https://www.doordash.com/search/query/${encName}%20${encItem}`;
+        const goLink = `https://www.google.com/search?q=Order+${encItem}+from+${encName}`;
 
         const htmlOutput = `
             <div style="background: #1a1a1a; padding: 16px; border-radius: 12px; border-left: 4px solid #007bff; text-align: left; margin-bottom: 15px;">
@@ -742,30 +723,31 @@ function executeLocalFoodSearch(queryText) {
                 const encFood = encodeURIComponent(searchItemName);
                 const encAddress = encodeURIComponent(address);
                 
-                // Embed exact found item alongside the exact physical location/address details
                 const googleOrderLink = `https://www.google.com/search?q=Order+${encFood}+from+${encPlace}+${encAddress}`;
-                const uberEatsLink = `https://www.ubereats.com/search?q=${encPlace}+${encFood}+${encAddress}`;
-                const doorDashLink = `https://www.doordash.com/search/store/${encPlace}%20${encFood}%20${encAddress}/`;
+                const uberEatsLink = `https://www.ubereats.com/search?q=${encPlace}+${encFood}`;
+                const doorDashLink = `https://www.doordash.com/search/query/${encPlace}%20${encFood}`;
                 const mapLink = `https://www.google.com/maps/search/?api=1&query=${encPlace}+${encAddress}`;
+
+                let suggestionHTML = dbMatch ? `<div style="color: #ccc; font-size: 0.95rem; margin-bottom: 4px;">💡 Suggested: <strong>${searchItemName}</strong></div>` : "";
 
                 const htmlOutput = `
                     <div style="background: #1a1a1a; padding: 16px; border-radius: 12px; border-left: 4px solid #ff9800; text-align: left; margin-bottom: 15px;">
                         <div style="font-size: 0.8rem; color: #ff9800; text-transform: uppercase; font-weight: bold; margin-bottom: 4px;">🍔 GPS Confirmed Match</div>
                         <div style="font-size: 1.2rem; font-weight: bold; color: #fff; margin-bottom: 8px;">${placeName}</div>
-                        <div style="color: #ccc; font-size: 0.95rem; margin-bottom: 4px;">💡 Suggested: <strong>${searchItemName}</strong></div>
+                        ${suggestionHTML}
                         <div style="color: #ccc; font-size: 0.95rem; margin-bottom: 4px;">⭐ Rating: ${rating} / 5.0</div>
                         <a href="${mapLink}" target="_blank" style="color: #ff9800; text-decoration: none; font-size: 0.85rem; display: block; margin-bottom: 15px;">📍 ${address} ↗</a>
                         
                         <div style="font-size: 0.75rem; color: #aaa; text-transform: uppercase; font-weight: bold; margin-bottom: 8px;">Auto-Routing Delivery Links</div>
                         <div style="display: flex; flex-direction: column; gap: 8px;">
                             <a href="${uberEatsLink}" target="_blank" style="display: flex; align-items: center; justify-content: space-between; background: #06C167; border-radius: 6px; padding: 10px 14px; color: #fff; text-decoration: none; font-weight: bold; font-size: 0.9rem;">
-                                <span>Route to UberEats</span><span>➔</span>
+                                    <span>Route to UberEats</span><span>➔</span>
                             </a>
                             <a href="${doorDashLink}" target="_blank" style="display: flex; align-items: center; justify-content: space-between; background: #FF3008; border-radius: 6px; padding: 10px 14px; color: #fff; text-decoration: none; font-weight: bold; font-size: 0.9rem;">
-                                <span>Route to DoorDash</span><span>➔</span>
+                                    <span>Route to DoorDash</span><span>➔</span>
                             </a>
                             <a href="${googleOrderLink}" target="_blank" style="display: flex; align-items: center; justify-content: space-between; background: #4285F4; border-radius: 6px; padding: 10px 14px; color: #fff; text-decoration: none; font-weight: bold; font-size: 0.9rem;">
-                                <span>Google Local Order</span><span>➔</span>
+                                    <span>Google Local Order</span><span>➔</span>
                             </a>
                         </div>
                     </div>
@@ -990,7 +972,6 @@ function runInfoExecution(query) {
         return; 
     }
 
-    // Intercept food keywords or prefixes
     let isFoodIntent = Object.keys(LOCAL_FOOD_DB).some(cat => cleanQuery.includes(cat)) || 
                        cleanQuery.startsWith("order ") || cleanQuery.startsWith("find ");
 
@@ -1268,21 +1249,16 @@ hubInput?.addEventListener('input', () => {
     let foodSuggestions = [];
     let cleanSearchQuery = trimmedQuery.toLowerCase();
     
-    // Normalize string by cleaning common conversational action headers
     let coreQuery = cleanSearchQuery.replace(/^(order me a |order a |order some |order |find )/i, "").trim();
-
-    // Strip explicit location parameters from suggestions generation query string
     coreQuery = coreQuery.split(/\s+in\s+|\s+near\s+/)[0].trim();
 
     if (coreQuery.length >= 1) {
         for (let cat in LOCAL_FOOD_DB) {
-            // Check matching categories directly
             if (cat.includes(coreQuery)) {
                 LOCAL_FOOD_DB[cat].forEach(b => {
                     foodSuggestions.push(`order ${b.item} from ${b.name}`);
                 });
             }
-            // Check specific brand labels and custom menu definitions
             LOCAL_FOOD_DB[cat].forEach(b => {
                 if (b.name.toLowerCase().includes(coreQuery) || b.item.toLowerCase().includes(coreQuery)) {
                     foodSuggestions.push(`order ${b.item} from ${b.name}`);
