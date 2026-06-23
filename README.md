@@ -26,7 +26,7 @@ The primary runtime chassis. This mode intercepts user queries and routes them t
 ### 2. Gemini Ecosystem (Conversational Mode)
 A heavily restricted, isolated conversational layer. 
 * **Persistent Memory:** Tracks dialogue history across multiple turns.
-* **Fallback Matrix:** Utilizes a cascading fallback tree (Gemini 3.5, 3.1, 2.5, Gemma models) to ensure 100% uptime if a specific model hits rate limits.
+* **Fallback Matrix:** Utilizes a cascading fallback tree (Latest Gemini models to earliest then Gemma models) to ensure 100% uptime if a specific model hits rate limits.
 * **Custom Persona:** Supports user-defined system instructions saved to local storage to alter the assistant's behavioral parameters.
 * **Strict Isolation:** Explicitly blocked from accessing native integrations (weather, maps, etc.) to maintain a pure text-based environment.
 
