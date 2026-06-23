@@ -33,6 +33,186 @@ const BASELINE_FALLBACK_TREE = [
     { name: "Gemma 4 26B", id: "gemma-4-26b" }
 ];
 
+const LOCAL_FOOD_DB = {
+    "burger": [
+        { name: "Wendy's", item: "Baconator with fries" },
+        { name: "Five Guys", item: "Bacon Cheeseburger with Cajun Fries" },
+        { name: "Shake Shack", item: "ShackBurger and a milkshake" },
+        { name: "In-N-Out Burger", item: "Double-Double Animal Style" },
+        { name: "McDonald's", item: "Big Mac meal" },
+        { name: "Burger King", item: "Whopper with cheese" },
+        { name: "Smashburger", item: "Classic Double Smash" },
+        { name: "Whataburger", item: "Patty Melt" },
+        { name: "Carl's Jr", item: "Western Bacon Cheeseburger" },
+        { name: "Hardee's", item: "Monster Thickburger" },
+        { name: "Culver's", item: "ButterBurger Cheese" },
+        { name: "Steak 'n Shake", item: "Original Double 'n Cheese" },
+        { name: "Jack in the Box", item: "Ultimate Cheeseburger" },
+        { name: "Dairy Queen", item: "FlameThrower GrillBurger" },
+        { name: "Sonic Drive-In", item: "SuperSONIC Double Cheeseburger" }
+    ],
+    "fries": [
+        { name: "Five Guys", item: "Large Cajun Fries" },
+        { name: "McDonald's", item: "Large World Famous Fries" },
+        { name: "Wendy's", item: "Baconator Fries" },
+        { name: "Checkers", item: "Fully Loaded Fries" },
+        { name: "Rally's", item: "Famous Seasoned Fries" },
+        { name: "Arby's", item: "Curly Fries" },
+        { name: "Chick-fil-A", item: "Waffle Potato Fries" },
+        { name: "Shake Shack", item: "Cheese Fries" },
+        { name: "Steak 'n Shake", item: "Cheese 'n Bacon Fries" },
+        { name: "Taco Bell", item: "Nacho Fries" }
+    ],
+    "pizza": [
+        { name: "Domino's Pizza", item: "ExtravaganZZa Specialty Pizza" },
+        { name: "Pizza Hut", item: "Meat Lover's Pan Pizza" },
+        { name: "Papa John's", item: "The Works Pizza" },
+        { name: "Little Caesars", item: "Hot-N-Ready Pepperoni" },
+        { name: "Papa Murphy's", item: "Cowboy Take 'N' Bake" },
+        { name: "Marco's Pizza", item: "Pepperoni Magnifico" },
+        { name: "Jet's Pizza", item: "Detroit-Style Deep Dish" },
+        { name: "Blaze Pizza", item: "Build Your Own Artisanal Pizza" },
+        { name: "MOD Pizza", item: "Mad Dog Pizza" },
+        { name: "California Pizza Kitchen", item: "Original BBQ Chicken Pizza" },
+        { name: "Mellow Mushroom", item: "Holy Shiitake Pie" },
+        { name: "Cici's", item: "Mac & Cheese Pizza" },
+        { name: "Sbarro", item: "XL NY Style Pepperoni Slice" },
+        { name: "Hungry Howie's", item: "Flavored Crust Pizza" },
+        { name: "Godfather's Pizza", item: "Classic Combo" }
+    ],
+    "chicken": [
+        { name: "Chick-fil-A", item: "Spicy Chicken Sandwich" },
+        { name: "Popeyes", item: "Classic Chicken Sandwich" },
+        { name: "KFC", item: "Famous Bowl" },
+        { name: "Church's Chicken", item: "Spicy Bone-In Chicken" },
+        { name: "Bojangles", item: "Cajun Chicken Filet Biscuit" },
+        { name: "Zaxby's", item: "Chicken Finger Plate" },
+        { name: "Raising Cane's", item: "The Box Combo" },
+        { name: "El Pollo Loco", item: "Fire-Grilled Chicken Meal" },
+        { name: "Wingstop", item: "Lemon Pepper Wings" },
+        { name: "Buffalo Wild Wings", item: "Honey BBQ Boneless Wings" },
+        { name: "Jollibee", item: "Chickenjoy" },
+        { name: "PDQ", item: "Crispy Chicken Tenders" }
+    ],
+    "mexican": [
+        { name: "Taco Bell", item: "Crunchwrap Supreme" },
+        { name: "Chipotle", item: "Steak Burrito Bowl" },
+        { name: "Qdoba", item: "3-Cheese Queso Burrito" },
+        { name: "Moe's Southwest Grill", item: "Homewrecker Burrito" },
+        { name: "Del Taco", item: "The Del Taco" },
+        { name: "Baja Fresh", item: "Baja Burrito" },
+        { name: "Taco John's", item: "Potato Olés" },
+        { name: "Torchy's Tacos", item: "Trailer Park Taco" },
+        { name: "On The Border", item: "Fajitas" },
+        { name: "Chuy's", item: "Chick-a-Chuy Chimi" },
+        { name: "Fuzzy's Taco Shop", item: "Baja Tacos" }
+    ],
+    "sandwich": [
+        { name: "Subway", item: "Italian B.M.T." },
+        { name: "Jersey Mike's", item: "Original Italian" },
+        { name: "Jimmy John's", item: "Vito Sub" },
+        { name: "Firehouse Subs", item: "Hook & Ladder" },
+        { name: "Panera Bread", item: "Bacon Turkey Bravo" },
+        { name: "Quiznos", item: "Classic Italian" },
+        { name: "Potbelly", item: "A Wreck Sandwich" },
+        { name: "Schlotzsky's", item: "The Original" },
+        { name: "Jason's Deli", item: "Muffaletta" },
+        { name: "McAlister's Deli", item: "McAlister's Club" },
+        { name: "Arby's", item: "Classic Roast Beef" },
+        { name: "Penn Station", item: "Philly Cheesesteak" },
+        { name: "Which Wich", item: "The Wicked" }
+    ],
+    "coffee": [
+        { name: "Starbucks", item: "Caramel Macchiato" },
+        { name: "Dunkin'", item: "Iced Coffee with Hazelnut" },
+        { name: "Peet's Coffee", item: "Major Dickason's Blend" },
+        { name: "Dutch Bros", item: "Golden Eagle" },
+        { name: "Caribou Coffee", item: "Campfire Mocha" },
+        { name: "Tim Hortons", item: "Iced Capp" },
+        { name: "The Coffee Bean", item: "Ice Blended Drink" },
+        { name: "Biggby Coffee", item: "Caramel Marvel" },
+        { name: "Scooter's Coffee", item: "Caramelicious" },
+        { name: "Philz Coffee", item: "Mint Mojito Iced Coffee" }
+    ],
+    "ice cream": [
+        { name: "Baskin-Robbins", item: "Mint Chocolate Chip" },
+        { name: "Dairy Queen", item: "Oreo Blizzard" },
+        { name: "Cold Stone Creamery", item: "Founder's Favorite" },
+        { name: "Ben & Jerry's", item: "Half Baked" },
+        { name: "Haagen-Dazs", item: "Dulce de Leche Dazzler" },
+        { name: "Rita's", item: "Mango Gelati" },
+        { name: "Culver's", item: "Turtle Sundae" },
+        { name: "Braum's", item: "Premium Ice Cream Cone" },
+        { name: "Bruster's", item: "Waffle Cone" },
+        { name: "Marble Slab", item: "Sweet Cream with Mix-ins" }
+    ],
+    "donuts": [
+        { name: "Dunkin'", item: "Boston Kreme Donut" },
+        { name: "Krispy Kreme", item: "Original Glazed" },
+        { name: "Tim Hortons", item: "Timbits" },
+        { name: "Shipley Do-Nuts", item: "Glazed Do-Nut" },
+        { name: "Voodoo Doughnut", item: "Bacon Maple Bar" },
+        { name: "Duck Donuts", item: "Bacon in the Sun" },
+        { name: "Stan's Donuts", item: "Biscoff Banana Pocket" }
+    ],
+    "breakfast": [
+        { name: "IHOP", item: "Rooty Tooty Fresh 'N Fruity" },
+        { name: "Denny's", item: "Grand Slam" },
+        { name: "Waffle House", item: "All-Star Special" },
+        { name: "Cracker Barrel", item: "Momma's Pancake Breakfast" },
+        { name: "First Watch", item: "Million Dollar Bacon" },
+        { name: "Bob Evans", item: "Farmer's Choice" },
+        { name: "Village Inn", item: "Lumberjack Breakfast" },
+        { name: "Perkins", item: "Tremendous Twelve" },
+        { name: "Snooze", item: "Pineapple Upside Down Pancakes" },
+        { name: "The Original Pancake House", item: "Apple Pancake" }
+    ],
+    "asian": [
+        { name: "Panda Express", item: "Orange Chicken with Chow Mein" },
+        { name: "P.F. Chang's", item: "Lettuce Wraps" },
+        { name: "Pei Wei", item: "Kung Pao Chicken" },
+        { name: "Yoshinoya", item: "Gyudon Beef Bowl" },
+        { name: "Sarku Japan", item: "Chicken Teriyaki" },
+        { name: "Genghis Grill", item: "Build Your Own Bowl" },
+        { name: "Kona Grill", item: "Macadamia Nut Chicken" },
+        { name: "Benihana", item: "Hibachi Steak" },
+        { name: "Sushi-San", item: "Spicy Tuna Roll" },
+        { name: "Nobu", item: "Black Cod Miso" }
+    ],
+    "seafood": [
+        { name: "Red Lobster", item: "Cheddar Bay Biscuits & Shrimp" },
+        { name: "Long John Silver's", item: "Fish & Chicken Platter" },
+        { name: "Captain D's", item: "Deluxe Seafood Platter" },
+        { name: "Bonefish Grill", item: "Bang Bang Shrimp" },
+        { name: "Joe's Crab Shack", item: "Crab Bucket" },
+        { name: "Bubba Gump Shrimp", item: "Dumb Luck Coconut Shrimp" },
+        { name: "McCormick & Schmick's", item: "Fresh Catch" },
+        { name: "Legal Sea Foods", item: "New England Clam Chowder" }
+    ],
+    "steakhouse": [
+        { name: "Outback Steakhouse", item: "Bloomin' Onion & Sirloin" },
+        { name: "Texas Roadhouse", item: "Bone-In Ribeye with Rolls" },
+        { name: "LongHorn Steakhouse", item: "Flo's Filet" },
+        { name: "Ruth's Chris", item: "Petite Filet" },
+        { name: "Capital Grille", item: "Dry Aged NY Strip" },
+        { name: "Fogo de Chao", item: "Full Churrasco Experience" },
+        { name: "Black Angus", item: "Campfire Feast" },
+        { name: "Morton's", item: "Center-Cut Filet Mignon" },
+        { name: "Saltgrass", item: "Pat's Ribeye" },
+        { name: "Fleming's", item: "Prime Tomahawk" }
+    ],
+    "italian": [
+        { name: "Olive Garden", item: "Tour of Italy" },
+        { name: "Carrabba's", item: "Chicken Bryan" },
+        { name: "Maggiano's", item: "Rigatoni D" },
+        { name: "Macaroni Grill", item: "Penne Rustica" },
+        { name: "Fazoli's", item: "Baked Ziti" },
+        { name: "Buca di Beppo", item: "Spaghetti with Meatballs" },
+        { name: "Old Spaghetti Factory", item: "Mizithra Cheese & Browned Butter" },
+        { name: "Carbone", item: "Spicy Rigatoni Vodka" }
+    ]
+};
+
 // ==========================================
 // 2. DOM & STATE
 // ==========================================
@@ -435,18 +615,60 @@ async function triggerBackgroundTitleGeneration(userMsg, modelResponse, runningM
 // ==========================================
 // 5. NATIVE MODULES (MAPS, WEATHER, VISION)
 // ==========================================
-function executeLocalFoodSearch(foodItem) {
+function executeLocalFoodSearch(queryText) {
     routingWarning.style.display = "none";
     
+    let category = Object.keys(LOCAL_FOOD_DB).find(key => queryText.includes(key));
+    let dbMatch = null;
+    let searchQuery = queryText;
+
+    if (category) {
+        const options = LOCAL_FOOD_DB[category];
+        dbMatch = options[Math.floor(Math.random() * options.length)];
+        searchQuery = dbMatch.name; 
+    }
+
     output.innerHTML = `
         <div class="generation-status">
             <div class="loader-spinner"></div>
-            <span style="color: #eee; font-size: 0.9rem;">Locating top-rated ${foodItem} nearby...</span>
+            <span style="color: #eee; font-size: 0.9rem;">Processing order request for ${queryText}...</span>
         </div>
     `;
 
+    const renderFallbackCard = (brandName, suggestionText) => {
+        const encName = encodeURIComponent(brandName);
+        const encItem = encodeURIComponent(suggestionText || queryText);
+        
+        const ueLink = `https://www.ubereats.com/search?q=${encName}+${encItem}`;
+        const ddLink = `https://www.doordash.com/search/store/${encName}/`;
+        const goLink = `https://www.google.com/search?q=Order+from+${encName}`;
+
+        const htmlOutput = `
+            <div style="background: #1a1a1a; padding: 16px; border-radius: 12px; border-left: 4px solid #007bff; text-align: left; margin-bottom: 15px;">
+                <div style="font-size: 0.8rem; color: #007bff; text-transform: uppercase; font-weight: bold; margin-bottom: 4px;">🍔 VAII Database Suggestion</div>
+                <div style="font-size: 1.2rem; font-weight: bold; color: #fff; margin-bottom: 8px;">${brandName}</div>
+                <div style="color: #ccc; font-size: 0.95rem; margin-bottom: 15px;">💡 Suggested: <strong>${suggestionText || queryText}</strong></div>
+                
+                <div style="font-size: 0.75rem; color: #aaa; text-transform: uppercase; font-weight: bold; margin-bottom: 8px;">Auto-Routing Delivery Links</div>
+                <div style="display: flex; flex-direction: column; gap: 8px;">
+                    <a href="${ueLink}" target="_blank" style="display: flex; align-items: center; justify-content: space-between; background: #06C167; border-radius: 6px; padding: 10px 14px; color: #fff; text-decoration: none; font-weight: bold; font-size: 0.9rem;">
+                        <span>Route to UberEats</span><span>➔</span>
+                    </a>
+                    <a href="${ddLink}" target="_blank" style="display: flex; align-items: center; justify-content: space-between; background: #FF3008; border-radius: 6px; padding: 10px 14px; color: #fff; text-decoration: none; font-weight: bold; font-size: 0.9rem;">
+                        <span>Route to DoorDash</span><span>➔</span>
+                    </a>
+                    <a href="${goLink}" target="_blank" style="display: flex; align-items: center; justify-content: space-between; background: #4285F4; border-radius: 6px; padding: 10px 14px; color: #fff; text-decoration: none; font-weight: bold; font-size: 0.9rem;">
+                        <span>Google Local Order</span><span>➔</span>
+                    </a>
+                </div>
+            </div>
+        `;
+        handleVaiiDataOutput("", htmlOutput);
+    };
+
     if (!navigator.geolocation) {
-        handleVaiiDataOutput("", "<div>Geolocation is not supported by your browser.</div>");
+        if (dbMatch) return renderFallbackCard(dbMatch.name, dbMatch.item);
+        handleVaiiDataOutput("", "<div>Geolocation unsupported and no database match found.</div>");
         return;
     }
 
@@ -456,14 +678,15 @@ function executeLocalFoodSearch(foodItem) {
             const lon = position.coords.longitude;
             
             if (typeof google === 'undefined' || !google.maps || !google.maps.places) {
-                handleVaiiDataOutput("", "<div>Google Places API failed to load. Check your script tag in index.html.</div>");
+                if (dbMatch) return renderFallbackCard(dbMatch.name, dbMatch.item);
+                handleVaiiDataOutput("", "<div>Google Places API failed to load.</div>");
                 return;
             }
 
             const request = {
                 location: new google.maps.LatLng(lat, lon),
-                radius: '8000', // Roughly 5 miles
-                query: foodItem,
+                radius: '16000', 
+                query: searchQuery, 
             };
 
             const service = new google.maps.places.PlacesService(document.createElement('div'));
@@ -471,7 +694,6 @@ function executeLocalFoodSearch(foodItem) {
             service.textSearch(request, (results, status) => {
                 if (status === google.maps.places.PlacesServiceStatus.OK && results.length > 0) {
                     
-                    // Sort by rating to ensure we get the best spot
                     results.sort((a, b) => (b.rating || 0) - (a.rating || 0));
                     const bestPlace = results[0];
                     
@@ -479,31 +701,32 @@ function executeLocalFoodSearch(foodItem) {
                     const rating = bestPlace.rating || "N/A";
                     const address = bestPlace.formatted_address;
                     
-                    // -- AUTOFILL DEEP LINKS --
-                    // These encode the restaurant and food item directly into the delivery platforms' search engines
-                    const encodedPlace = encodeURIComponent(placeName);
-                    const encodedFood = encodeURIComponent(foodItem);
+                    const encPlace = encodeURIComponent(placeName);
+                    const encFood = encodeURIComponent(dbMatch ? dbMatch.item : queryText);
                     
-                    const googleOrderLink = `https://www.google.com/search?q=Order+from+${encodedPlace}+${encodeURIComponent(address)}`;
-                    const uberEatsLink = `https://www.ubereats.com/search?q=${encodedPlace}+${encodedFood}`;
-                    const doorDashLink = `https://www.doordash.com/search/store/${encodedPlace}/`;
+                    const googleOrderLink = `https://www.google.com/search?q=Order+from+${encPlace}+${encodeURIComponent(address)}`;
+                    const uberEatsLink = `https://www.ubereats.com/search?q=${encPlace}+${encFood}`;
+                    const doorDashLink = `https://www.doordash.com/search/store/${encPlace}/`;
+
+                    let suggestionHTML = dbMatch ? `<div style="color: #ccc; font-size: 0.95rem; margin-bottom: 4px;">💡 Suggested: <strong>${dbMatch.item}</strong></div>` : "";
 
                     const htmlOutput = `
                         <div style="background: #1a1a1a; padding: 16px; border-radius: 12px; border-left: 4px solid #ff9800; text-align: left; margin-bottom: 15px;">
-                            <div style="font-size: 0.8rem; color: #ff9800; text-transform: uppercase; font-weight: bold; margin-bottom: 4px;">🍔 High-Priority Match</div>
+                            <div style="font-size: 0.8rem; color: #ff9800; text-transform: uppercase; font-weight: bold; margin-bottom: 4px;">🍔 GPS Confirmed Match</div>
                             <div style="font-size: 1.2rem; font-weight: bold; color: #fff; margin-bottom: 8px;">${placeName}</div>
+                            ${suggestionHTML}
                             <div style="color: #ccc; font-size: 0.95rem; margin-bottom: 4px;">⭐ Rating: ${rating} / 5.0</div>
                             <div style="color: #888; font-size: 0.85rem; margin-bottom: 15px;">📍 ${address}</div>
                             
                             <div style="font-size: 0.75rem; color: #aaa; text-transform: uppercase; font-weight: bold; margin-bottom: 8px;">Auto-Routing Delivery Links</div>
                             <div style="display: flex; flex-direction: column; gap: 8px;">
-                                <a href="${uberEatsLink}" target="_blank" style="display: flex; align-items: center; justify-content: space-between; background: #06C167; border-radius: 6px; padding: 10px 14px; color: #fff; text-decoration: none; font-weight: bold; font-size: 0.9rem; transition: transform 0.1s ease;">
+                                <a href="${uberEatsLink}" target="_blank" style="display: flex; align-items: center; justify-content: space-between; background: #06C167; border-radius: 6px; padding: 10px 14px; color: #fff; text-decoration: none; font-weight: bold; font-size: 0.9rem;">
                                     <span>Route to UberEats</span><span>➔</span>
                                 </a>
-                                <a href="${doorDashLink}" target="_blank" style="display: flex; align-items: center; justify-content: space-between; background: #FF3008; border-radius: 6px; padding: 10px 14px; color: #fff; text-decoration: none; font-weight: bold; font-size: 0.9rem; transition: transform 0.1s ease;">
+                                <a href="${doorDashLink}" target="_blank" style="display: flex; align-items: center; justify-content: space-between; background: #FF3008; border-radius: 6px; padding: 10px 14px; color: #fff; text-decoration: none; font-weight: bold; font-size: 0.9rem;">
                                     <span>Route to DoorDash</span><span>➔</span>
                                 </a>
-                                <a href="${googleOrderLink}" target="_blank" style="display: flex; align-items: center; justify-content: space-between; background: #4285F4; border-radius: 6px; padding: 10px 14px; color: #fff; text-decoration: none; font-weight: bold; font-size: 0.9rem; transition: transform 0.1s ease;">
+                                <a href="${googleOrderLink}" target="_blank" style="display: flex; align-items: center; justify-content: space-between; background: #4285F4; border-radius: 6px; padding: 10px 14px; color: #fff; text-decoration: none; font-weight: bold; font-size: 0.9rem;">
                                     <span>Google Local Order</span><span>➔</span>
                                 </a>
                             </div>
@@ -511,12 +734,20 @@ function executeLocalFoodSearch(foodItem) {
                     `;
                     handleVaiiDataOutput("", htmlOutput);
                 } else {
-                    handleVaiiDataOutput("", `<div>Could not find any highly-rated spots for "${foodItem}" nearby.</div>`);
+                    if (dbMatch) {
+                        renderFallbackCard(dbMatch.name, dbMatch.item);
+                    } else {
+                        handleVaiiDataOutput("", `<div>Could not locate any spots for "${queryText}" nearby.</div>`);
+                    }
                 }
             });
         },
         (error) => {
-            handleVaiiDataOutput("", "<div>Location access denied. VAII cannot search for local restaurants without GPS permission.</div>");
+            if (dbMatch) {
+                renderFallbackCard(dbMatch.name, dbMatch.item);
+            } else {
+                handleVaiiDataOutput("", "<div>Location access denied. VAII cannot map local spots without GPS.</div>");
+            }
         }
     );
 }
