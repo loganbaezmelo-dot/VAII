@@ -280,7 +280,7 @@ window.initVaiiMap = function() {
 // ==========================================
 function renderMarkdown(text) {
     if (!text) return "";
-    let safeHtml = text.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;"); 
+    let safeHtml = text.replace(/&/g, "&").replace(/</g, "<").replace(/>/g, ">"); 
     safeHtml = safeHtml.replace(/\*\*(.*?)\*\*/g, "<strong>$1</strong>");
     safeHtml = safeHtml.replace(/\*(.*?)\*/g, "<em>$1</em>");
     safeHtml = safeHtml.replace(/^[\s]*[\*\-]\s+(.*)$/gm, "<li style='margin-left: 15px; margin-bottom: 4px;'>$1</li>");
@@ -624,16 +624,32 @@ async function triggerBackgroundTitleGeneration(userMsg, modelResponse, runningM
 function executeLocalFoodSearch(queryText) {
     routingWarning.style.display = "none";
     
-    let cleanQuery = queryText.toLowerCase().trim();
+    let originalQuery = queryText.trim();
+    let cleanQuery = originalQuery.toLowerCase();
+    let explicitLocation = "";
+    
+    // Parse location suffix modifiers (" in Orlando", " near Miami")
+    const locInMatch = originalQuery.match(/\s+in\s+(.+)$/i);
+    const locNearMatch = originalQuery.match(/\s+near\s+(.+)$/i);
+    
+    if (locInMatch) {
+        explicitLocation = locInMatch[1].trim();
+        cleanQuery = originalQuery.substring(0, locInMatch.index).toLowerCase().trim();
+    } else if (locNearMatch) {
+        explicitLocation = locNearMatch[1].trim();
+        cleanQuery = originalQuery.substring(0, locNearMatch.index).toLowerCase().trim();
+    }
+
     let dbMatch = null;
-    let searchQuery = queryText;
+    let searchItemName = cleanQuery;
+    let searchBrandName = "";
 
     let category = Object.keys(LOCAL_FOOD_DB).find(key => cleanQuery.includes(key));
-    
     if (category) {
         const options = LOCAL_FOOD_DB[category];
         dbMatch = options[Math.floor(Math.random() * options.length)];
-        searchQuery = dbMatch.name; 
+        searchBrandName = dbMatch.name;
+        searchItemName = dbMatch.item;
     } else {
         for (let cat in LOCAL_FOOD_DB) {
             let brand = LOCAL_FOOD_DB[cat].find(b => {
@@ -643,32 +659,45 @@ function executeLocalFoodSearch(queryText) {
             });
             if (brand) {
                 dbMatch = brand;
-                searchQuery = dbMatch.name;
+                searchBrandName = dbMatch.name;
+                searchItemName = dbMatch.item;
                 break;
             }
         }
     }
 
+    if (!searchBrandName) {
+        searchBrandName = cleanQuery; 
+    }
+
+    // Assemble unified search engine parameter
+    let placesSearchQuery = searchBrandName;
+    if (explicitLocation) {
+        placesSearchQuery += ` in ${explicitLocation}`;
+    }
+
     output.innerHTML = `
         <div class="generation-status">
             <div class="loader-spinner"></div>
-            <span style="color: #eee; font-size: 0.9rem;">Processing order request for ${queryText}...</span>
+            <span style="color: #eee; font-size: 0.9rem;">Processing order request for "${searchItemName}"...</span>
         </div>
     `;
 
-    const renderFallbackCard = (brandName, suggestionText) => {
+    const renderFallbackCard = (brandName, suggestionText, fallbackLoc) => {
+        const locString = fallbackLoc ? ` ${fallbackLoc}` : "";
         const encName = encodeURIComponent(brandName);
-        const encItem = encodeURIComponent(suggestionText || queryText);
+        const encItem = encodeURIComponent(suggestionText);
+        const encLoc = encodeURIComponent(locString);
         
-        const ueLink = `https://www.ubereats.com/search?q=${encName}+${encItem}`;
-        const ddLink = `https://www.doordash.com/search/store/${encName}%20${encItem}/`;
-        const goLink = `https://www.google.com/search?q=Order+${encItem}+from+${encName}`;
+        const ueLink = `https://www.ubereats.com/search?q=${encName}+${encItem}${encLoc}`;
+        const ddLink = `https://www.doordash.com/search/store/${encName}%20${encItem}%20${encLoc}/`;
+        const goLink = `https://www.google.com/search?q=Order+${encItem}+from+${encName}${encLoc}`;
 
         const htmlOutput = `
             <div style="background: #1a1a1a; padding: 16px; border-radius: 12px; border-left: 4px solid #007bff; text-align: left; margin-bottom: 15px;">
                 <div style="font-size: 0.8rem; color: #007bff; text-transform: uppercase; font-weight: bold; margin-bottom: 4px;">🍔 VAII Database Suggestion</div>
                 <div style="font-size: 1.2rem; font-weight: bold; color: #fff; margin-bottom: 8px;">${brandName}</div>
-                <div style="color: #ccc; font-size: 0.95rem; margin-bottom: 15px;">💡 Suggested: <strong>${suggestionText || queryText}</strong></div>
+                <div style="color: #ccc; font-size: 0.95rem; margin-bottom: 15px;">💡 Suggested: <strong>${suggestionText}</strong> ${fallbackLoc ? 'near ' + fallbackLoc : ''}</div>
                 
                 <div style="font-size: 0.75rem; color: #aaa; text-transform: uppercase; font-weight: bold; margin-bottom: 8px;">Auto-Routing Delivery Links</div>
                 <div style="display: flex; flex-direction: column; gap: 8px;">
@@ -687,79 +716,77 @@ function executeLocalFoodSearch(queryText) {
         handleVaiiDataOutput("", htmlOutput);
     };
 
-    if (!navigator.geolocation) {
-        return renderFallbackCard(searchQuery, dbMatch ? dbMatch.item : "");
-    }
-
-    navigator.geolocation.getCurrentPosition(
-        (position) => {
-            const lat = position.coords.latitude;
-            const lon = position.coords.longitude;
-            
-            if (typeof google === 'undefined' || !google.maps || !google.maps.places) {
-                return renderFallbackCard(searchQuery, dbMatch ? dbMatch.item : "");
-            }
-
-            const request = {
-                location: new google.maps.LatLng(lat, lon),
-                radius: '16000', 
-                query: searchQuery, 
-            };
-
-            const service = new google.maps.places.PlacesService(document.createElement('div'));
-            
-            service.textSearch(request, (results, status) => {
-                if (status === google.maps.places.PlacesServiceStatus.OK && results.length > 0) {
-                    
-                    results.sort((a, b) => (b.rating || 0) - (a.rating || 0));
-                    const bestPlace = results[0];
-                    
-                    const placeName = bestPlace.name;
-                    const rating = bestPlace.rating || "N/A";
-                    const address = bestPlace.formatted_address;
-                    
-                    const encPlace = encodeURIComponent(placeName);
-                    const encFood = encodeURIComponent(dbMatch ? dbMatch.item : queryText);
-                    
-                    const googleOrderLink = `https://www.google.com/search?q=Order+${encFood}+from+${encPlace}+${encodeURIComponent(address)}`;
-                    const uberEatsLink = `https://www.ubereats.com/search?q=${encPlace}+${encFood}`;
-                    const doorDashLink = `https://www.doordash.com/search/store/${encPlace}%20${encFood}/`;
-                    const mapLink = `https://www.google.com/maps/search/?api=1&query=${encPlace}+${encodeURIComponent(address)}`;
-
-                    let suggestionHTML = dbMatch ? `<div style="color: #ccc; font-size: 0.95rem; margin-bottom: 4px;">💡 Suggested: <strong>${dbMatch.item}</strong></div>` : "";
-
-                    const htmlOutput = `
-                        <div style="background: #1a1a1a; padding: 16px; border-radius: 12px; border-left: 4px solid #ff9800; text-align: left; margin-bottom: 15px;">
-                            <div style="font-size: 0.8rem; color: #ff9800; text-transform: uppercase; font-weight: bold; margin-bottom: 4px;">🍔 GPS Confirmed Match</div>
-                            <div style="font-size: 1.2rem; font-weight: bold; color: #fff; margin-bottom: 8px;">${placeName}</div>
-                            ${suggestionHTML}
-                            <div style="color: #ccc; font-size: 0.95rem; margin-bottom: 4px;">⭐ Rating: ${rating} / 5.0</div>
-                            <a href="${mapLink}" target="_blank" style="color: #ff9800; text-decoration: none; font-size: 0.85rem; display: block; margin-bottom: 15px;">📍 ${address} ↗</a>
-                            
-                            <div style="font-size: 0.75rem; color: #aaa; text-transform: uppercase; font-weight: bold; margin-bottom: 8px;">Auto-Routing Delivery Links</div>
-                            <div style="display: flex; flex-direction: column; gap: 8px;">
-                                <a href="${uberEatsLink}" target="_blank" style="display: flex; align-items: center; justify-content: space-between; background: #06C167; border-radius: 6px; padding: 10px 14px; color: #fff; text-decoration: none; font-weight: bold; font-size: 0.9rem;">
-                                    <span>Route to UberEats</span><span>➔</span>
-                                </a>
-                                <a href="${doorDashLink}" target="_blank" style="display: flex; align-items: center; justify-content: space-between; background: #FF3008; border-radius: 6px; padding: 10px 14px; color: #fff; text-decoration: none; font-weight: bold; font-size: 0.9rem;">
-                                    <span>Route to DoorDash</span><span>➔</span>
-                                </a>
-                                <a href="${googleOrderLink}" target="_blank" style="display: flex; align-items: center; justify-content: space-between; background: #4285F4; border-radius: 6px; padding: 10px 14px; color: #fff; text-decoration: none; font-weight: bold; font-size: 0.9rem;">
-                                    <span>Google Local Order</span><span>➔</span>
-                                </a>
-                            </div>
-                        </div>
-                    `;
-                    handleVaiiDataOutput("", htmlOutput);
-                } else {
-                    return renderFallbackCard(searchQuery, dbMatch ? dbMatch.item : "");
-                }
-            });
-        },
-        (error) => {
-            return renderFallbackCard(searchQuery, dbMatch ? dbMatch.item : "");
+    const processPlacesSearch = (lat, lon) => {
+        if (typeof google === 'undefined' || !google.maps || !google.maps.places) {
+            return renderFallbackCard(searchBrandName, searchItemName, explicitLocation);
         }
-    );
+
+        const request = { query: placesSearchQuery };
+        if (lat && lon) {
+            request.location = new google.maps.LatLng(lat, lon);
+            request.radius = '16000';
+        }
+
+        const service = new google.maps.places.PlacesService(document.createElement('div'));
+        
+        service.textSearch(request, (results, status) => {
+            if (status === google.maps.places.PlacesServiceStatus.OK && results.length > 0) {
+                results.sort((a, b) => (b.rating || 0) - (a.rating || 0));
+                const bestPlace = results[0];
+                
+                const placeName = bestPlace.name;
+                const rating = bestPlace.rating || "N/A";
+                const address = bestPlace.formatted_address;
+                
+                const encPlace = encodeURIComponent(placeName);
+                const encFood = encodeURIComponent(searchItemName);
+                const encAddress = encodeURIComponent(address);
+                
+                // Embed exact found item alongside the exact physical location/address details
+                const googleOrderLink = `https://www.google.com/search?q=Order+${encFood}+from+${encPlace}+${encAddress}`;
+                const uberEatsLink = `https://www.ubereats.com/search?q=${encPlace}+${encFood}+${encAddress}`;
+                const doorDashLink = `https://www.doordash.com/search/store/${encPlace}%20${encFood}%20${encAddress}/`;
+                const mapLink = `https://www.google.com/maps/search/?api=1&query=${encPlace}+${encAddress}`;
+
+                const htmlOutput = `
+                    <div style="background: #1a1a1a; padding: 16px; border-radius: 12px; border-left: 4px solid #ff9800; text-align: left; margin-bottom: 15px;">
+                        <div style="font-size: 0.8rem; color: #ff9800; text-transform: uppercase; font-weight: bold; margin-bottom: 4px;">🍔 GPS Confirmed Match</div>
+                        <div style="font-size: 1.2rem; font-weight: bold; color: #fff; margin-bottom: 8px;">${placeName}</div>
+                        <div style="color: #ccc; font-size: 0.95rem; margin-bottom: 4px;">💡 Suggested: <strong>${searchItemName}</strong></div>
+                        <div style="color: #ccc; font-size: 0.95rem; margin-bottom: 4px;">⭐ Rating: ${rating} / 5.0</div>
+                        <a href="${mapLink}" target="_blank" style="color: #ff9800; text-decoration: none; font-size: 0.85rem; display: block; margin-bottom: 15px;">📍 ${address} ↗</a>
+                        
+                        <div style="font-size: 0.75rem; color: #aaa; text-transform: uppercase; font-weight: bold; margin-bottom: 8px;">Auto-Routing Delivery Links</div>
+                        <div style="display: flex; flex-direction: column; gap: 8px;">
+                            <a href="${uberEatsLink}" target="_blank" style="display: flex; align-items: center; justify-content: space-between; background: #06C167; border-radius: 6px; padding: 10px 14px; color: #fff; text-decoration: none; font-weight: bold; font-size: 0.9rem;">
+                                <span>Route to UberEats</span><span>➔</span>
+                            </a>
+                            <a href="${doorDashLink}" target="_blank" style="display: flex; align-items: center; justify-content: space-between; background: #FF3008; border-radius: 6px; padding: 10px 14px; color: #fff; text-decoration: none; font-weight: bold; font-size: 0.9rem;">
+                                <span>Route to DoorDash</span><span>➔</span>
+                            </a>
+                            <a href="${googleOrderLink}" target="_blank" style="display: flex; align-items: center; justify-content: space-between; background: #4285F4; border-radius: 6px; padding: 10px 14px; color: #fff; text-decoration: none; font-weight: bold; font-size: 0.9rem;">
+                                <span>Google Local Order</span><span>➔</span>
+                            </a>
+                        </div>
+                    </div>
+                `;
+                handleVaiiDataOutput("", htmlOutput);
+            } else {
+                return renderFallbackCard(searchBrandName, searchItemName, explicitLocation);
+            }
+        });
+    };
+
+    if (explicitLocation) {
+        processPlacesSearch(null, null);
+    } else if (navigator.geolocation) {
+        navigator.geolocation.getCurrentPosition(
+            (position) => { processPlacesSearch(position.coords.latitude, position.coords.longitude); },
+            () => { processPlacesSearch(null, null); }
+        );
+    } else {
+        processPlacesSearch(null, null);
+    }
 }
 
 function renderUnifiedLocationCard(lat, lon, zone, displayName, greetingHTML = "") {
@@ -963,13 +990,15 @@ function runInfoExecution(query) {
         return; 
     }
 
-    if (cleanQuery.startsWith("order ") || (cleanQuery.startsWith("find ") && cleanQuery.includes(" near me"))) {
-        let foodItem = query.toLowerCase()
-            .replace(/order me a /i, "")
+    // Intercept food keywords or prefixes
+    let isFoodIntent = Object.keys(LOCAL_FOOD_DB).some(cat => cleanQuery.includes(cat)) || 
+                       cleanQuery.startsWith("order ") || cleanQuery.startsWith("find ");
+
+    if (isFoodIntent) {
+        let foodItem = query.replace(/order me a /i, "")
             .replace(/order a /i, "")
             .replace(/order some /i, "")
             .replace(/order /i, "")
-            .replace(/ near me/i, "")
             .replace(/find /i, "")
             .trim();
         executeLocalFoodSearch(foodItem);
@@ -1237,23 +1266,30 @@ hubInput?.addEventListener('input', () => {
     if (routingWarning) routingWarning.style.display = trimmedQuery.toLowerCase().startsWith('open ') ? "block" : "none";
 
     let foodSuggestions = [];
-    const orderMatch = trimmedQuery.match(/^(order me a |order a |order some |order |find )/i);
+    let cleanSearchQuery = trimmedQuery.toLowerCase();
     
-    if (orderMatch) {
-        let justFood = trimmedQuery.substring(orderMatch[0].length).trim().toLowerCase();
-        if (justFood.length >= 1) {
-            for (let cat in LOCAL_FOOD_DB) {
-                if (cat.includes(justFood)) {
-                    LOCAL_FOOD_DB[cat].forEach(b => foodSuggestions.push(`order ${b.name}`));
-                }
+    // Normalize string by cleaning common conversational action headers
+    let coreQuery = cleanSearchQuery.replace(/^(order me a |order a |order some |order |find )/i, "").trim();
+
+    // Strip explicit location parameters from suggestions generation query string
+    coreQuery = coreQuery.split(/\s+in\s+|\s+near\s+/)[0].trim();
+
+    if (coreQuery.length >= 1) {
+        for (let cat in LOCAL_FOOD_DB) {
+            // Check matching categories directly
+            if (cat.includes(coreQuery)) {
                 LOCAL_FOOD_DB[cat].forEach(b => {
-                    if (b.name.toLowerCase().includes(justFood) || b.item.toLowerCase().includes(justFood)) {
-                        foodSuggestions.push(`order ${b.name}`);
-                    }
+                    foodSuggestions.push(`order ${b.item} from ${b.name}`);
                 });
             }
-            foodSuggestions = [...new Set(foodSuggestions)].slice(0, 8);
+            // Check specific brand labels and custom menu definitions
+            LOCAL_FOOD_DB[cat].forEach(b => {
+                if (b.name.toLowerCase().includes(coreQuery) || b.item.toLowerCase().includes(coreQuery)) {
+                    foodSuggestions.push(`order ${b.item} from ${b.name}`);
+                }
+            });
         }
+        foodSuggestions = [...new Set(foodSuggestions)].slice(0, 8);
     }
 
     if (searchAbortController) searchAbortController.abort();
