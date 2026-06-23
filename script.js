@@ -288,7 +288,7 @@ window.initVaiiMap = function() {
 // ==========================================
 function renderMarkdown(text) {
     if (!text) return "";
-    let safeHtml = text.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;"); 
+    let safeHtml = text.replace(/&/g, "&").replace(/</g, "<").replace(/>/g, ">"); 
     safeHtml = safeHtml.replace(/\*\*(.*?)\*\*/g, "<strong>$1</strong>");
     safeHtml = safeHtml.replace(/\*(.*?)\*/g, "<em>$1</em>");
     safeHtml = safeHtml.replace(/^[\s]*[\*\-]\s+(.*)$/gm, "<li style='margin-left: 15px; margin-bottom: 4px;'>$1</li>");
@@ -636,6 +636,7 @@ function executeLocalFoodSearch(queryText) {
     let cleanQuery = originalQuery.toLowerCase();
     let explicitLocation = "";
     
+    // Extract manual location routing (e.g. " in Orlando", " near Miami")
     const locInMatch = originalQuery.match(/\s+in\s+(.+)$/i);
     const locNearMatch = originalQuery.match(/\s+near\s+(.+)$/i);
     
@@ -648,33 +649,39 @@ function executeLocalFoodSearch(queryText) {
     }
 
     let dbMatch = null;
-    let searchItemName = cleanQuery;
     let searchBrandName = "";
+    let searchItemName = "";
 
-    let category = Object.keys(LOCAL_FOOD_DB).find(key => cleanQuery.includes(key));
-    if (category) {
-        const options = LOCAL_FOOD_DB[category];
-        dbMatch = options[Math.floor(Math.random() * options.length)];
-        searchBrandName = dbMatch.name;
-        searchItemName = dbMatch.item;
-    } else {
-        for (let cat in LOCAL_FOOD_DB) {
-            let brand = LOCAL_FOOD_DB[cat].find(b => {
-                let normName = b.name.toLowerCase().replace(/['\s]/g, '');
-                let normQuery = cleanQuery.replace(/['\s]/g, '');
-                return normQuery.includes(normName) || normName.includes(normQuery);
-            });
-            if (brand) {
-                dbMatch = brand;
-                searchBrandName = dbMatch.name;
-                searchItemName = dbMatch.item;
-                break;
-            }
+    // 1. Check for specific brand mention FIRST to prevent random category jumping
+    for (let cat in LOCAL_FOOD_DB) {
+        let brand = LOCAL_FOOD_DB[cat].find(b => {
+            let normName = b.name.toLowerCase().replace(/['\s]/g, '');
+            let normQuery = cleanQuery.replace(/['\s]/g, '');
+            return normQuery.includes(normName);
+        });
+        if (brand) {
+            dbMatch = brand;
+            searchBrandName = dbMatch.name;
+            searchItemName = dbMatch.item;
+            break;
         }
     }
 
+    // 2. If no specific brand was mentioned, look for a generic category
+    if (!dbMatch) {
+        let category = Object.keys(LOCAL_FOOD_DB).find(key => cleanQuery.includes(key));
+        if (category) {
+            const options = LOCAL_FOOD_DB[category];
+            dbMatch = options[Math.floor(Math.random() * options.length)];
+            searchBrandName = dbMatch.name;
+            searchItemName = dbMatch.item;
+        }
+    }
+
+    // 3. Fallback if absolutely no matches
     if (!searchBrandName) {
         searchBrandName = cleanQuery; 
+        searchItemName = cleanQuery;
     }
 
     let placesSearchQuery = searchBrandName;
@@ -689,14 +696,15 @@ function executeLocalFoodSearch(queryText) {
         </div>
     `;
 
+    // Renders if GPS fails or no results match the radius parameters
     const renderFallbackCard = (brandName, suggestionText, fallbackLoc) => {
-        const locString = fallbackLoc ? ` ${fallbackLoc}` : "";
+        // Strip out weird characters to prevent search engine breaks
+        const cleanName = brandName.replace(/[^a-zA-Z0-9\s]/g, '');
+        const encName = encodeURIComponent(cleanName);
+        const encLoc = fallbackLoc ? encodeURIComponent(fallbackLoc) : '';
         
-        const cleanFallbackString = (brandName + locString).replace(/[^a-zA-Z0-9 ,]/g, '');
-        const encFallback = encodeURIComponent(cleanFallbackString);
-        
-        const ddLink = `https://www.doordash.com/search/store/${encFallback}/`;
-        const goLink = `https://www.google.com/search?q=Order+delivery+from+${encFallback}`;
+        const ddLink = `https://www.doordash.com/search/store/${encName}/`;
+        const goLink = `https://www.google.com/search?q=Order+delivery+from+${encName}${fallbackLoc ? '+near+' + encLoc : ''}`;
 
         const htmlOutput = `
             <div style="background: #1a1a1a; padding: 16px; border-radius: 12px; border-left: 4px solid #007bff; text-align: left; margin-bottom: 15px;">
@@ -740,11 +748,12 @@ function executeLocalFoodSearch(queryText) {
                 const rating = bestPlace.rating || "N/A";
                 const address = bestPlace.formatted_address || "";
                 
-                const cleanAddressSearch = (placeName + " " + address).replace(/[^a-zA-Z0-9 ,]/g, '');
-                const encQuery = encodeURIComponent(cleanAddressSearch);
+                // Embed clean brand name for DoorDash to prevent address string formatting 404 breaks
+                const cleanPlaceName = placeName.replace(/[^a-zA-Z0-9\s]/g, '');
+                const encPlace = encodeURIComponent(cleanPlaceName);
                 
-                const googleOrderLink = `https://www.google.com/search?q=Order+delivery+from+${encQuery}`;
-                const doorDashLink = `https://www.doordash.com/search/store/${encQuery}/`;
+                const doorDashLink = `https://www.doordash.com/search/store/${encPlace}/`;
+                const googleOrderLink = `https://www.google.com/search?q=Order+delivery+from+${encPlace}`;
                 const mapLink = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(placeName + " " + address)}`;
 
                 let suggestionHTML = dbMatch ? `<div style="color: #ccc; font-size: 0.95rem; margin-bottom: 4px;">💡 Suggested: <strong>${searchItemName}</strong></div>` : "";
@@ -776,7 +785,7 @@ function executeLocalFoodSearch(queryText) {
     };
 
     if (explicitLocation) {
-        processPlacesSearch(null, null);
+        processPlacesSearch(null, null); // bypass GPS if manual location is specified
     } else if (navigator.geolocation) {
         navigator.geolocation.getCurrentPosition(
             (position) => { processPlacesSearch(position.coords.latitude, position.coords.longitude); },
