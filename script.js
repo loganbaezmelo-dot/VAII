@@ -435,6 +435,92 @@ async function triggerBackgroundTitleGeneration(userMsg, modelResponse, runningM
 // ==========================================
 // 5. NATIVE MODULES (MAPS, WEATHER, VISION)
 // ==========================================
+function executeLocalFoodSearch(foodItem) {
+    routingWarning.style.display = "none";
+    
+    output.innerHTML = `
+        <div class="generation-status">
+            <div class="loader-spinner"></div>
+            <span style="color: #eee; font-size: 0.9rem;">Locating top-rated ${foodItem} nearby...</span>
+        </div>
+    `;
+
+    if (!navigator.geolocation) {
+        handleVaiiDataOutput("", "<div>Geolocation is not supported by your browser.</div>");
+        return;
+    }
+
+    navigator.geolocation.getCurrentPosition(
+        (position) => {
+            const lat = position.coords.latitude;
+            const lon = position.coords.longitude;
+            
+            if (typeof google === 'undefined' || !google.maps || !google.maps.places) {
+                handleVaiiDataOutput("", "<div>Google Places API failed to load. Check your script tag in index.html.</div>");
+                return;
+            }
+
+            const request = {
+                location: new google.maps.LatLng(lat, lon),
+                radius: '8000', // Roughly 5 miles
+                query: foodItem,
+            };
+
+            const service = new google.maps.places.PlacesService(document.createElement('div'));
+            
+            service.textSearch(request, (results, status) => {
+                if (status === google.maps.places.PlacesServiceStatus.OK && results.length > 0) {
+                    
+                    // Sort by rating to ensure we get the best spot
+                    results.sort((a, b) => (b.rating || 0) - (a.rating || 0));
+                    const bestPlace = results[0];
+                    
+                    const placeName = bestPlace.name;
+                    const rating = bestPlace.rating || "N/A";
+                    const address = bestPlace.formatted_address;
+                    
+                    // -- AUTOFILL DEEP LINKS --
+                    // These encode the restaurant and food item directly into the delivery platforms' search engines
+                    const encodedPlace = encodeURIComponent(placeName);
+                    const encodedFood = encodeURIComponent(foodItem);
+                    
+                    const googleOrderLink = `https://www.google.com/search?q=Order+from+${encodedPlace}+${encodeURIComponent(address)}`;
+                    const uberEatsLink = `https://www.ubereats.com/search?q=${encodedPlace}+${encodedFood}`;
+                    const doorDashLink = `https://www.doordash.com/search/store/${encodedPlace}/`;
+
+                    const htmlOutput = `
+                        <div style="background: #1a1a1a; padding: 16px; border-radius: 12px; border-left: 4px solid #ff9800; text-align: left; margin-bottom: 15px;">
+                            <div style="font-size: 0.8rem; color: #ff9800; text-transform: uppercase; font-weight: bold; margin-bottom: 4px;">🍔 High-Priority Match</div>
+                            <div style="font-size: 1.2rem; font-weight: bold; color: #fff; margin-bottom: 8px;">${placeName}</div>
+                            <div style="color: #ccc; font-size: 0.95rem; margin-bottom: 4px;">⭐ Rating: ${rating} / 5.0</div>
+                            <div style="color: #888; font-size: 0.85rem; margin-bottom: 15px;">📍 ${address}</div>
+                            
+                            <div style="font-size: 0.75rem; color: #aaa; text-transform: uppercase; font-weight: bold; margin-bottom: 8px;">Auto-Routing Delivery Links</div>
+                            <div style="display: flex; flex-direction: column; gap: 8px;">
+                                <a href="${uberEatsLink}" target="_blank" style="display: flex; align-items: center; justify-content: space-between; background: #06C167; border-radius: 6px; padding: 10px 14px; color: #fff; text-decoration: none; font-weight: bold; font-size: 0.9rem; transition: transform 0.1s ease;">
+                                    <span>Route to UberEats</span><span>➔</span>
+                                </a>
+                                <a href="${doorDashLink}" target="_blank" style="display: flex; align-items: center; justify-content: space-between; background: #FF3008; border-radius: 6px; padding: 10px 14px; color: #fff; text-decoration: none; font-weight: bold; font-size: 0.9rem; transition: transform 0.1s ease;">
+                                    <span>Route to DoorDash</span><span>➔</span>
+                                </a>
+                                <a href="${googleOrderLink}" target="_blank" style="display: flex; align-items: center; justify-content: space-between; background: #4285F4; border-radius: 6px; padding: 10px 14px; color: #fff; text-decoration: none; font-weight: bold; font-size: 0.9rem; transition: transform 0.1s ease;">
+                                    <span>Google Local Order</span><span>➔</span>
+                                </a>
+                            </div>
+                        </div>
+                    `;
+                    handleVaiiDataOutput("", htmlOutput);
+                } else {
+                    handleVaiiDataOutput("", `<div>Could not find any highly-rated spots for "${foodItem}" nearby.</div>`);
+                }
+            });
+        },
+        (error) => {
+            handleVaiiDataOutput("", "<div>Location access denied. VAII cannot search for local restaurants without GPS permission.</div>");
+        }
+    );
+}
+
 function renderUnifiedLocationCard(lat, lon, zone, displayName, greetingHTML = "") {
     output.innerHTML = greetingHTML + `<div style="color:#888; font-style:italic;">Assembling location data card...</div>`;
     
@@ -634,6 +720,19 @@ function runInfoExecution(query) {
         `;
         handleVaiiDataOutput("", htmlLayout);
         return; 
+    }
+
+    if (cleanQuery.startsWith("order ") || (cleanQuery.startsWith("find ") && cleanQuery.includes(" near me"))) {
+        let foodItem = query.toLowerCase()
+            .replace(/order me a /i, "")
+            .replace(/order a /i, "")
+            .replace(/order some /i, "")
+            .replace(/order /i, "")
+            .replace(/ near me/i, "")
+            .replace(/find /i, "")
+            .trim();
+        executeLocalFoodSearch(foodItem);
+        return;
     }
 
     const isLocationIntent = cleanQuery.startsWith("map of ") || cleanQuery.startsWith("show map ") || cleanQuery.startsWith("time in ") || cleanQuery.startsWith("weather in ") || cleanQuery.startsWith("weather ") || cleanQuery.startsWith("clock ");
