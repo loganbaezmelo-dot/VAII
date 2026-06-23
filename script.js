@@ -636,7 +636,6 @@ function executeLocalFoodSearch(queryText) {
     let cleanQuery = originalQuery.toLowerCase();
     let explicitLocation = "";
     
-    // Extract manual location routing (e.g. " in Orlando", " near Miami")
     const locInMatch = originalQuery.match(/\s+in\s+(.+)$/i);
     const locNearMatch = originalQuery.match(/\s+near\s+(.+)$/i);
     
@@ -652,7 +651,7 @@ function executeLocalFoodSearch(queryText) {
     let searchBrandName = "";
     let searchItemName = "";
 
-    // 1. Check for specific brand mention FIRST to prevent random category jumping
+    // Priority 1: Check for specific brand match first
     for (let cat in LOCAL_FOOD_DB) {
         let brand = LOCAL_FOOD_DB[cat].find(b => {
             let normName = b.name.toLowerCase().replace(/['\s]/g, '');
@@ -667,7 +666,7 @@ function executeLocalFoodSearch(queryText) {
         }
     }
 
-    // 2. If no specific brand was mentioned, look for a generic category
+    // Priority 2: Fallback to random category grab
     if (!dbMatch) {
         let category = Object.keys(LOCAL_FOOD_DB).find(key => cleanQuery.includes(key));
         if (category) {
@@ -678,7 +677,6 @@ function executeLocalFoodSearch(queryText) {
         }
     }
 
-    // 3. Fallback if absolutely no matches
     if (!searchBrandName) {
         searchBrandName = cleanQuery; 
         searchItemName = cleanQuery;
@@ -696,15 +694,13 @@ function executeLocalFoodSearch(queryText) {
         </div>
     `;
 
-    // Renders if GPS fails or no results match the radius parameters
     const renderFallbackCard = (brandName, suggestionText, fallbackLoc) => {
-        // Strip out weird characters to prevent search engine breaks
         const cleanName = brandName.replace(/[^a-zA-Z0-9\s]/g, '');
         const encName = encodeURIComponent(cleanName);
         const encLoc = fallbackLoc ? encodeURIComponent(fallbackLoc) : '';
         
-        const ddLink = `https://www.doordash.com/search/store/${encName}/`;
         const goLink = `https://www.google.com/search?q=Order+delivery+from+${encName}${fallbackLoc ? '+near+' + encLoc : ''}`;
+        const ddLink = `https://www.doordash.com/search/store/${encName}/`;
 
         const htmlOutput = `
             <div style="background: #1a1a1a; padding: 16px; border-radius: 12px; border-left: 4px solid #007bff; text-align: left; margin-bottom: 15px;">
@@ -714,11 +710,11 @@ function executeLocalFoodSearch(queryText) {
                 
                 <div style="font-size: 0.75rem; color: #aaa; text-transform: uppercase; font-weight: bold; margin-bottom: 8px;">Auto-Routing Delivery Links</div>
                 <div style="display: flex; flex-direction: column; gap: 8px;">
-                    <a href="${ddLink}" target="_blank" style="display: flex; align-items: center; justify-content: space-between; background: #FF3008; border-radius: 6px; padding: 10px 14px; color: #fff; text-decoration: none; font-weight: bold; font-size: 0.9rem;">
-                        <span>Route to DoorDash</span><span>➔</span>
-                    </a>
                     <a href="${goLink}" target="_blank" style="display: flex; align-items: center; justify-content: space-between; background: #4285F4; border-radius: 6px; padding: 10px 14px; color: #fff; text-decoration: none; font-weight: bold; font-size: 0.9rem;">
-                        <span>Google Local Order</span><span>➔</span>
+                        <span>🌐 Google Food Aggregator</span><span>➔</span>
+                    </a>
+                    <a href="${ddLink}" target="_blank" style="display: flex; align-items: center; justify-content: space-between; background: #FF3008; border-radius: 6px; padding: 10px 14px; color: #fff; text-decoration: none; font-weight: bold; font-size: 0.9rem;">
+                        <span>🔴 Search DoorDash</span><span>➔</span>
                     </a>
                 </div>
             </div>
@@ -748,12 +744,12 @@ function executeLocalFoodSearch(queryText) {
                 const rating = bestPlace.rating || "N/A";
                 const address = bestPlace.formatted_address || "";
                 
-                // Embed clean brand name for DoorDash to prevent address string formatting 404 breaks
-                const cleanPlaceName = placeName.replace(/[^a-zA-Z0-9\s]/g, '');
-                const encPlace = encodeURIComponent(cleanPlaceName);
+                // Embed EXACT localized Google search parameters to ensure Google opens the correct branch
+                const exactGoogleSearch = encodeURIComponent(`Order delivery from ${placeName} ${address}`);
+                const googleOrderLink = `https://www.google.com/search?q=${exactGoogleSearch}`;
                 
-                const doorDashLink = `https://www.doordash.com/search/store/${encPlace}/`;
-                const googleOrderLink = `https://www.google.com/search?q=Order+delivery+from+${encPlace}`;
+                const cleanPlaceName = placeName.replace(/[^a-zA-Z0-9\s]/g, '');
+                const doorDashLink = `https://www.doordash.com/search/store/${encodeURIComponent(cleanPlaceName)}/`;
                 const mapLink = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(placeName + " " + address)}`;
 
                 let suggestionHTML = dbMatch ? `<div style="color: #ccc; font-size: 0.95rem; margin-bottom: 4px;">💡 Suggested: <strong>${searchItemName}</strong></div>` : "";
@@ -763,16 +759,18 @@ function executeLocalFoodSearch(queryText) {
                         <div style="font-size: 0.8rem; color: #ff9800; text-transform: uppercase; font-weight: bold; margin-bottom: 4px;">🍔 GPS Confirmed Match</div>
                         <div style="font-size: 1.2rem; font-weight: bold; color: #fff; margin-bottom: 8px;">${placeName}</div>
                         ${suggestionHTML}
-                        <div style="color: #ccc; font-size: 0.95rem; margin-bottom: 4px;">⭐ Rating: ${rating} / 5.0</div>
-                        <a href="${mapLink}" target="_blank" style="color: #ff9800; text-decoration: none; font-size: 0.85rem; display: block; margin-bottom: 15px;">📍 ${address} ↗</a>
+                        <div style="color: #ccc; font-size: 0.95rem; margin-bottom: 15px;">⭐ Rating: ${rating} / 5.0</div>
                         
                         <div style="font-size: 0.75rem; color: #aaa; text-transform: uppercase; font-weight: bold; margin-bottom: 8px;">Auto-Routing Delivery Links</div>
                         <div style="display: flex; flex-direction: column; gap: 8px;">
-                            <a href="${doorDashLink}" target="_blank" style="display: flex; align-items: center; justify-content: space-between; background: #FF3008; border-radius: 6px; padding: 10px 14px; color: #fff; text-decoration: none; font-weight: bold; font-size: 0.9rem;">
-                                <span>Route to DoorDash</span><span>➔</span>
-                            </a>
                             <a href="${googleOrderLink}" target="_blank" style="display: flex; align-items: center; justify-content: space-between; background: #4285F4; border-radius: 6px; padding: 10px 14px; color: #fff; text-decoration: none; font-weight: bold; font-size: 0.9rem;">
-                                <span>Google Local Order</span><span>➔</span>
+                                <span>🌐 Google Food Aggregator</span><span>➔</span>
+                            </a>
+                            <a href="${doorDashLink}" target="_blank" style="display: flex; align-items: center; justify-content: space-between; background: #FF3008; border-radius: 6px; padding: 10px 14px; color: #fff; text-decoration: none; font-weight: bold; font-size: 0.9rem;">
+                                <span>🔴 Search DoorDash</span><span>➔</span>
+                            </a>
+                            <a href="${mapLink}" target="_blank" style="display: flex; align-items: center; justify-content: space-between; background: #2a2a2a; border: 1px solid #444; border-radius: 6px; padding: 10px 14px; color: #ddd; text-decoration: none; font-weight: bold; font-size: 0.9rem;">
+                                <span>🗺️ Open in Google Maps</span><span>↗</span>
                             </a>
                         </div>
                     </div>
@@ -785,7 +783,7 @@ function executeLocalFoodSearch(queryText) {
     };
 
     if (explicitLocation) {
-        processPlacesSearch(null, null); // bypass GPS if manual location is specified
+        processPlacesSearch(null, null); 
     } else if (navigator.geolocation) {
         navigator.geolocation.getCurrentPosition(
             (position) => { processPlacesSearch(position.coords.latitude, position.coords.longitude); },
