@@ -618,14 +618,29 @@ async function triggerBackgroundTitleGeneration(userMsg, modelResponse, runningM
 function executeLocalFoodSearch(queryText) {
     routingWarning.style.display = "none";
     
-    let category = Object.keys(LOCAL_FOOD_DB).find(key => queryText.includes(key));
+    let cleanQuery = queryText.toLowerCase().trim();
     let dbMatch = null;
     let searchQuery = queryText;
 
+    let category = Object.keys(LOCAL_FOOD_DB).find(key => cleanQuery.includes(key));
+    
     if (category) {
         const options = LOCAL_FOOD_DB[category];
         dbMatch = options[Math.floor(Math.random() * options.length)];
         searchQuery = dbMatch.name; 
+    } else {
+        for (let cat in LOCAL_FOOD_DB) {
+            let brand = LOCAL_FOOD_DB[cat].find(b => {
+                let normName = b.name.toLowerCase().replace(/['\s]/g, '');
+                let normQuery = cleanQuery.replace(/['\s]/g, '');
+                return normQuery.includes(normName) || normName.includes(normQuery);
+            });
+            if (brand) {
+                dbMatch = brand;
+                searchQuery = dbMatch.name;
+                break;
+            }
+        }
     }
 
     output.innerHTML = `
@@ -667,9 +682,7 @@ function executeLocalFoodSearch(queryText) {
     };
 
     if (!navigator.geolocation) {
-        if (dbMatch) return renderFallbackCard(dbMatch.name, dbMatch.item);
-        handleVaiiDataOutput("", "<div>Geolocation unsupported and no database match found.</div>");
-        return;
+        return renderFallbackCard(searchQuery, dbMatch ? dbMatch.item : "");
     }
 
     navigator.geolocation.getCurrentPosition(
@@ -678,9 +691,7 @@ function executeLocalFoodSearch(queryText) {
             const lon = position.coords.longitude;
             
             if (typeof google === 'undefined' || !google.maps || !google.maps.places) {
-                if (dbMatch) return renderFallbackCard(dbMatch.name, dbMatch.item);
-                handleVaiiDataOutput("", "<div>Google Places API failed to load.</div>");
-                return;
+                return renderFallbackCard(searchQuery, dbMatch ? dbMatch.item : "");
             }
 
             const request = {
@@ -734,20 +745,12 @@ function executeLocalFoodSearch(queryText) {
                     `;
                     handleVaiiDataOutput("", htmlOutput);
                 } else {
-                    if (dbMatch) {
-                        renderFallbackCard(dbMatch.name, dbMatch.item);
-                    } else {
-                        handleVaiiDataOutput("", `<div>Could not locate any spots for "${queryText}" nearby.</div>`);
-                    }
+                    return renderFallbackCard(searchQuery, dbMatch ? dbMatch.item : "");
                 }
             });
         },
         (error) => {
-            if (dbMatch) {
-                renderFallbackCard(dbMatch.name, dbMatch.item);
-            } else {
-                handleVaiiDataOutput("", "<div>Location access denied. VAII cannot map local spots without GPS.</div>");
-            }
+            return renderFallbackCard(searchQuery, dbMatch ? dbMatch.item : "");
         }
     );
 }
