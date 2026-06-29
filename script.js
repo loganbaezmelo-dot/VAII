@@ -1560,4 +1560,39 @@ authToggle?.addEventListener('click', () => {
     const isLoginMode = (authSubmitBtn.innerText === "Log In");
     authError.style.display = "none";
     authTitle.innerText = isLoginMode ? "✨ Create Account" : "🔒 Account Sign In";
-    authSubmitBtn.innerText = isLoginMode ? "Register User" :
+    authSubmitBtn.innerText = isLoginMode ? "Register User" : "Log In";
+    authToggle.innerText = isLoginMode ? "Already have an account? Sign In" : "Need an account? Register instead";
+});
+
+authSubmitBtn?.addEventListener('click', () => {
+    const email = authEmail.value.trim();
+    const password = authPassword.value;
+    const isLoginMode = (authSubmitBtn.innerText === "Log In");
+    authError.style.display = "none";
+    if (!email || !password) return showAuthError("Please fill out all credentials.");
+    
+    if (isLoginMode) signInWithEmailAndPassword(auth, email, password).catch(err => showAuthError(err.message));
+    else createUserWithEmailAndPassword(auth, email, password).catch(err => showAuthError(err.message));
+});
+
+googleSigninBtn?.addEventListener('click', () => {
+    authError.style.display = "none";
+    signInWithPopup(auth, googleProvider).catch(err => showAuthError(err.message));
+});
+
+logoutActionBtn?.addEventListener('click', () => signOut(auth).catch(err => console.error(err)));
+
+onAuthStateChanged(auth, (user) => {
+    if (user) {
+        authContainer.style.display = "none";
+        mainApp.style.display = "block";
+        initializeFreshChatSession();
+        clearActiveImage();
+        renderHistoryListItems();
+        if (prefsInstructionsInput) prefsInstructionsInput.value = localStorage.getItem('vaii_gemini_instructions') || '';
+        updateDatalist([], [], [], []);
+    } else {
+        authContainer.style.display = "block";
+        mainApp.style.display = "none";
+    }
+});
