@@ -393,6 +393,7 @@
                         <span style="font-size: 0.8rem; color: #aaa; display: block; margin-bottom: 8px;">These core operations process natively via external live integrations:</span>
                         <ul>
                             <li><strong>🎤 Voice Recognition:</strong> Tap the microphone icon to dictate commands directly.</li>
+                            <li><strong>🔊 Text-to-Speech:</strong> Tap the speaker icon to read out the current screen response.</li>
                             <li><strong>📰 News Aggregator:</strong> Type <code>news about [topic]</code> or <code>top news</code> for live global headlines.</li>
                             <li><strong>🎬 Media Search:</strong> Type <code>movie [title]</code> to pull posters, plots, and IMDB scores.</li>
                             <li><strong>📝 To-Do Notes:</strong> Type <code>note: [text]</code> to save entries, and <code>show notes</code> to manage them.</li>
@@ -455,6 +456,7 @@
 
                         <div class="input-row">
                             <button id="mic-trigger-btn" class="camera-btn" title="Voice Input">🎤</button>
+                            <button id="tts-trigger-btn" class="camera-btn" title="Read Aloud">🔊</button>
                             <button id="camera-trigger-btn" class="camera-btn" title="Image Upload">📷</button>
                             <input type="file" id="image-file-input" accept="image/*" style="display: none;">
                             <input type="text" id="hub-input" placeholder="Type a command..." list="hub-suggestions" autocomplete="off">
