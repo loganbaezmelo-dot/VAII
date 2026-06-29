@@ -147,6 +147,7 @@
             display: flex;
             align-items: center;
             justify-content: center;
+            flex-shrink: 0;
             transition: background 0.2s ease, transform 0.1s ease;
         }
         .enter-btn:hover {
@@ -162,6 +163,7 @@
             border: 2px solid #444;
             width: 46px;
             height: 46px;
+            flex-shrink: 0;
             border-radius: 8px;
             font-size: 1.1rem;
             cursor: pointer;
@@ -174,6 +176,17 @@
             border-color: #007bff;
             color: #007bff;
             background: #112233;
+        }
+        .camera-btn.listening {
+            border-color: #ff4d4d;
+            color: #ff4d4d;
+            animation: pulse 1.5s infinite;
+        }
+
+        @keyframes pulse {
+            0% { box-shadow: 0 0 0 0 rgba(255, 77, 77, 0.4); }
+            70% { box-shadow: 0 0 0 10px rgba(255, 77, 77, 0); }
+            100% { box-shadow: 0 0 0 0 rgba(255, 77, 77, 0); }
         }
         
         .preview-box {
@@ -294,19 +307,6 @@
             margin-right: 12px;
             vertical-align: middle;
         }
-        @keyframes spin {
-            to { transform: rotate(360deg); }
-        }
-        .generation-status {
-            display: flex;
-            align-items: center;
-            background: #1a1a1a;
-            padding: 12px;
-            border-radius: 6px;
-            border-left: 3px solid #007bff;
-            margin-top: 10px;
-            text-align: left;
-        }
         
         .auth-field {
             width: 100%;
@@ -370,8 +370,20 @@
                     <div class="widget-header">
                         <h3>🔍 Smart Assistant Hub</h3>
                         <div style="display: flex; gap: 8px;">
+                            <button id="changelog-toggle" class="help-btn" style="border-color: #ffc107; color: #ffc107; background: #332b00;" title="Version History">🕒</button>
                             <button id="history-toggle" class="help-btn" style="border-color: #6f42c1; color: #6f42c1; background: #1f142e;" title="Gemini Chat History">📜</button>
                             <button id="help-toggle" class="help-btn">?</button>
+                        </div>
+                    </div>
+
+                    <div id="changelog-drawer" class="help-drawer">
+                        <strong style="color: #ffc107; font-size: 1rem;">🚀 VAII Version History</strong>
+                        <div style="margin-top: 10px; border-left: 2px solid #444; padding-left: 10px; display: flex; flex-direction: column; gap: 12px;">
+                            <div><strong style="color:#fff;">v4.0 (Current)</strong><br><span style="color:#aaa;">Integrated Web Speech API for voice commands, News Aggregator, OMDB Media Search, persistent To-Do Notes, and the UI History tracker.</span></div>
+                            <div><strong style="color:#fff;">v3.5</strong><br><span style="color:#aaa;">Introduced Local Food Concierge, 150+ brand database, and spatial mapping for DoorDash deep links.</span></div>
+                            <div><strong style="color:#fff;">v3.0</strong><br><span style="color:#aaa;">Added Google Maps, Open-Meteo Weather, CoinGecko Crypto, MyMemory Translations, and Pollinations AI Art.</span></div>
+                            <div><strong style="color:#fff;">v2.0</strong><br><span style="color:#aaa;">Built the Gemini Ecosystem fallback tree and integrated Gemini 3.5 Flash Vision.</span></div>
+                            <div><strong style="color:#fff;">v1.0</strong><br><span style="color:#aaa;">Initial release. Base HTML/CSS, Auth, Wiktionary, and Wikipedia integrations.</span></div>
                         </div>
                     </div>
 
@@ -379,22 +391,21 @@
                         <strong>💡 All Supported Services inside VAII Native:</strong>
                         <span style="font-size: 0.8rem; color: #aaa; display: block; margin-bottom: 8px;">These core operations process natively via external live integrations:</span>
                         <ul>
-                            <li><strong>🧠 Knowledge Base:</strong> Input a single distinct vocabulary term to fetch live lexical definitions via the Wiktionary API.</li>
-                            <li><strong>📰 Wikipedia Summaries:</strong> Type general terms to pull summary extracts directly from the Wikipedia API.</li>
-                            <li><strong>🔴 YouTube Metrics:</strong> Search for famous creators to fetch live subscriber and view counts via the YouTube Data API.</li>
-                            <li><strong>👁️ Gemini Vision Engine:</strong> Tap the camera icon to select or capture an image file. Enter your question to analyze data properties.</li>
-                            <li><strong>🗺️ Interactive Maps:</strong> Type <code>map of [location]</code> or <code>show map [location]</code> to load a live visual layout via Google Maps API.</li>
-                            <li><strong>☀️ Weather & Local Time:</strong> Type any city name or phrases like <code>weather in Tokyo</code> to check conditions and matching clocks instantly via Open-Meteo API.</li>
-                            <li><strong>🌐 Web Link Routing:</strong> Input domains like <code>wikipedia.org</code> or commands like <code>open youtube</code> to launch them.</li>
-                            <li><strong>🍔 Local Food Ordering:</strong> Type <code>order [food/brand]</code> (e.g., <code>order McDonald's</code>) to search an internal database and route to local spots via Google Places API. <em>Note: DoorDash provides delivery if the location is within range, otherwise it defaults to pickup.</em></li>
-                            <li><strong>🔢 Calculations & Conversions:</strong> Type math equations directly or conversion strings like <code>193 lbs to kg</code> to display solutions.</li>
-                            <li><strong>🔄 Translations:</strong> Enter translation patterns like <code>Hello to Spanish</code> to convert text via the MyMemory API.</li>
-                            <li><strong>📈 Market Trackers:</strong> Input stock symbols or crypto tickers directly for real-time market estimates via CoinGecko API.</li>
-                            <li><strong>🎨 AI Art Generator:</strong> Type <code>draw </code> before any description to compile custom artwork on the screen via Pollinations AI.</li>
+                            <li><strong>🎤 Voice Recognition:</strong> Tap the microphone icon to dictate commands directly.</li>
+                            <li><strong>📰 News Aggregator:</strong> Type <code>news about [topic]</code> or <code>top news</code> for live global headlines.</li>
+                            <li><strong>🎬 Media Search:</strong> Type <code>movie [title]</code> to pull posters, plots, and IMDB scores.</li>
+                            <li><strong>📝 To-Do Notes:</strong> Type <code>note: [text]</code> to save entries, and <code>show notes</code> to manage them.</li>
+                            <li><strong>🧠 Knowledge Base:</strong> Input a single term to fetch definitions via Wiktionary.</li>
+                            <li><strong>🔴 YouTube Metrics:</strong> Search for famous creators to fetch live stats.</li>
+                            <li><strong>👁️ Gemini Vision:</strong> Tap the camera to upload an image and prompt a visual analysis.</li>
+                            <li><strong>🗺️ Maps & Weather:</strong> Type <code>map of [city]</code> or <code>weather in [city]</code> for live spatial cards.</li>
+                            <li><strong>🌐 Web Link Routing:</strong> Input domains like <code>wikipedia.org</code> or <code>open youtube</code> to launch them.</li>
+                            <li><strong>🍔 Local Food Ordering:</strong> Type <code>order [food/brand]</code> (e.g., <code>order McDonald's</code>) for DoorDash routing.</li>
+                            <li><strong>🔢 Calculations & Conversions:</strong> Type math or conversions like <code>193 lbs to kg</code>.</li>
+                            <li><strong>🔄 Translations:</strong> Enter <code>Hello to Spanish</code> to convert text.</li>
+                            <li><strong>📈 Market Trackers:</strong> Input stock symbols or crypto tickers for live pricing.</li>
+                            <li><strong>🎨 AI Art Generator:</strong> Type <code>draw [prompt]</code> to compile custom artwork.</li>
                         </ul>
-                        <div style="margin-top: 10px; color: #ff4d4d; font-size: 0.8rem; font-weight: bold; padding-top: 8px; border-top: 1px solid #3d3d3d;">
-                            ⚠️ CRITICAL RULE: The Gemini Ecosystem mode is an isolated text environment and cannot execute any of the above web widgets.
-                        </div>
                     </div>
 
                     <div id="history-drawer" class="help-drawer">
@@ -402,18 +413,17 @@
                             <strong>📜 Saved Gemini Chats:</strong>
                             <button id="new-chat-btn" style="background: #28a745; color: white; border: none; padding: 4px 10px; border-radius: 4px; font-size: 0.75rem; cursor: pointer; font-weight: bold;">➕ New Chat</button>
                         </div>
-                        <div id="history-list" style="display: flex; flex-direction: column; gap: 6px; max-height: 160px; overflow-y: auto; margin-top: 5px; padding-right: 2px;">
-                        </div>
+                        <div id="history-list" style="display: flex; flex-direction: column; gap: 6px; max-height: 160px; overflow-y: auto; margin-top: 5px; padding-right: 2px;"></div>
                     </div>
 
                     <div id="prefs-drawer" class="help-drawer">
                         <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
-                            <strong>⚙️ System Preferences (Gemini Custom Identity):</strong>
+                            <strong>⚙️ System Preferences:</strong>
                             <span id="prefs-close-btn" style="cursor: pointer; color: #dc3545; font-weight: bold; font-size: 0.85rem;">✕</span>
                         </div>
                         <div style="display: flex; flex-direction: column; gap: 8px; margin-top: 6px;">
-                            <textarea id="prefs-instructions-input" style="width: 100%; height: 75px; background: #1a1a1a; color: #fff; border: 1px solid #3d3d3d; border-radius: 6px; padding: 8px; font-family: inherit; font-size: 0.82rem; resize: vertical; box-sizing: border-box;" placeholder="Type behavioral rules or persona parameters (e.g., Use emojis, adopt a witty style, speak informally)..."></textarea>
-                            <button id="prefs-save-btn" style="background: #007bff; color: white; border: none; padding: 6px 12px; border-radius: 4px; font-size: 0.8rem; cursor: pointer; font-weight: bold; width: 100%; text-align: center; transition: background 0.2s ease;">Save Preferences</button>
+                            <textarea id="prefs-instructions-input" style="width: 100%; height: 75px; background: #1a1a1a; color: #fff; border: 1px solid #3d3d3d; border-radius: 6px; padding: 8px; font-family: inherit; font-size: 0.82rem; resize: vertical; box-sizing: border-box;" placeholder="Type persona parameters for the Gemini mode..."></textarea>
+                            <button id="prefs-save-btn" style="background: #007bff; color: white; border: none; padding: 6px 12px; border-radius: 4px; font-size: 0.8rem; cursor: pointer; font-weight: bold; width: 100%; transition: background 0.2s ease;">Save Preferences</button>
                         </div>
                     </div>
 
@@ -440,7 +450,8 @@
                         </div>
 
                         <div class="input-row">
-                            <button id="camera-trigger-btn" class="camera-btn">📷</button>
+                            <button id="mic-trigger-btn" class="camera-btn" title="Voice Input">🎤</button>
+                            <button id="camera-trigger-btn" class="camera-btn" title="Image Upload">📷</button>
                             <input type="file" id="image-file-input" accept="image/*" style="display: none;">
                             <input type="text" id="hub-input" placeholder="Type a command..." list="hub-suggestions" autocomplete="off">
                             <button id="execute-action-btn" class="enter-btn">➔</button>
