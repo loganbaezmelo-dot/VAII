@@ -298,7 +298,7 @@ function closeAllDrawers() {
 
 function renderMarkdown(text) {
     if (!text) return "";
-    let safeHtml = text.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;"); 
+    let safeHtml = text.replace(/&/g, "&").replace(/</g, "<").replace(/>/g, ">"); 
     safeHtml = safeHtml.replace(/\*\*(.*?)\*\*/g, "<strong>$1</strong>");
     safeHtml = safeHtml.replace(/\*(.*?)\*/g, "<em>$1</em>");
     safeHtml = safeHtml.replace(/^[\s]*[\*\-]\s+(.*)$/gm, "<li style='margin-left: 15px; margin-bottom: 4px;'>$1</li>");
@@ -320,7 +320,6 @@ function getSavedSessions() {
     }
 }
 
-// Persist conversation tracks
 function saveSessionsToDisk(sessions) {
     localStorage.setItem('vaii_chat_sessions', JSON.stringify(sessions));
 }
@@ -480,6 +479,27 @@ function updateDatalist(cities = [], wikiTitles = [], wikitubiaTitles = [], comb
     });
 }
 
+function handleVaiiDataOutput(rawTextContent, defaultHtmlOutput, runMapCallback = null) {
+    output.innerHTML = defaultHtmlOutput;
+    if (runMapCallback) runMapCallback();
+}
+
+function showAuthError(message) {
+    if (authError) {
+        authError.innerText = message.replace("Firebase: ", "");
+        authError.style.display = "block";
+    }
+}
+
+function clearActiveImage() {
+    activeImageBase64 = null;
+    activeImageMimeType = null;
+    if (imageFileInput) imageFileInput.value = "";
+    if (imagePreviewThumbnail) imagePreviewThumbnail.src = "";
+    if (imagePreviewContainer) imagePreviewContainer.style.display = "none";
+    if (cameraTriggerBtn) cameraTriggerBtn.classList.remove('active');
+}
+
 function renderNotesManager() {
     let notes = JSON.parse(localStorage.getItem('vaii_notes') || '[]');
     if (notes.length === 0) {
@@ -522,7 +542,7 @@ function fetchNewsAPI(topic) {
             let errorMsg = Array.isArray(data.errors) ? data.errors[0] : (typeof data.errors === 'string' ? data.errors : "Unknown GNews error");
             return handleVaiiDataOutput("", `<div style="background: #1a1a1a; padding: 14px; border-radius: 8px; border-left: 3px solid #ff4d4d; text-align: left;"><strong style="color:#ff4d4d;">GNews API Error:</strong> ${errorMsg}</div>`);
         }
-        if (!data.articles || data.articles.length === 0) return handleVaiiDataOutput("", "<div>No articles found for this search.</div>");
+        if (!data.articles || data.articles.length === 0) return handleVaiiDataOutput("", `<div style="background: #1a1a1a; padding: 14px; border-radius: 8px; border-left: 3px solid #ffc107; text-align: left;">No articles found for this search.</div>`);
         
         let html = `<div style="text-align: left; margin-bottom: 10px; font-weight: bold; color: #aaa; text-transform: uppercase;">📰 Live News ${topic ? 'on ' + topic : 'Headlines'}</div>`;
         data.articles.slice(0, 3).forEach(art => {
@@ -532,7 +552,7 @@ function fetchNewsAPI(topic) {
             </a>`;
         });
         handleVaiiDataOutput("", html);
-    }).catch(err => handleVaiiDataOutput("", `<div>News routing failed. Network error.</div>`));
+    }).catch(err => handleVaiiDataOutput("", `<div style="background: #1a1a1a; padding: 14px; border-radius: 8px; border-left: 3px solid #ff4d4d; text-align: left;">News routing failed. Network error.</div>`));
 }
 
 function fetchOMDBMedia(title) {
@@ -540,7 +560,7 @@ function fetchOMDBMedia(title) {
     fetch(`https://www.omdbapi.com/?t=${encodeURIComponent(title)}&apikey=${OMDB_API_KEY}`)
         .then(res => res.json())
         .then(data => {
-            if (data.Response === "False") return handleVaiiDataOutput("", `<div>${data.Error}</div>`);
+            if (data.Response === "False") return handleVaiiDataOutput("", `<div style="background: #1a1a1a; padding: 14px; border-radius: 8px; border-left: 3px solid #ffc107; text-align: left;">${data.Error}</div>`);
             const html = `
                 <div style="background: #1a1a1a; padding: 16px; border-radius: 12px; border-left: 4px solid #e50914; text-align: left; display: flex; gap: 15px;">
                     ${data.Poster !== "N/A" ? `<img src="${data.Poster}" style="width: 90px; border-radius: 6px; object-fit: cover;">` : ''}
@@ -552,7 +572,7 @@ function fetchOMDBMedia(title) {
                 </div>
             `;
             handleVaiiDataOutput("", html);
-        }).catch(() => handleVaiiDataOutput("", "<div>OMDB routing failed. Check API key.</div>"));
+        }).catch(() => handleVaiiDataOutput("", `<div style="background: #1a1a1a; padding: 14px; border-radius: 8px; border-left: 3px solid #ff4d4d; text-align: left;">OMDB routing failed. Network error.</div>`));
 }
 
 // ==========================================
@@ -853,7 +873,7 @@ function executeLocalFoodSearch(queryText) {
 }
 
 function renderUnifiedLocationCard(lat, lon, zone, displayName, greetingHTML = "") {
-    output.innerHTML = greetingHTML + `<div style="color:#888; font-style:italic;">Assembling location data card...</div>`;
+    output.innerHTML = greetingHTML + `<div class="generation-status"><div class="loader-spinner"></div> Locating coordinates for "${displayName}"...</div>`;
     
     fetch(`https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current_weather=true`)
         .then(res => res.json())
@@ -901,7 +921,7 @@ function renderUnifiedLocationCard(lat, lon, zone, displayName, greetingHTML = "
             });
         })
         .catch(err => {
-            handleVaiiDataOutput("", "<div>Error pulling metrics for spatial location.</div>");
+            handleVaiiDataOutput("", `<div style="background: #1a1a1a; padding: 14px; border-radius: 8px; border-left: 3px solid #ff4d4d; text-align: left;">Error pulling metrics for spatial location.</div>`);
             console.error(err);
         });
 }
@@ -952,7 +972,7 @@ function executeVisionAnalysis(promptText) {
 }
 
 function runMarketExecution(ticker) {
-    output.innerText = `Fetching price updates for "${ticker.toUpperCase()}"...`;
+    output.innerHTML = `<div class="generation-status"><div class="loader-spinner"></div> Fetching price updates for "${ticker.toUpperCase()}"...</div>`;
     const cleanTicker = ticker.trim().toLowerCase();
     const cryptoMap = { btc: "bitcoin", eth: "ethereum", solana: "solana" };
 
@@ -971,7 +991,7 @@ function runMarketExecution(ticker) {
                     </div>
                 `;
                 handleVaiiDataOutput("", htmlOutput);
-            }).catch(() => { handleVaiiDataOutput("", "<div>Error pulling crypto ticker data.</div>"); });
+            }).catch(() => { handleVaiiDataOutput("", `<div style="background: #1a1a1a; padding: 14px; border-radius: 8px; border-left: 3px solid #ff4d4d; text-align: left;">Error pulling crypto ticker data.</div>`); });
     } else {
         const htmlOutput = `
             <div style="background: #1a1a1a; padding: 14px; border-radius: 8px; border-left: 3px solid #6f42c1; text-align: left;">
@@ -1090,6 +1110,9 @@ function runInfoExecution(query) {
 
     if (isLocationIntent) {
         let parsedLocation = query.replace(/map of /i, "").replace(/show map /i, "").replace(/time in /i, "").replace(/weather in /i, "").replace(/weather /i, "").replace(/clock /i, "").trim();
+        
+        output.innerHTML = `<div class="generation-status"><div class="loader-spinner"></div> Locating coordinates for "${parsedLocation}"...</div>`;
+
         fetch(`https://geocoding-api.open-meteo.com/v1/search?name=${encodeURIComponent(parsedLocation)}&count=1&language=en&format=json`)
             .then(res => res.json())
             .then(data => {
@@ -1097,9 +1120,9 @@ function runInfoExecution(query) {
                     const loc = data.results[0];
                     renderUnifiedLocationCard(loc.latitude, loc.longitude, loc.timezone, `${loc.name}, ${loc.admin1 || ''} (${loc.country})`, greetingHTML);
                 } else {
-                    handleVaiiDataOutput("", `<div>Could not extract metrics for "${parsedLocation}".</div>`);
+                    handleVaiiDataOutput("", `<div style="background: #1a1a1a; padding: 14px; border-radius: 8px; border-left: 3px solid #ff4d4d; text-align: left;">Could not extract metrics for "${parsedLocation}".</div>`);
                 }
-            }).catch(() => { handleVaiiDataOutput("", "<div>Location processing engine connection failure.</div>"); });
+            }).catch(() => { handleVaiiDataOutput("", `<div style="background: #1a1a1a; padding: 14px; border-radius: 8px; border-left: 3px solid #ff4d4d; text-align: left;">Location processing engine connection failure.</div>`); });
         return;
     }
 
@@ -1113,7 +1136,7 @@ function runInfoExecution(query) {
     if (query.toLowerCase().startsWith("open ")) {
         let appName = query.substring(5).trim().toLowerCase().replace(/['"]+/g, '');
         if (!appName) { output.innerText = "Please specify what you want to open."; return; }
-        output.innerText = `Resolving address for "${appName}"...`;
+        output.innerHTML = `<div class="generation-status"><div class="loader-spinner"></div> Resolving address for "${appName}"...</div>`;
         const randomizedRoutes = {
             "gemini": ["https://gemini.google.com"],
             "google gemini": ["https://gemini.google.com"],
@@ -1173,18 +1196,23 @@ function runInfoExecution(query) {
                     return;
                 }
             }
+
+            output.innerHTML = `<div class="generation-status"><div class="loader-spinner"></div> Translating phrase...</div>`;
+
             fetch(`https://api.mymemory.translated.net/get?q=${encodeURIComponent(source)}&langpair=en|${encodeURIComponent(targetLanguage.substring(0,2))}`)
                 .then(res => res.json())
                 .then(data => {
                     const transText = data.responseData.translatedText;
                     const htmlOutput = `<div style="background: #1a1a1a; padding: 14px; border-radius: 8px; border-left: 3px solid #4da3ff; text-align: left;">🗣️ <strong>Translation:</strong><br>📤 Result: <strong style="color: #4da3ff; font-size: 1.1rem; display:block; margin-top:4px;">"${transText}"</strong></div>`;
                     handleVaiiDataOutput("", htmlOutput);
-                }).catch(() => { handleVaiiDataOutput("", "<div>Translation engine network failure.</div>"); });
+                }).catch(() => { handleVaiiDataOutput("", `<div style="background: #1a1a1a; padding: 14px; border-radius: 8px; border-left: 3px solid #ff4d4d; text-align: left;">Translation engine network failure.</div>`); });
             return;
         }
     }
 
     routingWarning.style.display = "none";
+    output.innerHTML = `<div class="generation-status"><div class="loader-spinner"></div> Searching knowledge base for "${query}"...</div>`;
+
     if (!query.includes(" ")) {
         fetch(`https://en.wiktionary.org/api/rest_v1/page/definition/${encodeURIComponent(query.toLowerCase())}`)
             .then(res => res.json())
@@ -1251,7 +1279,7 @@ function compileFinalSourceIndexBox(query, wikiData) {
 
     let totalHTML = wikiData.greeting || "";
     if (blocksHtml.length === 0) {
-        handleVaiiDataOutput("", totalHTML + `<div>No matches found for "${query}".</div>`);
+        handleVaiiDataOutput("", totalHTML + `<div style="background: #1a1a1a; padding: 14px; border-radius: 8px; border-left: 3px solid #ffc107; text-align: left;">No matches found for "${query}".</div>`);
         return;
     }
     
@@ -1464,11 +1492,15 @@ executeActionBtn?.addEventListener('click', () => {
     const query = hubInput.value.trim();
     const mode = document.querySelector('input[name="vaii-mode"]:checked').value;
     
+    if (!query && !activeImageBase64) return;
+    
+    hubInput.value = "";
+    if (routingWarning) routingWarning.style.display = "none";
+    
     if (activeImageBase64) {
         executeVisionAnalysis(query || "Describe this image content in clear detail.");
         return;
     }
-    if (!query) return;
 
     if (mode === "gemini") {
         executeGeminiDirectChat(query);
