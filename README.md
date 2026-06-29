@@ -1,4 +1,4 @@
-# ⚡ VAII
+# ⚡ VAII v4.0
 > **Virtual Assistant with Internet Integrations**
 
 VAII is a lightweight, frontend-only web application designed to act as a localized, multi-modal smart assistant. Built entirely on vanilla JavaScript (ES6 Modules), HTML5, and CSS3, it bypasses the need for heavy backend frameworks by interacting directly with a matrix of REST APIs and Google Cloud services.
@@ -12,6 +12,10 @@ The architecture is divided into two distinct processing engines: **VAII Native*
 ### 1. VAII Native (Integration Mode)
 The primary runtime chassis. This mode intercepts user queries and routes them to specific external APIs to render interactive HTML widgets directly in the DOM.
 
+* **🎤 Voice Recognition:** Uses the native browser Web Speech API to dictate inputs directly to the engine without typing.
+* **📰 News Aggregator:** Pulls live top global headlines or specific topic news via the **GNews API**.
+* **🎬 Media Search:** Renders movie posters, plots, and IMDB metrics via the **OMDB API**.
+* **📝 To-Do Notes:** A localized manager that utilizes browser `localStorage` to securely save and track personal notes.
 * **🧠 Knowledge Base:** Fetches live lexical definitions via the **Wiktionary API** and summary extracts via the **Wikipedia API**.
 * **👁️ Vision Engine:** Processes user-uploaded Base64 image data using the **Gemini 3.5 Flash** model to provide detailed visual analysis.
 * **🗺️ Interactive Maps:** Renders live, interactive embedded maps using the **Google Maps JavaScript API** based on location queries.
@@ -46,11 +50,13 @@ This is due to strict Google Cloud security policies (`Error 403: disallowed_use
 To run this application locally, you must supply and configure the following API keys within `script.js`:
 
 1.  **Firebase Config:** Initialize your project with your specific `apiKey`, `authDomain`, and `projectId`.
-2.  **Google Maps API Key:** Required for spatial rendering and the Local Food Concierge (ensure `&libraries=places` is appended to the script tag in `index.html`).
+2.  **Google Maps API Key:** Required for spatial rendering and the Local Food Concierge. Ensure `&libraries=places` is appended to the Google Maps script tag in `index.html`.
 3.  **Google Cloud / Gemini API Key:** Required for both the Vision Engine and the Gemini Ecosystem fallback tree.
 4.  **YouTube Data API Key:** Required for live subscriber tracking.
+5.  **OMDB API Key:** Required for fetching cinematic media endpoints.
+6.  **GNews API Key:** Required for the live news aggregator widget.
 
-*Note: Ensure your API keys are restricted via the Google Cloud Console to your specific authorized domains to prevent quota theft.*
+*Note: Ensure your API keys are restricted via the Google Cloud Console or their respective dashboards to your specific authorized domains to prevent quota theft.*
 
 ---
 
@@ -60,3 +66,4 @@ The architecture is deliberately kept flat to ensure rapid load times and zero-b
 
 * `index.html`: The monolithic UI layout, including CSS styling and all structural widget containers.
 * `script.js`: The central logic controller, housing Firebase initialization, API fetch routing, DOM manipulation, and the Gemini chat engine.
+* `privacy.html`: Legal and local data storage disclaimers outlining API telemetry rules.
