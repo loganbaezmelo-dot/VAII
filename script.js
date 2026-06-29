@@ -258,6 +258,7 @@ const prefsInstructionsInput = document.getElementById('prefs-instructions-input
 const prefsSaveBtn = document.getElementById('prefs-save-btn');
 
 const micBtn = document.getElementById('mic-trigger-btn');
+const ttsBtn = document.getElementById('tts-trigger-btn');
 const cameraTriggerBtn = document.getElementById('camera-trigger-btn');
 const imageFileInput = document.getElementById('image-file-input');
 const imagePreviewContainer = document.getElementById('image-preview-container');
@@ -269,6 +270,7 @@ let debounceTimer;
 let searchAbortController = null;
 let activeImageBase64 = null; 
 let activeImageMimeType = null;
+let autoSpeak = false;
 const wikitubiaCache = new Set();
 
 let chatHistory = [];
@@ -304,6 +306,19 @@ function renderMarkdown(text) {
     safeHtml = safeHtml.replace(/^[\s]*[\*\-]\s+(.*)$/gm, "<li style='margin-left: 15px; margin-bottom: 4px;'>$1</li>");
     safeHtml = safeHtml.replace(/\n/g, "<br>");
     return safeHtml;
+}
+
+function stripHtml(html) {
+    let tmp = document.createElement("DIV");
+    tmp.innerHTML = html;
+    return tmp.textContent || tmp.innerText || "";
+}
+
+function speakText(text) {
+    if (!('speechSynthesis' in window)) return;
+    window.speechSynthesis.cancel(); 
+    const utterance = new SpeechSynthesisUtterance(text);
+    window.speechSynthesis.speak(utterance);
 }
 
 function updateWelcomeMessageText() {
@@ -482,6 +497,11 @@ function updateDatalist(cities = [], wikiTitles = [], wikitubiaTitles = [], comb
 function handleVaiiDataOutput(rawTextContent, defaultHtmlOutput, runMapCallback = null) {
     output.innerHTML = defaultHtmlOutput;
     if (runMapCallback) runMapCallback();
+    
+    if (autoSpeak) {
+        speakText(stripHtml(defaultHtmlOutput));
+        autoSpeak = false; 
+    }
 }
 
 function showAuthError(message) {
@@ -671,6 +691,11 @@ async function executeGeminiDirectChat(userInput) {
 
         renderFullChatLogBubble();
         saveCurrentSessionState();
+
+        if (autoSpeak) {
+            speakText(successfulResponseText);
+            autoSpeak = false;
+        }
 
         if (chatHistory.length === 4) {
             triggerBackgroundTitleGeneration(chatHistory[2].parts[0].text, successfulResponseText, successfulModelLabel);
@@ -958,15 +983,16 @@ function executeVisionAnalysis(promptText) {
             return;
         }
         const descriptionResult = data.candidates[0].content.parts[0].text;
-        output.innerHTML = `
+        const finalHtml = `
             <div style="background: #1a1a1a; padding: 14px; border-radius: 8px; border-left: 3px solid #007bff; text-align: left;">
                 <div style="font-size: 0.75rem; color: #888; text-transform: uppercase; font-weight: bold; margin-bottom: 8px; letter-spacing: 0.5px;">👁️ Image Analysis Output</div>
                 <div style="color: #eee; font-size: 0.95rem; line-height: 1.5; white-space: pre-wrap;">${descriptionResult}</div>
             </div>
         `;
+        handleVaiiDataOutput("", finalHtml);
         clearActiveImage();
     }).catch(err => {
-        output.innerText = "Network intercept error connecting to Google vision matrices.";
+        handleVaiiDataOutput("", `<div style="background: #1a1a1a; padding: 14px; border-radius: 8px; border-left: 3px solid #ff4d4d; text-align: left;">Network intercept error connecting to Google vision matrices.</div>`);
         console.error(err);
     });
 }
@@ -1041,7 +1067,7 @@ function launchTargetUrl(url) {
             <span>Open Site ↗</span>
         </a>
     `;
-    output.innerHTML = htmlOutput;
+    handleVaiiDataOutput("", htmlOutput);
     window.open(url, '_blank');
 }
 
@@ -1363,6 +1389,7 @@ if (SpeechRecognition) {
         micBtn.classList.remove('listening');
         hubInput.value = e.results[0][0].transcript;
         hubInput.placeholder = "Type a command...";
+        autoSpeak = true;
         executeActionBtn.click();
     };
     
@@ -1373,6 +1400,16 @@ if (SpeechRecognition) {
 } else {
     if (micBtn) micBtn.style.display = 'none';
 }
+
+ttsBtn?.addEventListener('click', () => {
+    const currentOutput = output.innerHTML;
+    if (currentOutput && currentOutput.trim() !== "") {
+        speakText(stripHtml(currentOutput));
+    } else if (chatHistory.length > 0 && document.querySelector('input[name="vaii-mode"]:checked').value === "gemini") {
+        const lastMsg = chatHistory[chatHistory.length - 1];
+        if (lastMsg.role === "model") speakText(lastMsg.parts[0].text);
+    }
+});
 
 cameraTriggerBtn?.addEventListener('click', () => {
     imageFileInput?.click();
@@ -1410,7 +1447,6 @@ hubInput?.addEventListener('input', () => {
     let customSuggestions = [];
     let cleanInput = trimmedQuery.toLowerCase();
     
-    // 1. Food database suggestions
     if (/^(o|or|ord|orde|order|f|fi|fin|find)/i.test(cleanInput)) {
         let searchTarget = cleanInput.replace(/^(order|find)\s+/i, '').trim();
         if (searchTarget.length > 0) {
@@ -1420,7 +1456,6 @@ hubInput?.addEventListener('input', () => {
         }
     }
 
-    // 2. Static Local News topic presets
     if ("news".startsWith(cleanInput) || cleanInput.startsWith("news")) {
         const newsPresets = ["news", "top news", "news about technology", "news about gaming", "news about science", "news about space", "news about artificial intelligence"];
         newsPresets.forEach(p => {
@@ -1428,7 +1463,6 @@ hubInput?.addEventListener('input', () => {
         });
     }
 
-    // 3. Static Local Movie prefix suggestions
     if ("movie".startsWith(cleanInput) || cleanInput.startsWith("movie")) {
         if (cleanInput === "movie" || cleanInput === "movie ") {
             customSuggestions.push("movie Superman", "movie Batman", "movie Inception", "movie Interstellar");
@@ -1457,7 +1491,6 @@ hubInput?.addEventListener('input', () => {
         const wikitubiaFetch = fetch(`https://youtube.fandom.com/api.php?action=query&list=search&srsearch=${encodeURIComponent(searchUrlQuery)}&utf8=&format=json&origin=*`, { signal })
             .then(res => res.json()).then(data => data.query?.search?.map(item => item.title) || []).catch(() => []);
 
-        // Live OMDB movie suggestions block
         let omdbSuggestionsFetch = Promise.resolve([]);
         if (cleanInput.startsWith("movie ")) {
             let mTerm = trimmedQuery.substring(6).trim();
@@ -1469,7 +1502,6 @@ hubInput?.addEventListener('input', () => {
             }
         }
 
-        // Live GNews suggestions block (Fails silently with empty array if server is down)
         let gnewsSuggestionsFetch = Promise.resolve([]);
         if (cleanInput.startsWith("news about ")) {
             let nTerm = trimmedQuery.substring(11).trim();
