@@ -320,6 +320,7 @@ function getSavedSessions() {
     }
 }
 
+// Persist conversation tracks
 function saveSessionsToDisk(sessions) {
     localStorage.setItem('vaii_chat_sessions', JSON.stringify(sessions));
 }
@@ -439,11 +440,11 @@ function renderFullChatLogBubble() {
     output.scrollTop = output.scrollHeight;
 }
 
-function updateDatalist(cities = [], wikiTitles = [], wikitubiaTitles = [], foodSuggestions = []) {
+function updateDatalist(cities = [], wikiTitles = [], wikitubiaTitles = [], combinedSuggestions = []) {
     if (!datalist) return;
     datalist.innerHTML = "";
     
-    foodSuggestions.forEach(item => {
+    combinedSuggestions.forEach(item => {
         const option = document.createElement('option');
         option.value = item;
         datalist.appendChild(option);
@@ -479,31 +480,10 @@ function updateDatalist(cities = [], wikiTitles = [], wikitubiaTitles = [], food
     });
 }
 
-function handleVaiiDataOutput(rawTextContent, defaultHtmlOutput, runMapCallback = null) {
-    output.innerHTML = defaultHtmlOutput;
-    if (runMapCallback) runMapCallback();
-}
-
-function showAuthError(message) {
-    if (authError) {
-        authError.innerText = message.replace("Firebase: ", "");
-        authError.style.display = "block";
-    }
-}
-
-function clearActiveImage() {
-    activeImageBase64 = null;
-    activeImageMimeType = null;
-    if (imageFileInput) imageFileInput.value = "";
-    if (imagePreviewThumbnail) imagePreviewThumbnail.src = "";
-    if (imagePreviewContainer) imagePreviewContainer.style.display = "none";
-    if (cameraTriggerBtn) cameraTriggerBtn.classList.remove('active');
-}
-
 function renderNotesManager() {
     let notes = JSON.parse(localStorage.getItem('vaii_notes') || '[]');
     if (notes.length === 0) {
-        handleVaiiDataOutput("", `<div style="background: #1a1a1a; padding: 14px; border-left: 3px solid #ffc107; text-align: left;">📝 No notes saved. Use <code>note: [text]</code> to add one.</div>`);
+        handleVaiiDataOutput("", `<div style="background: #1a1a1a; padding: 14px; border-left: 3px solid #ffc107; text-align: left; border-radius: 8px;">📝 No notes saved. Use <code>note: [text]</code> to add one.</div>`);
         return;
     }
     
@@ -1399,21 +1379,37 @@ hubInput?.addEventListener('input', () => {
     const trimmedQuery = query.trim();
     if (routingWarning) routingWarning.style.display = trimmedQuery.toLowerCase().startsWith('open ') ? "block" : "none";
 
-    let foodSuggestions = [];
+    let customSuggestions = [];
     let cleanInput = trimmedQuery.toLowerCase();
     
+    // 1. Food database suggestions
     if (/^(o|or|ord|orde|order|f|fi|fin|find)/i.test(cleanInput)) {
         let searchTarget = cleanInput.replace(/^(order|find)\s+/i, '').trim();
         if (searchTarget.length > 0) {
-            foodSuggestions = ALL_FOOD_SUGGESTIONS.filter(s => s.toLowerCase().includes(searchTarget)).slice(0, 12);
+            customSuggestions = ALL_FOOD_SUGGESTIONS.filter(s => s.toLowerCase().includes(searchTarget)).slice(0, 8);
         } else {
-            foodSuggestions = ALL_FOOD_SUGGESTIONS.slice(0, 12);
+            customSuggestions = ALL_FOOD_SUGGESTIONS.slice(0, 8);
+        }
+    }
+
+    // 2. Static Local News topic presets
+    if ("news".startsWith(cleanInput) || cleanInput.startsWith("news")) {
+        const newsPresets = ["news", "top news", "news about technology", "news about gaming", "news about science", "news about space", "news about artificial intelligence"];
+        newsPresets.forEach(p => {
+            if (p.startsWith(cleanInput) || p.includes(cleanInput)) customSuggestions.push(p);
+        });
+    }
+
+    // 3. Static Local Movie prefix suggestions
+    if ("movie".startsWith(cleanInput) || cleanInput.startsWith("movie")) {
+        if (cleanInput === "movie" || cleanInput === "movie ") {
+            customSuggestions.push("movie Superman", "movie Batman", "movie Inception", "movie Interstellar");
         }
     }
 
     if (searchAbortController) searchAbortController.abort();
     if (trimmedQuery.length < 3 || trimmedQuery.toLowerCase().startsWith('open ') || /\.[a-z]{2,6}/i.test(trimmedQuery)) {
-        updateDatalist([], [], [], foodSuggestions); 
+        updateDatalist([], [], [], customSuggestions); 
         clearTimeout(debounceTimer); 
         return; 
     }
@@ -1433,8 +1429,33 @@ hubInput?.addEventListener('input', () => {
         const wikitubiaFetch = fetch(`https://youtube.fandom.com/api.php?action=query&list=search&srsearch=${encodeURIComponent(searchUrlQuery)}&utf8=&format=json&origin=*`, { signal })
             .then(res => res.json()).then(data => data.query?.search?.map(item => item.title) || []).catch(() => []);
 
-        Promise.all([geoFetch, wikiFetch, wikitubiaFetch]).then(([cities, wikiTitles, wikitubiaTitles]) => {
-            updateDatalist(cities, wikiTitles, wikitubiaTitles, foodSuggestions);
+        // Live OMDB movie suggestions block
+        let omdbSuggestionsFetch = Promise.resolve([]);
+        if (cleanInput.startsWith("movie ")) {
+            let mTerm = trimmedQuery.substring(6).trim();
+            if (mTerm.length >= 2) {
+                omdbSuggestionsFetch = fetch(`https://www.omdbapi.com/?s=${encodeURIComponent(mTerm)}&apikey=${OMDB_API_KEY}`, { signal })
+                    .then(res => res.json())
+                    .then(data => data.Search ? data.Search.slice(0, 5).map(m => `movie ${m.Title}`) : [])
+                    .catch(() => []);
+            }
+        }
+
+        // Live GNews suggestions block (Fails silently with empty array if server is down)
+        let gnewsSuggestionsFetch = Promise.resolve([]);
+        if (cleanInput.startsWith("news about ")) {
+            let nTerm = trimmedQuery.substring(11).trim();
+            if (nTerm.length >= 2) {
+                gnewsSuggestionsFetch = fetch(`https://gnews.io/api/v4/search?q=${encodeURIComponent(nTerm)}&lang=en&apikey=${GNEWS_API_KEY}`, { signal })
+                    .then(res => res.json())
+                    .then(data => data.articles ? data.articles.slice(0, 3).map(a => `news about ${a.title.substring(0, 32)}...`) : [])
+                    .catch(() => []);
+            }
+        }
+
+        Promise.all([geoFetch, wikiFetch, wikitubiaFetch, omdbSuggestionsFetch, gnewsSuggestionsFetch]).then(([cities, wikiTitles, wikitubiaTitles, omdbTitles, gnewsTitles]) => {
+            let combinedCustom = [...customSuggestions, ...omdbTitles, ...gnewsTitles];
+            updateDatalist(cities, wikiTitles, wikitubiaTitles, combinedCustom);
         }).catch(() => {});
     }, 300);
 });
