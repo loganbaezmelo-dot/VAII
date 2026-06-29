@@ -1,6 +1,6 @@
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
 import { 
-    getAuth, GoogleAuthProvider, signInWithPopup, signInWithEmailAndPassword, 
+    getAuth, GoogleAuthProvider, signInWithRedirect, getRedirectResult, signInWithEmailAndPassword, 
     createUserWithEmailAndPassword, onAuthStateChanged, signOut 
 } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
 
@@ -300,7 +300,7 @@ function closeAllDrawers() {
 
 function renderMarkdown(text) {
     if (!text) return "";
-    let safeHtml = text.replace(/&/g, "&").replace(/</g, "<").replace(/>/g, ">"); 
+    let safeHtml = text.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;"); 
     safeHtml = safeHtml.replace(/\*\*(.*?)\*\*/g, "<strong>$1</strong>");
     safeHtml = safeHtml.replace(/\*(.*?)\*/g, "<em>$1</em>");
     safeHtml = safeHtml.replace(/^[\s]*[\*\-]\s+(.*)$/gm, "<li style='margin-left: 15px; margin-bottom: 4px;'>$1</li>");
@@ -515,9 +515,17 @@ function handleVaiiDataOutput(rawTextContent, defaultHtmlOutput, runMapCallback 
     }
 }
 
-function showAuthError(message) {
+function showAuthError(err) {
+    console.error("Firebase Auth Exception:", err); 
     if (authError) {
-        authError.innerText = message.replace("Firebase: ", "");
+        let errorText = "Authentication failed. Please try again.";
+        if (typeof err === "string") {
+            errorText = err;
+        } else if (err && err.message) {
+            errorText = err.message;
+        }
+        
+        authError.innerText = errorText.replace("Firebase: ", "").replace(" (auth/invalid-credential).", ".");
         authError.style.display = "block";
     }
 }
@@ -1563,4 +1571,70 @@ executeActionBtn?.addEventListener('click', () => {
     
     if (!query && !activeImageBase64) return;
     
-    hubInput.value
+    hubInput.value = "";
+    if (routingWarning) routingWarning.style.display = "none";
+    
+    if (activeImageBase64) {
+        executeVisionAnalysis(query || "Describe this image content in clear detail.");
+        return;
+    }
+
+    if (mode === "gemini") {
+        executeGeminiDirectChat(query);
+    } else {
+        if (query.toLowerCase().startsWith("draw ")) {
+            executeImageGeneration(query.substring(5).trim());
+        } else {
+            runInfoExecution(query);
+        }
+    }
+});
+
+hubInput?.addEventListener('keypress', (e) => {
+    if (e.key === 'Enter') executeActionBtn?.click();
+});
+
+getRedirectResult(auth).catch(err => {
+    showAuthError(err);
+});
+
+googleSigninBtn?.addEventListener('click', () => {
+    authError.style.display = "none";
+    signInWithRedirect(auth, googleProvider).catch(err => showAuthError(err));
+});
+
+authToggle?.addEventListener('click', () => {
+    const isLoginMode = (authSubmitBtn.innerText === "Log In");
+    authError.style.display = "none";
+    authTitle.innerText = isLoginMode ? "✨ Create Account" : "🔒 Account Sign In";
+    authSubmitBtn.innerText = isLoginMode ? "Register User" : "Log In";
+    authToggle.innerText = isLoginMode ? "Already have an account? Sign In" : "Need an account? Register instead";
+});
+
+authSubmitBtn?.addEventListener('click', () => {
+    const email = authEmail.value.trim();
+    const password = authPassword.value;
+    const isLoginMode = (authSubmitBtn.innerText === "Log In");
+    authError.style.display = "none";
+    if (!email || !password) return showAuthError("Please fill out all credentials.");
+    
+    if (isLoginMode) signInWithEmailAndPassword(auth, email, password).catch(err => showAuthError(err));
+    else createUserWithEmailAndPassword(auth, email, password).catch(err => showAuthError(err));
+});
+
+logoutActionBtn?.addEventListener('click', () => signOut(auth).catch(err => console.error(err)));
+
+onAuthStateChanged(auth, (user) => {
+    if (user) {
+        authContainer.style.display = "none";
+        mainApp.style.display = "block";
+        initializeFreshChatSession();
+        clearActiveImage();
+        renderHistoryListItems();
+        if (prefsInstructionsInput) prefsInstructionsInput.value = localStorage.getItem('vaii_gemini_instructions') || '';
+        updateDatalist([], [], [], []);
+    } else {
+        authContainer.style.display = "block";
+        mainApp.style.display = "none";
+    }
+});
