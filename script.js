@@ -22,6 +22,8 @@ const googleProvider = new GoogleAuthProvider();
 
 const GOOGLE_API_KEY = "AIzaSyAJ" + "KTkU0nd6" + "ZB_zjIcN" + "QCAQQsff" + "HEp4WH8";
 const GEMINI_VISION_KEY = "AQ.Ab8RN" + "6JH2s8Lpq" + "PfRqjRgs" + "OgOMy2f76" + "HU4b4Xmg_CYURTOmgJQ";
+const OMDB_API_KEY = "YOUR_OMDB_KEY"; 
+const GNEWS_API_KEY = "YOUR_GNEWS_KEY"; 
 
 const BASELINE_FALLBACK_TREE = [
     { name: "Gemini 3.5", id: "gemini-3.5-flash" },
@@ -213,7 +215,6 @@ const LOCAL_FOOD_DB = {
     ]
 };
 
-// Pre-compile the suggestions array for instant datalist rendering
 const ALL_FOOD_SUGGESTIONS = [];
 Object.keys(LOCAL_FOOD_DB).forEach(cat => ALL_FOOD_SUGGESTIONS.push(`Order ${cat}`));
 Object.values(LOCAL_FOOD_DB).flat().forEach(b => {
@@ -243,6 +244,8 @@ const routingWarning = document.getElementById('routing-warning');
 
 const helpToggle = document.getElementById('help-toggle');
 const helpGuide = document.getElementById('help-guide');
+const changelogToggle = document.getElementById('changelog-toggle');
+const changelogDrawer = document.getElementById('changelog-drawer');
 const historyToggle = document.getElementById('history-toggle');
 const historyDrawer = document.getElementById('history-drawer');
 const historyList = document.getElementById('history-list');
@@ -254,6 +257,7 @@ const prefsCloseBtn = document.getElementById('prefs-close-btn');
 const prefsInstructionsInput = document.getElementById('prefs-instructions-input');
 const prefsSaveBtn = document.getElementById('prefs-save-btn');
 
+const micBtn = document.getElementById('mic-trigger-btn');
 const cameraTriggerBtn = document.getElementById('camera-trigger-btn');
 const imageFileInput = document.getElementById('image-file-input');
 const imagePreviewContainer = document.getElementById('image-preview-container');
@@ -269,6 +273,8 @@ const wikitubiaCache = new Set();
 
 let chatHistory = [];
 let currentSessionId = null;
+
+const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
 
 const welcomeVaiiText = `Welcome to VAII Native! Enter a search query, app routing command, calculation sequence, weather location, translation phrase, crypto ticker, map request, or art prompt to begin...`;
 const welcomeGeminiText = `Welcome to the Gemini Ecosystem! This is a persistent conversational space. Start typing below to begin a continuous chat thread...`;
@@ -286,6 +292,10 @@ window.initVaiiMap = function() {
 // ==========================================
 // 3. UTILS & RENDERERS
 // ==========================================
+function closeAllDrawers() {
+    [helpGuide, changelogDrawer, historyDrawer, prefsDrawer].forEach(d => { if(d) d.style.display = "none"; });
+}
+
 function renderMarkdown(text) {
     if (!text) return "";
     let safeHtml = text.replace(/&/g, "&").replace(/</g, "<").replace(/>/g, ">"); 
@@ -490,6 +500,76 @@ function clearActiveImage() {
     if (cameraTriggerBtn) cameraTriggerBtn.classList.remove('active');
 }
 
+function renderNotesManager() {
+    let notes = JSON.parse(localStorage.getItem('vaii_notes') || '[]');
+    if (notes.length === 0) {
+        handleVaiiDataOutput("", `<div style="background: #1a1a1a; padding: 14px; border-left: 3px solid #ffc107; text-align: left;">📝 No notes saved. Use <code>note: [text]</code> to add one.</div>`);
+        return;
+    }
+    
+    let html = `<div style="background: #1a1a1a; padding: 16px; border-radius: 12px; border-left: 4px solid #ffc107; text-align: left;">
+        <div style="font-weight: bold; font-size: 1.1rem; margin-bottom: 10px;">📝 My Notes</div>
+        <div style="display: flex; flex-direction: column; gap: 8px;" id="notes-container"></div>
+    </div>`;
+    
+    handleVaiiDataOutput("", html, () => {
+        const container = document.getElementById('notes-container');
+        notes.forEach((note, index) => {
+            const div = document.createElement('div');
+            div.style = "display: flex; justify-content: space-between; background: #252525; padding: 8px 12px; border-radius: 6px;";
+            div.innerHTML = `<span style="font-size: 0.9rem;">${note}</span> <button data-index="${index}" class="delete-note-btn" style="background:none; border:none; color:#dc3545; cursor:pointer;">✕</button>`;
+            container.appendChild(div);
+        });
+
+        document.querySelectorAll('.delete-note-btn').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                let idx = e.target.getAttribute('data-index');
+                notes.splice(idx, 1);
+                localStorage.setItem('vaii_notes', JSON.stringify(notes));
+                renderNotesManager();
+            });
+        });
+    });
+}
+
+function fetchNewsAPI(topic) {
+    output.innerHTML = `<div class="generation-status"><div class="loader-spinner"></div> Fetching live news...</div>`;
+    let url = topic ? `https://gnews.io/api/v4/search?q=${encodeURIComponent(topic)}&lang=en&apikey=${GNEWS_API_KEY}` 
+                    : `https://gnews.io/api/v4/top-headlines?category=general&lang=en&apikey=${GNEWS_API_KEY}`;
+                    
+    fetch(url).then(res => res.json()).then(data => {
+        if (!data.articles || data.articles.length === 0) return handleVaiiDataOutput("", "<div>No articles found or invalid API key.</div>");
+        let html = `<div style="text-align: left; margin-bottom: 10px; font-weight: bold; color: #aaa; text-transform: uppercase;">📰 Live News ${topic ? 'on ' + topic : 'Headlines'}</div>`;
+        data.articles.slice(0, 3).forEach(art => {
+            html += `<a href="${art.url}" target="_blank" style="display: block; background: #1a1a1a; padding: 12px; border-left: 3px solid #17a2b8; text-decoration: none; color: #fff; margin-bottom: 10px; border-radius: 8px;">
+                <div style="font-weight: bold; margin-bottom: 5px;">${art.title}</div>
+                <div style="font-size: 0.8rem; color: #888;">${art.source.name}</div>
+            </a>`;
+        });
+        handleVaiiDataOutput("", html);
+    }).catch(() => handleVaiiDataOutput("", "<div>News routing failed. Check API key.</div>"));
+}
+
+function fetchOMDBMedia(title) {
+    output.innerHTML = `<div class="generation-status"><div class="loader-spinner"></div> Querying media database...</div>`;
+    fetch(`https://www.omdbapi.com/?t=${encodeURIComponent(title)}&apikey=${OMDB_API_KEY}`)
+        .then(res => res.json())
+        .then(data => {
+            if (data.Response === "False") return handleVaiiDataOutput("", `<div>${data.Error}</div>`);
+            const html = `
+                <div style="background: #1a1a1a; padding: 16px; border-radius: 12px; border-left: 4px solid #e50914; text-align: left; display: flex; gap: 15px;">
+                    ${data.Poster !== "N/A" ? `<img src="${data.Poster}" style="width: 90px; border-radius: 6px; object-fit: cover;">` : ''}
+                    <div>
+                        <div style="font-size: 1.2rem; font-weight: bold; margin-bottom: 4px;">🎬 ${data.Title} (${data.Year})</div>
+                        <div style="color: #ffc107; font-size: 0.85rem; margin-bottom: 8px;">⭐ IMDB: ${data.imdbRating} | ${data.Genre}</div>
+                        <div style="color: #ccc; font-size: 0.9rem; line-height: 1.4;">${data.Plot}</div>
+                    </div>
+                </div>
+            `;
+            handleVaiiDataOutput("", html);
+        }).catch(() => handleVaiiDataOutput("", "<div>OMDB routing failed. Check API key.</div>"));
+}
+
 // ==========================================
 // 4. CHAT ENGINE (GEMINI FALLBACK LOOP)
 // ==========================================
@@ -648,38 +728,33 @@ function executeLocalFoodSearch(queryText) {
     }
 
     let dbMatch = null;
+    let searchItemName = cleanQuery;
     let searchBrandName = "";
-    let searchItemName = "";
 
-    // Priority 1: Check for specific brand match first
-    for (let cat in LOCAL_FOOD_DB) {
-        let brand = LOCAL_FOOD_DB[cat].find(b => {
-            let normName = b.name.toLowerCase().replace(/['\s]/g, '');
-            let normQuery = cleanQuery.replace(/['\s]/g, '');
-            return normQuery.includes(normName);
-        });
-        if (brand) {
-            dbMatch = brand;
-            searchBrandName = dbMatch.name;
-            searchItemName = dbMatch.item;
-            break;
-        }
-    }
-
-    // Priority 2: Fallback to random category grab
-    if (!dbMatch) {
-        let category = Object.keys(LOCAL_FOOD_DB).find(key => cleanQuery.includes(key));
-        if (category) {
-            const options = LOCAL_FOOD_DB[category];
-            dbMatch = options[Math.floor(Math.random() * options.length)];
-            searchBrandName = dbMatch.name;
-            searchItemName = dbMatch.item;
+    let category = Object.keys(LOCAL_FOOD_DB).find(key => cleanQuery.includes(key));
+    if (category) {
+        const options = LOCAL_FOOD_DB[category];
+        dbMatch = options[Math.floor(Math.random() * options.length)];
+        searchBrandName = dbMatch.name;
+        searchItemName = dbMatch.item;
+    } else {
+        for (let cat in LOCAL_FOOD_DB) {
+            let brand = LOCAL_FOOD_DB[cat].find(b => {
+                let normName = b.name.toLowerCase().replace(/['\s]/g, '');
+                let normQuery = cleanQuery.replace(/['\s]/g, '');
+                return normQuery.includes(normName) || normName.includes(normQuery);
+            });
+            if (brand) {
+                dbMatch = brand;
+                searchBrandName = dbMatch.name;
+                searchItemName = dbMatch.item;
+                break;
+            }
         }
     }
 
     if (!searchBrandName) {
         searchBrandName = cleanQuery; 
-        searchItemName = cleanQuery;
     }
 
     let placesSearchQuery = searchBrandName;
@@ -695,12 +770,13 @@ function executeLocalFoodSearch(queryText) {
     `;
 
     const renderFallbackCard = (brandName, suggestionText, fallbackLoc) => {
-        const cleanName = brandName.replace(/[^a-zA-Z0-9\s]/g, '');
-        const encName = encodeURIComponent(cleanName);
-        const encLoc = fallbackLoc ? encodeURIComponent(fallbackLoc) : '';
+        const locString = fallbackLoc ? ` ${fallbackLoc}` : "";
         
-        const goLink = `https://www.google.com/search?q=Order+delivery+from+${encName}${fallbackLoc ? '+near+' + encLoc : ''}`;
-        const ddLink = `https://www.doordash.com/search/store/${encName}/`;
+        const cleanFallbackString = (brandName + locString).replace(/[^a-zA-Z0-9 ,]/g, '');
+        const encFallback = encodeURIComponent(cleanFallbackString);
+        
+        const ddLink = `https://www.doordash.com/search/store/${encFallback}/`;
+        const goLink = `https://www.google.com/search?q=Order+delivery+from+${encFallback}`;
 
         const htmlOutput = `
             <div style="background: #1a1a1a; padding: 16px; border-radius: 12px; border-left: 4px solid #007bff; text-align: left; margin-bottom: 15px;">
@@ -710,11 +786,11 @@ function executeLocalFoodSearch(queryText) {
                 
                 <div style="font-size: 0.75rem; color: #aaa; text-transform: uppercase; font-weight: bold; margin-bottom: 8px;">Auto-Routing Delivery Links</div>
                 <div style="display: flex; flex-direction: column; gap: 8px;">
-                    <a href="${goLink}" target="_blank" style="display: flex; align-items: center; justify-content: space-between; background: #4285F4; border-radius: 6px; padding: 10px 14px; color: #fff; text-decoration: none; font-weight: bold; font-size: 0.9rem;">
-                        <span>🌐 Google Food Aggregator</span><span>➔</span>
-                    </a>
                     <a href="${ddLink}" target="_blank" style="display: flex; align-items: center; justify-content: space-between; background: #FF3008; border-radius: 6px; padding: 10px 14px; color: #fff; text-decoration: none; font-weight: bold; font-size: 0.9rem;">
-                        <span>🔴 Search DoorDash</span><span>➔</span>
+                        <span>Route to DoorDash</span><span>➔</span>
+                    </a>
+                    <a href="${goLink}" target="_blank" style="display: flex; align-items: center; justify-content: space-between; background: #4285F4; border-radius: 6px; padding: 10px 14px; color: #fff; text-decoration: none; font-weight: bold; font-size: 0.9rem;">
+                        <span>Google Local Order</span><span>➔</span>
                     </a>
                 </div>
             </div>
@@ -744,12 +820,11 @@ function executeLocalFoodSearch(queryText) {
                 const rating = bestPlace.rating || "N/A";
                 const address = bestPlace.formatted_address || "";
                 
-                // Embed EXACT localized Google search parameters to ensure Google opens the correct branch
-                const exactGoogleSearch = encodeURIComponent(`Order delivery from ${placeName} ${address}`);
-                const googleOrderLink = `https://www.google.com/search?q=${exactGoogleSearch}`;
+                const cleanAddressSearch = (placeName + " " + address).replace(/[^a-zA-Z0-9 ,]/g, '');
+                const encQuery = encodeURIComponent(cleanAddressSearch);
                 
-                const cleanPlaceName = placeName.replace(/[^a-zA-Z0-9\s]/g, '');
-                const doorDashLink = `https://www.doordash.com/search/store/${encodeURIComponent(cleanPlaceName)}/`;
+                const googleOrderLink = `https://www.google.com/search?q=Order+delivery+from+${encQuery}`;
+                const doorDashLink = `https://www.doordash.com/search/store/${encQuery}/`;
                 const mapLink = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(placeName + " " + address)}`;
 
                 let suggestionHTML = dbMatch ? `<div style="color: #ccc; font-size: 0.95rem; margin-bottom: 4px;">💡 Suggested: <strong>${searchItemName}</strong></div>` : "";
@@ -759,18 +834,16 @@ function executeLocalFoodSearch(queryText) {
                         <div style="font-size: 0.8rem; color: #ff9800; text-transform: uppercase; font-weight: bold; margin-bottom: 4px;">🍔 GPS Confirmed Match</div>
                         <div style="font-size: 1.2rem; font-weight: bold; color: #fff; margin-bottom: 8px;">${placeName}</div>
                         ${suggestionHTML}
-                        <div style="color: #ccc; font-size: 0.95rem; margin-bottom: 15px;">⭐ Rating: ${rating} / 5.0</div>
+                        <div style="color: #ccc; font-size: 0.95rem; margin-bottom: 4px;">⭐ Rating: ${rating} / 5.0</div>
+                        <a href="${mapLink}" target="_blank" style="color: #ff9800; text-decoration: none; font-size: 0.85rem; display: block; margin-bottom: 15px;">📍 ${address} ↗</a>
                         
                         <div style="font-size: 0.75rem; color: #aaa; text-transform: uppercase; font-weight: bold; margin-bottom: 8px;">Auto-Routing Delivery Links</div>
                         <div style="display: flex; flex-direction: column; gap: 8px;">
-                            <a href="${googleOrderLink}" target="_blank" style="display: flex; align-items: center; justify-content: space-between; background: #4285F4; border-radius: 6px; padding: 10px 14px; color: #fff; text-decoration: none; font-weight: bold; font-size: 0.9rem;">
-                                <span>🌐 Google Food Aggregator</span><span>➔</span>
-                            </a>
                             <a href="${doorDashLink}" target="_blank" style="display: flex; align-items: center; justify-content: space-between; background: #FF3008; border-radius: 6px; padding: 10px 14px; color: #fff; text-decoration: none; font-weight: bold; font-size: 0.9rem;">
-                                <span>🔴 Search DoorDash</span><span>➔</span>
+                                <span>Route to DoorDash</span><span>➔</span>
                             </a>
-                            <a href="${mapLink}" target="_blank" style="display: flex; align-items: center; justify-content: space-between; background: #2a2a2a; border: 1px solid #444; border-radius: 6px; padding: 10px 14px; color: #ddd; text-decoration: none; font-weight: bold; font-size: 0.9rem;">
-                                <span>🗺️ Open in Google Maps</span><span>↗</span>
+                            <a href="${googleOrderLink}" target="_blank" style="display: flex; align-items: center; justify-content: space-between; background: #4285F4; border-radius: 6px; padding: 10px 14px; color: #fff; text-decoration: none; font-weight: bold; font-size: 0.9rem;">
+                                <span>Google Local Order</span><span>➔</span>
                             </a>
                         </div>
                     </div>
@@ -783,7 +856,7 @@ function executeLocalFoodSearch(queryText) {
     };
 
     if (explicitLocation) {
-        processPlacesSearch(null, null); 
+        processPlacesSearch(null, null);
     } else if (navigator.geolocation) {
         navigator.geolocation.getCurrentPosition(
             (position) => { processPlacesSearch(position.coords.latitude, position.coords.longitude); },
@@ -995,6 +1068,25 @@ function runInfoExecution(query) {
         return; 
     }
 
+    if (cleanQuery.startsWith("note:")) {
+        let text = query.substring(5).trim();
+        if (text) {
+            let notes = JSON.parse(localStorage.getItem('vaii_notes') || '[]');
+            notes.push(text);
+            localStorage.setItem('vaii_notes', JSON.stringify(notes));
+            handleVaiiDataOutput("", `<div style="background: #1a1a1a; padding: 14px; border-left: 3px solid #28a745; text-align: left; border-radius: 8px;">✅ Note securely saved to local storage. Type <code>show notes</code> to view.</div>`);
+        }
+        return;
+    }
+    if (cleanQuery === "show notes" || cleanQuery === "my notes") return renderNotesManager();
+
+    if (cleanQuery.startsWith("news about ")) return fetchNewsAPI(query.substring(11).trim());
+    if (cleanQuery === "top news" || cleanQuery === "news") return fetchNewsAPI("");
+
+    if (cleanQuery.startsWith("movie ") || cleanQuery.startsWith("film ")) {
+        return fetchOMDBMedia(cleanQuery.replace(/^(movie|film)\s+/i, '').trim());
+    }
+
     let isFoodIntent = Object.keys(LOCAL_FOOD_DB).some(cat => cleanQuery.includes(cat)) || 
                        cleanQuery.startsWith("order ") || cleanQuery.startsWith("find ");
 
@@ -1204,11 +1296,11 @@ document.querySelectorAll('input[name="vaii-mode"]').forEach(r => r.addEventList
 
 prefsToggleBtn?.addEventListener('click', (e) => {
     e.stopPropagation();
-    prefsDrawer.style.display = (prefsDrawer.style.display === "block") ? "none" : "block";
-    if (prefsDrawer.style.display === "block") {
+    const isVisible = prefsDrawer.style.display === "block";
+    closeAllDrawers();
+    if (!isVisible) {
+        prefsDrawer.style.display = "block";
         prefsInstructionsInput.value = localStorage.getItem('vaii_gemini_instructions') || '';
-        if (helpGuide) helpGuide.style.display = "none";
-        if (historyDrawer) historyDrawer.style.display = "none";
     }
 });
 
@@ -1219,22 +1311,55 @@ prefsSaveBtn?.addEventListener('click', () => {
 });
 
 helpToggle?.addEventListener('click', () => {
-    helpGuide.style.display = (helpGuide.style.display === "block") ? "none" : "block";
-    if (historyDrawer) historyDrawer.style.display = "none";
-    if (prefsDrawer) prefsDrawer.style.display = "none";
+    const isVisible = helpGuide.style.display === "block";
+    closeAllDrawers();
+    helpGuide.style.display = isVisible ? "none" : "block";
+});
+
+changelogToggle?.addEventListener('click', () => {
+    const isVisible = changelogDrawer.style.display === "block";
+    closeAllDrawers();
+    changelogDrawer.style.display = isVisible ? "none" : "block";
 });
 
 historyToggle?.addEventListener('click', () => {
-    historyDrawer.style.display = (historyDrawer.style.display === "block") ? "none" : "block";
-    if (historyDrawer.style.display === "block") renderHistoryListItems();
-    if (helpGuide) helpGuide.style.display = "none";
-    if (prefsDrawer) prefsDrawer.style.display = "none";
+    const isVisible = historyDrawer.style.display === "block";
+    closeAllDrawers();
+    if (!isVisible) {
+        historyDrawer.style.display = "block";
+        renderHistoryListItems();
+    }
 });
 
 newChatBtn?.addEventListener('click', () => {
     initializeFreshChatSession();
     if (historyDrawer) historyDrawer.style.display = "none";
 });
+
+if (SpeechRecognition) {
+    const recognition = new SpeechRecognition();
+    recognition.continuous = false;
+    
+    micBtn?.addEventListener('click', () => {
+        recognition.start();
+        micBtn.classList.add('listening');
+        hubInput.placeholder = "Listening...";
+    });
+    
+    recognition.onresult = (e) => {
+        micBtn.classList.remove('listening');
+        hubInput.value = e.results[0][0].transcript;
+        hubInput.placeholder = "Type a command...";
+        executeActionBtn.click();
+    };
+    
+    recognition.onerror = () => {
+        micBtn.classList.remove('listening');
+        hubInput.placeholder = "Type a command...";
+    };
+} else {
+    if (micBtn) micBtn.style.display = 'none';
+}
 
 cameraTriggerBtn?.addEventListener('click', () => {
     imageFileInput?.click();
