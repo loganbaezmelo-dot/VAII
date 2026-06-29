@@ -325,6 +325,7 @@ function updateWelcomeMessageText() {
     if (!output) return;
     const selectedMode = document.querySelector('input[name="vaii-mode"]:checked')?.value;
     output.innerHTML = (selectedMode === "gemini") ? welcomeGeminiText : welcomeVaiiText;
+    if (ttsBtn) ttsBtn.style.display = 'none';
 }
 
 function getSavedSessions() {
@@ -428,8 +429,11 @@ function renderFullChatLogBubble() {
     
     if (dialogueItems.length === 0) {
         output.innerHTML = welcomeGeminiText;
+        if (ttsBtn) ttsBtn.style.display = 'none';
         return;
     }
+    
+    if (ttsBtn) ttsBtn.style.display = 'flex';
     
     dialogueItems.forEach(msg => {
         const isUserTurn = (msg.role === 'user');
@@ -497,6 +501,8 @@ function updateDatalist(cities = [], wikiTitles = [], wikitubiaTitles = [], comb
 function handleVaiiDataOutput(rawTextContent, defaultHtmlOutput, runMapCallback = null) {
     output.innerHTML = defaultHtmlOutput;
     if (runMapCallback) runMapCallback();
+    
+    if (ttsBtn) ttsBtn.style.display = 'flex';
     
     if (autoSpeak) {
         speakText(stripHtml(defaultHtmlOutput));
@@ -1031,6 +1037,7 @@ function runMarketExecution(ticker) {
 }
 
 function executeImageGeneration(imagePrompt) {
+    if (ttsBtn) ttsBtn.style.display = 'flex';
     routingWarning.style.display = "none"; 
     output.innerHTML = `
         <div style="color: #888; font-style: italic; margin-bottom: 12px; font-size: 0.9rem; line-height: 1.4;">🎨 Generating artwork for "${imagePrompt}"...</div>
@@ -1553,39 +1560,4 @@ authToggle?.addEventListener('click', () => {
     const isLoginMode = (authSubmitBtn.innerText === "Log In");
     authError.style.display = "none";
     authTitle.innerText = isLoginMode ? "✨ Create Account" : "🔒 Account Sign In";
-    authSubmitBtn.innerText = isLoginMode ? "Register User" : "Log In";
-    authToggle.innerText = isLoginMode ? "Already have an account? Sign In" : "Need an account? Register instead";
-});
-
-authSubmitBtn?.addEventListener('click', () => {
-    const email = authEmail.value.trim();
-    const password = authPassword.value;
-    const isLoginMode = (authSubmitBtn.innerText === "Log In");
-    authError.style.display = "none";
-    if (!email || !password) return showAuthError("Please fill out all credentials.");
-    
-    if (isLoginMode) signInWithEmailAndPassword(auth, email, password).catch(err => showAuthError(err.message));
-    else createUserWithEmailAndPassword(auth, email, password).catch(err => showAuthError(err.message));
-});
-
-googleSigninBtn?.addEventListener('click', () => {
-    authError.style.display = "none";
-    signInWithPopup(auth, googleProvider).catch(err => showAuthError(err.message));
-});
-
-logoutActionBtn?.addEventListener('click', () => signOut(auth).catch(err => console.error(err)));
-
-onAuthStateChanged(auth, (user) => {
-    if (user) {
-        authContainer.style.display = "none";
-        mainApp.style.display = "block";
-        initializeFreshChatSession();
-        clearActiveImage();
-        renderHistoryListItems();
-        if (prefsInstructionsInput) prefsInstructionsInput.value = localStorage.getItem('vaii_gemini_instructions') || '';
-        updateDatalist([], [], [], []);
-    } else {
-        authContainer.style.display = "block";
-        mainApp.style.display = "none";
-    }
-});
+    authSubmitBtn.innerText = isLoginMode ? "Register User" :
