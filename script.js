@@ -538,7 +538,12 @@ function fetchNewsAPI(topic) {
                     : `https://gnews.io/api/v4/top-headlines?category=general&lang=en&apikey=${GNEWS_API_KEY}`;
                     
     fetch(url).then(res => res.json()).then(data => {
-        if (!data.articles || data.articles.length === 0) return handleVaiiDataOutput("", "<div>No articles found or invalid API key.</div>");
+        if (data.errors) {
+            let errorMsg = Array.isArray(data.errors) ? data.errors[0] : (typeof data.errors === 'string' ? data.errors : "Unknown GNews error");
+            return handleVaiiDataOutput("", `<div style="background: #1a1a1a; padding: 14px; border-radius: 8px; border-left: 3px solid #ff4d4d; text-align: left;"><strong style="color:#ff4d4d;">GNews API Error:</strong> ${errorMsg}</div>`);
+        }
+        if (!data.articles || data.articles.length === 0) return handleVaiiDataOutput("", "<div>No articles found for this search.</div>");
+        
         let html = `<div style="text-align: left; margin-bottom: 10px; font-weight: bold; color: #aaa; text-transform: uppercase;">📰 Live News ${topic ? 'on ' + topic : 'Headlines'}</div>`;
         data.articles.slice(0, 3).forEach(art => {
             html += `<a href="${art.url}" target="_blank" style="display: block; background: #1a1a1a; padding: 12px; border-left: 3px solid #17a2b8; text-decoration: none; color: #fff; margin-bottom: 10px; border-radius: 8px;">
@@ -547,7 +552,7 @@ function fetchNewsAPI(topic) {
             </a>`;
         });
         handleVaiiDataOutput("", html);
-    }).catch(() => handleVaiiDataOutput("", "<div>News routing failed. Check API key.</div>"));
+    }).catch(err => handleVaiiDataOutput("", `<div>News routing failed. Network error.</div>`));
 }
 
 function fetchOMDBMedia(title) {
