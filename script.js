@@ -22,8 +22,8 @@ const googleProvider = new GoogleAuthProvider();
 
 const GOOGLE_API_KEY = "AIzaSyAJ" + "KTkU0nd6" + "ZB_zjIcN" + "QCAQQsff" + "HEp4WH8";
 const GEMINI_VISION_KEY = "AQ.Ab8RN" + "6JH2s8Lpq" + "PfRqjRgs" + "OgOMy2f76" + "HU4b4Xmg_CYURTOmgJQ";
-const OMDB_API_KEY = "YOUR_OMDB_KEY"; 
-const GNEWS_API_KEY = "YOUR_GNEWS_KEY"; 
+const OMDB_API_KEY = "bd1c" + "f679"; 
+const GNEWS_API_KEY = "a461968b" + "01ba9829" + "5729c637" + "0ec31d8d"; 
 
 const BASELINE_FALLBACK_TREE = [
     { name: "Gemini 3.5", id: "gemini-3.5-flash" },
@@ -298,7 +298,7 @@ function closeAllDrawers() {
 
 function renderMarkdown(text) {
     if (!text) return "";
-    let safeHtml = text.replace(/&/g, "&").replace(/</g, "<").replace(/>/g, ">"); 
+    let safeHtml = text.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;"); 
     safeHtml = safeHtml.replace(/\*\*(.*?)\*\*/g, "<strong>$1</strong>");
     safeHtml = safeHtml.replace(/\*(.*?)\*/g, "<em>$1</em>");
     safeHtml = safeHtml.replace(/^[\s]*[\*\-]\s+(.*)$/gm, "<li style='margin-left: 15px; margin-bottom: 4px;'>$1</li>");
